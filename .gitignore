@@ -1,0 +1,14 @@
+# IntelliJ project files
+.idea
+
+# Build files
+*.pyc
+*.pyd
+
+# Log files
+dump.txt
+
+*.o
+*.elf
+tests/cpp/messgen
+.done.*

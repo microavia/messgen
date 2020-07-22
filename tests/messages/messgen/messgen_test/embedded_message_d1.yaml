@@ -1,0 +1,13 @@
+id: 1
+fields:
+  - name: f0
+    type: uint8[10]
+
+  - name: f1
+    type: simple_message[2]
+
+  - name: f2
+    type: uint64[5]
+
+  - name: f3
+    type: simple_message
