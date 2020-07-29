@@ -285,7 +285,7 @@ class GoGenerator:
 
         type_info = dict(maproto_types[t])
         type_info["name"] = f["name"]
-        full_size = self._data_types_map[t]["full_size"]
+        full_size = self._data_types_map[t]["static_size"]
         type_info["is_array"] = f["is_array"]
         type_info["is_dynamic"] = f["is_dynamic"]
         type_info["array_size"] = f["num"]
