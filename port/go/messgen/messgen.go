@@ -5,19 +5,11 @@ import (
 )
 
 const (
-	HeaderSize = 8
-)
-
-const (
-	MessageClassData MessageClass = iota
-	MessageClassRequest
-	MessageClassResponse
+	HeaderSize = 3
 )
 
 type (
-	MessageId       uint8
-	MessageClass    uint8
-	MessageSequence uint32
+	MessageId uint8
 
 	Message interface {
 		MsgId() int
@@ -28,18 +20,14 @@ type (
 
 	MessageInfo struct {
 		Id      MessageId
-		Class   MessageClass
-		Seq     MessageSequence
 		Payload []byte
 	}
 )
 
 func Serialize(info MessageInfo, msg Message) ([]byte, error) {
 	buf := make([]byte, msg.MsgSize()+HeaderSize)
-	binary.LittleEndian.PutUint32(buf[0:4], uint32(info.Seq))
-	buf[4] = byte(info.Class)
-	buf[5] = byte(msg.MsgId())
-	binary.LittleEndian.PutUint16(buf[6:8], uint16(msg.MsgSize()))
+	buf[0] = byte(msg.MsgId())
+	binary.LittleEndian.PutUint16(buf[1:3], uint16(msg.MsgSize()))
 	_, err := msg.Pack(buf[HeaderSize:])
 	if err != nil {
 		return buf, err
@@ -54,10 +42,8 @@ func Parse(buf []byte) (*MessageInfo, int) {
 		return nil, 0
 	}
 	var info MessageInfo
-	info.Seq = MessageSequence(binary.LittleEndian.Uint32(buf[0:4]))
-	info.Class = MessageClass(buf[4])
-	info.Id = MessageId(buf[5])
-	msgSize := int(binary.LittleEndian.Uint16(buf[6:8]))
+	info.Id = MessageId(buf[0])
+	msgSize := int(binary.LittleEndian.Uint16(buf[1:3]))
 	serMsgSize := HeaderSize + msgSize
 	if len(buf) < serMsgSize {
 		return nil, 0

@@ -285,7 +285,7 @@ class GoGenerator:
 
         type_info = dict(maproto_types[t])
         type_info["name"] = f["name"]
-        full_size = self._data_types_map[t]["full_size"]
+        static_size = self._data_types_map[t]["static_size"]
         type_info["is_array"] = f["is_array"]
         type_info["is_dynamic"] = f["is_dynamic"]
         type_info["array_size"] = f["num"]
@@ -294,7 +294,7 @@ class GoGenerator:
             type_info["storage_type"] = t
 
         type_info["element_type"] = type_info["storage_type"]
-        type_info["element_size"] = full_size
+        type_info["element_size"] = static_size
         if "imports" not in type_info:
             type_info["imports"] = []
 
@@ -303,11 +303,11 @@ class GoGenerator:
             type_info["storage_type"] = "[]" + type_info["storage_type"]
             type_info["imports"].append("encoding/binary")
         elif f["is_array"]:
-            type_info["total_size"] = full_size * f["num"]
+            type_info["total_size"] = static_size * f["num"]
             type_info["storage_type"] = "[" + str(f["num"]) + "]" + type_info["storage_type"]
         else:
             if "total_size" not in type_info:
-                type_info["total_size"] = full_size
+                type_info["total_size"] = static_size
 
         return type_info
 
