@@ -25,7 +25,7 @@ type (
 	}
 )
 
-func Serialize(info MessageInfo, msg Message) ([]byte, error) {
+func Serialize(msg Message) ([]byte, error) {
 	buf := make([]byte, msg.MsgSize()+HeaderSize)
 	buf[0] = byte(msg.MsgId())
 	binary.LittleEndian.PutUint16(buf[1:3], uint16(msg.MsgSize()))
