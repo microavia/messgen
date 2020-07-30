@@ -2,6 +2,7 @@ package messgen
 
 import (
 	"encoding/binary"
+	"errors"
 )
 
 const (
@@ -33,6 +34,21 @@ func Serialize(info MessageInfo, msg Message) ([]byte, error) {
 		return buf, err
 	}
 	return buf, nil
+}
+
+func SerializeToBuffer(msg Message, buf []byte) (int, error) {
+	totalSize := HeaderSize + msg.MsgSize()
+	if len(buf) < totalSize {
+		return 0, errors.New("wrong buffer size")
+	}
+
+	buf[0] = byte(msg.MsgId())
+	binary.LittleEndian.PutUint16(buf[1:3], uint16(msg.MsgSize()))
+	_, err := msg.Pack(buf[HeaderSize:])
+	if err != nil {
+		return 0, err
+	}
+	return totalSize, nil
 }
 
 // Parse header of the first message in buffer, return message info, total size (including header).
