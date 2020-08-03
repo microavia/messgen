@@ -13,7 +13,7 @@ public:
     template<class T>
     T * alloc(size_t num) {
         const size_t alloc_size = sizeof(T) * num;
-        if (align(alignof(T), alloc_size, _mem_start, _size)) {
+        if (align(alignof(T), alloc_size, _mem_start, _size) || alloc_size == 0) {
             T *ptr = reinterpret_cast<T *>(_mem_start);
             _mem_start = (uint8_t *) _mem_start + alloc_size;
             _size -= alloc_size;
