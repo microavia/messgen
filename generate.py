@@ -38,8 +38,39 @@ ALIAS_TYPES = {
 }
 
 
-def __dump_datatypes(datatypes_map):
+def __get_free_id_list(module, free_ids_cnt):
+    module_msg_ids = []
+    for msg in module["messages"]:
+        module_msg_ids.append(msg["id"])
+
+    module_msg_ids.sort()
+
+    free_ids = []
+    last_id = 0
+    for id in module_msg_ids:
+        if id - last_id > 0:
+            free_ids.extend(range(last_id+1, id))
+
+        last_id = id
+
+    if len(free_ids) < free_ids_cnt:
+        d = free_ids_cnt - len(free_ids)
+        free_ids.extend(range(module_msg_ids[-1] + 1, module_msg_ids[-1] + d + 1))
+    else:
+        free_ids = free_ids[:free_ids_cnt]
+
+    return free_ids
+
+
+def __dump_datatypes(modules_map, datatypes_map, free_ids_cnt=10):
     dump = ""
+
+    for module_name, module_obj in modules_map.items():
+        free_ids = __get_free_id_list(module_obj, free_ids_cnt)
+        dump += ("%s free ids list: %s" % (module_name, str(free_ids))) + os.linesep
+
+    dump += os.linesep
+
     for typename, datatype in datatypes_map.items():
         dump += "****************" + os.linesep
         dump += typename + os.linesep
@@ -97,7 +128,7 @@ def main():
         data_types_preprocessor = DataTypesPreprocessor(PLAIN_TYPES, ALIAS_TYPES)
         data_types_map = data_types_preprocessor.create_types_map(modules_map)
         with open("dump.txt", "w+") as f:
-            f.write(__dump_datatypes(data_types_map))
+            f.write(__dump_datatypes(modules_map, data_types_map))
 
         g_type = generators.get(args.lang)
         if g_type is None:
