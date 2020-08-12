@@ -29,3 +29,12 @@ fields:
 
   - name: f9
     type: int8[]
+
+  - name: my_null_string
+    type: string
+
+  - name: non_null_string1
+    type: string
+
+  - name: non_null_string2
+    type: string

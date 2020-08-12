@@ -22,7 +22,7 @@ class DataTypesPreprocessor:
         for k, v in alias_types_map.items():
             self._types_map[k] = {
                 "alias": v,
-                "align": 1,
+                "align": 8,
                 "static_size": 0,
                 "plain": True
             }
@@ -31,7 +31,7 @@ class DataTypesPreprocessor:
     def create_types_map(self, modules_map):
         """
         Data type post-processing.
-        Creates additional fields for rach module:
+        Creates additional fields for each module:
             "max_datatype_size" -   maximum size among all datatypes in module
             "namespace"         -   datatypes namespace inside a module
 
@@ -39,7 +39,7 @@ class DataTypesPreprocessor:
         {
             "typename": {
                 "align": alignment,
-                "static_size": size of plain fields,
+                "static_size": size of static fields,
                 "plain": indicates whether data type is plain one,
                 "dynamic_fields_cnt": number of dynamic arrays in data type
                 "fields": [{
@@ -134,7 +134,10 @@ class DataTypesPreprocessor:
 
             field["is_array"] = is_array(field["type"])
             field["num"] = int(get_array_size(field["type"]))
-            field["is_dynamic"] = is_dynamic(field["type"])
+            if field["type"] == "string":
+                field["is_dynamic"] = True
+            else:
+                field["is_dynamic"] = is_dynamic(field["type"])
             field["type"] = child_norm_typename
 
             if field["is_dynamic"]:

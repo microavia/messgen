@@ -20,3 +20,9 @@ fields:
 
   - name: f6
     type: simple_dynamic_message
+
+  - name: f7
+    type: string
+
+  - name: f8
+    type: string

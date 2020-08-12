@@ -95,6 +95,8 @@ protected:
         _embedded_dyn_d1_msg.f5[0] = gen_random_simple_dynamic_msg();
         _embedded_dyn_d1_msg.f5[1] = gen_random_simple_dynamic_msg();
         _embedded_dyn_d1_msg.f6 = gen_random_simple_dynamic_msg();
+        _embedded_dyn_d1_msg.f7 = nullptr;
+        _embedded_dyn_d1_msg.f8 = "Embedded string";
 
         memset(&_ser_buf[0], 0, SERIALIZE_BUF_SIZE);
         memset(&_memory_pool[0], 0, MEMORY_POOL_SIZE);
@@ -144,6 +146,8 @@ protected:
         msg.f7 = random < int16_t > ();
         msg.f8 = gen_random_plain_dynamic_field<uint8_t>();
         msg.f9 = gen_random_plain_dynamic_field<int8_t>();
+        msg.non_null_string1 = "string1";
+        msg.non_null_string2 = "string2";
 
         return msg;
     }
