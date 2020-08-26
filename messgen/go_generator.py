@@ -293,6 +293,7 @@ class GoGenerator:
             type_info["is_dynamic"] = f["is_dynamic"]
         else:
             type_info["is_dynamic"] = False
+            type_info["total_size"] = sizeof_dynamic
 
         type_info["element_type"] = type_info["storage_type"]
         type_info["element_size"] = static_size

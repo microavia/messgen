@@ -9,7 +9,7 @@ def format_type(f):
     f_type = t[0].upper() + t[1:]
     if f["num"] > 1:
         f_type += "[%s]" % f["num"]
-    elif f["is_dynamic"]:
+    elif f["is_dynamic"] and (f["type"] != "string"):
         f_type += "[]"
     return f_type
 
