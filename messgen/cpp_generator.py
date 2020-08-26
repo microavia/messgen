@@ -477,99 +477,101 @@ class CppGenerator:
             ""
         ])
 
+    def __serialize_struct_array(self, field_ptr, size):
+        serialize_call = "%s[i].serialize_msg(%s)" % (field_ptr, "ptr")
+
+        self.start_for_cycle(str(size))
+        self.append(set_inc_var("ptr", serialize_call))
+        self.stop_cycle()
+        self.append("")
+
+    def __serialize_dynamic_field_length(self, length):
+        for i in range(DYN_FIELD_LEN_SIZE):
+            shift_str = "((%s >> (%dU*8U)) & 0xFFU)" % (str(length), i)
+            self.append("ptr[%d] = %s;" % (i, shift_str))
+        
+        self.append(set_inc_var("ptr", str(DYN_FIELD_LEN_SIZE)))
+
+
     def generate_serialize_method(self, message):
         self.start_block("size_t serialize_msg(uint8_t *%s) const" % INPUT_BUF_NAME)
         self.extend([
             "uint8_t * ptr = %s;" % INPUT_BUF_NAME,
             "uint32_t dyn_field_len;",
-            "(void)dyn_field_len;"
+            "(void)dyn_field_len;",
             ""
         ])
 
-        first_field_ptr = None
-        copy_size = 0
+        current_field_pos = 0
 
-        dynamic_field_id = 0
+        ### Process plain fields
+        copy_size = 0
         for field in message["fields"]:
             typeinfo = self._data_types_map[field["type"]]
 
-            if field["is_dynamic"] or not typeinfo["plain"] or (field["type"] == "string"):
-                if copy_size != 0:
-                    self.__copy_struct_block(first_field_ptr, copy_size)
+            if (not typeinfo["plain"]) or (field["is_dynamic"]):
+                break
 
-                first_field_ptr = None
-                copy_size = 0
+            current_field_pos += 1
 
-                if (field["type"] == "string") or field["is_dynamic"]:
-                    # Insert dynamic field size
-                    if field["type"] == "string":
-                        self.start_block(if_not_null(field["name"]))
-                        self.append(set_var("dyn_field_len", strlen(field["name"])))
-                        self.continue_block("else")
-                        self.append(set_var("dyn_field_len", "0"))
-                        self.stop_block()
-                    else:
-                        self.append(set_var("dyn_field_len", get_dyn_field_size(field)))
+            if field["is_array"]:
+                num = field["num"]
+            else:
+                num = 1
 
-                    for i in range(DYN_FIELD_LEN_SIZE):
-                        shift_str = "((%s >> (%dU*8U)) & 0xFFU)" % ("dyn_field_len", i)
-                        self.append("ptr[%d] = %s;" % (i, shift_str))
+            copy_size += typeinfo["static_size"] * num
 
-                    self.append(set_inc_var("ptr", str(DYN_FIELD_LEN_SIZE)))
+        if copy_size != 0:
+            self.__copy_struct_block("&" + message["fields"][0]["name"], copy_size)
 
-                    dynamic_field_id += 1
+        ### Process composite fields
+        for  field in message["fields"][current_field_pos:]:
+            if field["is_dynamic"]:
+                break
+         
+            typeinfo = self._data_types_map[field["type"]]
+            current_field_pos += 1
+
+            if field["is_array"]:
+                self.__serialize_struct_array(field["name"], field["num"])
+            else:
+                serialize_call = "%s.serialize_msg(%s)" % (field["name"], "ptr")
+                self.extend([set_inc_var("ptr", serialize_call)])
+
+        self.append("")
+
+        ### Process dynamic fields
+        for field in message["fields"][current_field_pos:]:
+            typeinfo = self._data_types_map[field["type"]]
 
             if field["type"] == "string":
                 if field["is_array"]:
                     raise MessgenException("Array of strings is not supported in C++ generator")
 
                 self.start_block(if_not_null(field["name"]))
+                self.append(set_var("dyn_field_len", strlen(field["name"])))
+                self.__serialize_dynamic_field_length("dyn_field_len")
                 self.extend([
                     memcpy("ptr", field["name"], "dyn_field_len"),
                     set_inc_var("ptr", "dyn_field_len"),
-                    ""
                 ])
+                self.continue_block("else")
+                self.__serialize_dynamic_field_length(0)
                 self.stop_block()
-
-            elif typeinfo["plain"]:
-                if field["is_dynamic"]:
-                    dyn_ptr, dyn_size = get_dyn_field_vars(field)
-                    mem_size = dyn_size + "*" + str(typeinfo["static_size"])
-                    self.extend([
-                        memcpy("ptr", dyn_ptr, mem_size),
-                        set_inc_var("ptr", mem_size),
-                        ""
-                    ])
-                else:
-                    if first_field_ptr is None:
-                        first_field_ptr = "&" + field["name"]
-
-                    num = 1
-                    if field["is_array"]:
-                        num = field["num"]
-
-                    copy_size += typeinfo["static_size"] * num
+                self.append("")
             else:
-                if not field["is_array"]:
-                    serialize_call = "%s.serialize_msg(%s);" % (field["name"], "ptr")
-                    self.extend([set_inc_var("ptr", serialize_call), ""])
+                dyn_ptr, dyn_size = get_dyn_field_vars(field)
+                self.__serialize_dynamic_field_length(dyn_size)
+
+                if typeinfo["plain"]:
+                        mem_size = dyn_size + "*" + str(typeinfo["static_size"])
+                        self.extend([
+                            memcpy("ptr", dyn_ptr, mem_size),
+                            set_inc_var("ptr", mem_size),
+                            ""
+                        ])
                 else:
-                    if field["is_dynamic"]:
-                        items_ptr = get_dyn_field_ptr(field)
-                        cycle_limit = get_dyn_field_size(field)
-                    else:
-                        items_ptr = field["name"]
-                        cycle_limit = field["num"]
-
-                    serialize_call = "%s[i].serialize_msg(%s);" % (items_ptr, "ptr")
-
-                    self.start_for_cycle(cycle_limit),
-                    self.append(set_inc_var("ptr", serialize_call)),
-                    self.stop_cycle()
-                    self.append("")
-
-        if copy_size != 0:
-            self.__copy_struct_block(first_field_ptr, copy_size)
+                    self.__serialize_struct_array(dyn_ptr, dyn_size)
 
         self.append("return ptr - %s;" % INPUT_BUF_NAME)
         self.stop_block()
