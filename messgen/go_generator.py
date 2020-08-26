@@ -51,10 +51,6 @@ def parse_custom(t_info):
     return ".Unpack(buf[ptr:])"
 
 
-def sizeof_string(var, t_info):
-    return "2 + len(v.%s)" % var
-
-
 def sizeof_dynamic(var, t_info):
     return "2 + %i*len(v.%s)" % (t_info["element_size"], var)
 
@@ -79,7 +75,7 @@ maproto_types = {
     "uint64": {"fmt": fmt_int, "parse": parse_int, "imports": ["encoding/binary"]},
     "float32": {"fmt": fmt_float, "parse": parse_float, "imports": ["math", "encoding/binary"]},
     "float64": {"fmt": fmt_float, "parse": parse_float, "imports": ["math", "encoding/binary"]},
-    "string": {"total_size": sizeof_string, "fmt": fmt_string, "parse": parse_string, "imports": ["$MESSGEN_MODULE"]},
+    "string": {"fmt": fmt_string, "parse": parse_string, "imports": ["$MESSGEN_MODULE"]},
 }
 
 
@@ -287,22 +283,27 @@ class GoGenerator:
         type_info["name"] = f["name"]
         static_size = self._data_types_map[t]["static_size"]
         type_info["is_array"] = f["is_array"]
-        type_info["is_dynamic"] = f["is_dynamic"]
         type_info["array_size"] = f["num"]
 
         if "storage_type" not in type_info:
             type_info["storage_type"] = t
+
+        # TODO: FIXME
+        if t != "string":
+            type_info["is_dynamic"] = f["is_dynamic"]
+        else:
+            type_info["is_dynamic"] = False
 
         type_info["element_type"] = type_info["storage_type"]
         type_info["element_size"] = static_size
         if "imports" not in type_info:
             type_info["imports"] = []
 
-        if f["is_dynamic"]:
+        if type_info["is_dynamic"]:
             type_info["total_size"] = sizeof_dynamic
             type_info["storage_type"] = "[]" + type_info["storage_type"]
             type_info["imports"].append("encoding/binary")
-        elif f["is_array"]:
+        elif type_info["is_array"]:
             type_info["total_size"] = static_size * f["num"]
             type_info["storage_type"] = "[" + str(f["num"]) + "]" + type_info["storage_type"]
         else:

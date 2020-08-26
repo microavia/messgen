@@ -6,8 +6,9 @@ class DataTypesPreprocessor:
     MAX_PROTO_ID = 0x80
     MSGS_NAMESPACE = "msgs"
 
-    def __init__(self, plain_types_map, alias_types_map):
+    def __init__(self, plain_types_map, special_types_map):
         self._plain_types_map = plain_types_map
+        self._special_types_map = special_types_map
         self._types_map = {}
         self._lookup_table = {}
 
@@ -19,14 +20,12 @@ class DataTypesPreprocessor:
             }
 
         # TODO make aliases in correct way
-        for k, v in alias_types_map.items():
+        for k, v in special_types_map.items():
             self._types_map[k] = {
-                "alias": v,
-                "align": 8,
-                "static_size": 0,
+                "align": v["align"],
+                "static_size": v["size"],
                 "plain": True
             }
-            self._plain_types_map[k] = {"size": 0, "align": 0}
 
     def create_types_map(self, modules_map):
         """
@@ -134,10 +133,12 @@ class DataTypesPreprocessor:
 
             field["is_array"] = is_array(field["type"])
             field["num"] = int(get_array_size(field["type"]))
+
             if field["type"] == "string":
                 field["is_dynamic"] = True
             else:
                 field["is_dynamic"] = is_dynamic(field["type"])
+            
             field["type"] = child_norm_typename
 
             if field["is_dynamic"]:
@@ -209,7 +210,7 @@ class DataTypesPreprocessor:
     def __normalize_typename(self, module_name, typename):
         type_without_array = remove_array(typename)
 
-        if (type_without_array in self._plain_types_map) or (self.MSGS_NAMESPACE in typename):
+        if (type_without_array in self._plain_types_map) or (type_without_array in self._special_types_map) or (self.MSGS_NAMESPACE in typename):
             return str(type_without_array)
 
         if "/" in type_without_array:

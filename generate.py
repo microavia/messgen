@@ -32,9 +32,8 @@ PLAIN_TYPES = {
     "float64": {"size": 8, "align": 8},
 }
 
-ALIAS_TYPES = {
-    "string": "char[]",
-    "bytes": "uint8[]",
+SPECIAL_TYPES = {
+    "string": {"size": 1, "align": 1}
 }
 
 
@@ -125,7 +124,7 @@ def main():
 
         modules_map = load_modules(args.basedirs, args.modules)
 
-        data_types_preprocessor = DataTypesPreprocessor(PLAIN_TYPES, ALIAS_TYPES)
+        data_types_preprocessor = DataTypesPreprocessor(PLAIN_TYPES, SPECIAL_TYPES)
         data_types_map = data_types_preprocessor.create_types_map(modules_map)
         with open("dump.txt", "w+") as f:
             f.write(__dump_datatypes(modules_map, data_types_map))
