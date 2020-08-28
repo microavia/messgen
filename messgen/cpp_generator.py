@@ -680,6 +680,9 @@ class CppGenerator:
                 else:
                     var = make_variable(field["name"], c_type, field["num"])
 
+            if field.get("descr") is not None:
+                var += " // " + str(field["descr"])
+
             self.append(var)
 
     def generate_metadata(self, message_obj):

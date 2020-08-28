@@ -11,6 +11,7 @@ fields:
 
   - name: f3
     type: simple_message
+    descr: "Test comment f3"
 
   - name: f4
     type: uint8

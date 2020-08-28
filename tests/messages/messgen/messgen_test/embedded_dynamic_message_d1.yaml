@@ -2,9 +2,11 @@ id: 4
 fields:
   - name: f0
     type: uint64[]
+    descr: "Test comment f0"
 
   - name: f1
     type: simple_dynamic_message[]
+    descr: "Test comment f1"
 
   - name: f2
     type: simple_message[]
@@ -23,6 +25,7 @@ fields:
 
   - name: f7
     type: string
+    descr: "Test comment f7"
 
   - name: f8
     type: string
