@@ -13,7 +13,7 @@ from messgen import MessgenException
 MODULE_SEP = "/"
 
 generators = {
-    "c": CppGenerator,
+    "cpp": CppGenerator,
     "go": GoGenerator,
     "json": JsonGenerator,
 }
@@ -107,7 +107,7 @@ def main():
     parser.add_argument("-m", "--modules", required=True, type=str, nargs="+", help='Modules')
     parser.add_argument("-o", "--outdir", type=str, help='Output directory', default=".")
     parser.add_argument("-l", "--lang", required=True, type=str,
-                        help='Output language (c=C++, go=Golang, js=JavaScript)')
+                        help='Output language (cpp=C++, go=Golang, js=JavaScript)')
     parser.add_argument("-D", "--define", action='append', help="Define variables in 'key=value' format")
 
     args = parser.parse_args()

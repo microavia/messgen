@@ -87,7 +87,7 @@ FUNCTION(MESSGEN_GENERATE_MESSAGES BASEDIRS MODULES OUTDIR)
                 "-o"
                 ${OUTDIR}
                 "-l"
-                "c"
+                "cpp"
                 DEPENDS
                 ${GENERATOR_DEPS}
                 ${MESSGEN_INPUT_FILES}
