@@ -21,7 +21,7 @@ struct MessageInfo {
      * Get total serialized message size, including header
      * @return total serialized size
      */
-    size_t get_total_size() {
+    size_t get_total_size() const {
         return HEADER_SIZE + size;
     }
 };
