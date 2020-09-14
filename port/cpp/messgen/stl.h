@@ -10,27 +10,33 @@ namespace messgen {
 class DynamicMemoryAllocator {
 public:
     explicit DynamicMemoryAllocator(size_t size) :
-        _memory(size) {}
+        _memory(size),
+        _alloc(&_memory[0], _memory.size()) {}
 
-    operator MemoryAllocator () noexcept {
-        return MemoryAllocator(&_memory[0], _memory.size());
+    operator MemoryAllocator& () noexcept {
+        _alloc = MemoryAllocator(&_memory[0], _memory.size());
+        return _alloc;
     }
 
 private:
     std::vector<uint8_t> _memory;
+    MemoryAllocator _alloc;
 };
 
 template <size_t MEM_SIZE>
 class StaticMemoryAllocator {
 public:
-    explicit StaticMemoryAllocator() noexcept = default;
+    explicit StaticMemoryAllocator() noexcept :
+            _alloc(_memory.begin(), _memory.size()) {}
 
-    operator MemoryAllocator () noexcept {
-        return MemoryAllocator(_memory.begin(), _memory.size());
+    operator MemoryAllocator &() noexcept {
+        _alloc = MemoryAllocator(_memory.begin(), _memory.size());
+        return _alloc;
     }
 
 private:
     std::array<uint8_t, MEM_SIZE> _memory{};
+    MemoryAllocator _alloc;
 };
 
 template <class T>
