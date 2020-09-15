@@ -27,7 +27,7 @@ struct MessageInfo {
 };
 
 template<typename T>
-size_t serialize(const T &msg, uint8_t *buf, uint16_t buf_len) {
+size_t serialize(const T &msg, uint8_t *buf, size_t buf_len) {
     size_t payload_size = msg.get_size();
     size_t ser_total_size = payload_size + MessageInfo::HEADER_SIZE;
 
@@ -44,7 +44,7 @@ size_t serialize(const T &msg, uint8_t *buf, uint16_t buf_len) {
     return ser_total_size;
 }
 
-inline int get_message_info(const uint8_t *buf, uint16_t buf_len, MessageInfo &info) {
+inline int get_message_info(const uint8_t *buf, size_t buf_len, MessageInfo &info) {
     if (buf_len < MessageInfo::HEADER_SIZE) {
         return -1;
     }
