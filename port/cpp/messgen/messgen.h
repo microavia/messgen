@@ -78,4 +78,21 @@ int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
     return 0;
 }
 
+template <class F>
+size_t for_each_message(const uint8_t *data, size_t data_size, F f) {
+    const uint8_t *buf = data;
+    size_t remaining = data_size;
+
+    messgen::MessageInfo msg_info{};
+    while (0 == get_message_info(buf, remaining, msg_info)) {
+        f(msg_info);
+
+        const auto total_size = msg_info.get_total_size();
+        buf += total_size;
+        remaining -= total_size;
+    }
+
+    return buf - data;
+}
+
 }

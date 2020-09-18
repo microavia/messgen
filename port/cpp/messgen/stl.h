@@ -52,4 +52,14 @@ int get_message_info(const std::vector<uint8_t> & buf, MessageInfo &info) {
     return get_message_info(&buf[0], buf.size(), info);
 }
 
+template <class F>
+size_t for_each_message(const std::vector<uint8_t> &payload, F f) {
+    return for_each_message(&payload[0], payload.size(), f);
+}
+
+template <class T>
+Dynamic<T> make_dynamic(std::vector<T> & vec) {
+    return Dynamic<T>{&vec[0], vec.size()};
+}
+
 }
