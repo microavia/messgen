@@ -43,9 +43,19 @@ template <class T>
 size_t serialize(const T &msg, std::vector<uint8_t> & buf) {
     const size_t initial_size = buf.size();
     const size_t serialized_size = get_serialized_size(msg);
+    const size_t total_size = initial_size + serialized_size;
 
-    buf.resize(initial_size + serialized_size);
-    return serialize(msg, &buf[initial_size], serialized_size);
+    if (buf.capacity() < total_size) {
+        return 0;
+    }
+
+    buf.resize(total_size);
+    size_t res = serialize(msg, &buf[initial_size], serialized_size);
+    if (res == 0) {
+        buf.resize(initial_size);
+    }
+
+    return res;
 }
 
 int get_message_info(const std::vector<uint8_t> & buf, MessageInfo &info) {
