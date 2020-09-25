@@ -5,6 +5,10 @@
 
 namespace messgen {
 
+/**
+ * @brief Class for holding dynamic fields while parsing
+ * @note  Class is supposed to be re-created after each parse call
+ */
 class MemoryAllocator {
 public:
     MemoryAllocator(uint8_t *mem, size_t memory_size) :

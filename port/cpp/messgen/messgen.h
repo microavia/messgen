@@ -26,12 +26,25 @@ struct MessageInfo {
     }
 };
 
-
+/**
+ * @brief   Get serialized size (message size + header size)
+ * @tparam T    -   message type
+ * @param msg   -   message instance
+ * @return  number of bytes in serialized message
+ */
 template <class T>
 size_t get_serialized_size(const T & msg) {
     return msg.get_size() + MessageInfo::HEADER_SIZE;
 }
 
+/**
+ * @brief Serialize message into given buffer
+ * @tparam T        -   message type
+ * @param msg       -   message instance
+ * @param buf       -   buffer to serialize into
+ * @param buf_len   -   buffer size
+ * @return number of bytes written into buffer or 0 in case of failure
+ */
 template<typename T>
 size_t serialize(const T &msg, uint8_t *buf, size_t buf_len) {
     size_t payload_size = msg.get_size();
@@ -50,6 +63,13 @@ size_t serialize(const T &msg, uint8_t *buf, size_t buf_len) {
     return ser_total_size;
 }
 
+/**
+ * @brief Get message info from buffer
+ * @param buf           -   buffer with serialized message inside
+ * @param buf_len       -   buffer length
+ * @param info          -   where to store message info
+ * @return  0 in case of success, -1 in case of error
+ */
 inline int get_message_info(const uint8_t *buf, size_t buf_len, MessageInfo &info) {
     if (buf_len < MessageInfo::HEADER_SIZE) {
         return -1;
@@ -65,6 +85,14 @@ inline int get_message_info(const uint8_t *buf, size_t buf_len, MessageInfo &inf
     return 0;
 }
 
+/**
+ * @brief Parse message
+ * @tparam T            -   message type
+ * @param info          -   message info. See get_message_info.
+ * @param msg           -   message instance to parse into
+ * @param allocator     -   memory allocator instance
+ * @return -1 in case of error, 0 in case of success
+ */
 template<class T>
 int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
     if (info.msg_id != T::TYPE) {
@@ -78,6 +106,14 @@ int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
     return 0;
 }
 
+/**
+ * @brief   Iterate over all messages inside a buffer
+ * @tparam F            -   Message handler type
+ * @param data          -   buffer with messages
+ * @param data_size     -   buffer size
+ * @param f             -   message handler. Must override operator()(const MessageInfo &)
+ * @return  Number of bytes parsed
+ */
 template <class F>
 size_t for_each_message(const uint8_t *data, size_t data_size, F f) {
     const uint8_t *buf = data;
