@@ -89,7 +89,7 @@ int get_message_info(const std::vector<uint8_t> & buf, MessageInfo &info) {
  * @brief Helper wrapper around std::vector. See messgen.h for_each_message().
  */
 template <class F>
-size_t for_each_message(const std::vector<uint8_t> &payload, F f) {
+size_t for_each_message(const std::vector<uint8_t> &payload, F& f) {
     return for_each_message(&payload[0], payload.size(), f);
 }
 

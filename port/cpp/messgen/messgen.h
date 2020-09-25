@@ -115,7 +115,7 @@ int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
  * @return  Number of bytes parsed
  */
 template <class F>
-size_t for_each_message(const uint8_t *data, size_t data_size, F f) {
+size_t for_each_message(const uint8_t *data, size_t data_size, F& f) {
     const uint8_t *buf = data;
     size_t remaining = data_size;
 
