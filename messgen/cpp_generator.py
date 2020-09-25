@@ -204,6 +204,7 @@ def allocate_memory(dst, type, size):
     return ["%s = %s.alloc<%s>(%s);" % (dst, INPUT_ALLOC_NAME, type, str(size)),
             "if (%s == nullptr) {return 0;}" % dst]
 
+
 def get_dynamic_field_items_num():
     size = ""
     for i in range(DYN_FIELD_LEN_SIZE):
@@ -226,16 +227,15 @@ def is_not_null(s):
 
 
 def if_not_null(s):
-    return ("if (%s)" % is_not_null(s))
+    return "if (%s)" % is_not_null(s)
 
 
 def if_null(s):
-    return ("if (%s)" % is_null(s))
-
+    return "if (%s)" % is_null(s)
 
 
 def arr_item(arr, idx):
-    return ("%s[%s]" % (arr, idx)) 
+    return "%s[%s]" % (arr, idx)
 
 
 class CppGenerator:
@@ -427,7 +427,6 @@ class CppGenerator:
                 self.start_block(if_not_null(field["name"]))
                 self.append(set_inc_var("size", strlen(field["name"])))
                 self.stop_block()
-                    
 
         self.append("return size;")
         self.stop_block()
@@ -436,6 +435,7 @@ class CppGenerator:
         self.start_block("bool operator== (const " + typename + "& " + "other) const")
 
         if len(datatype["fields"]) == 0:
+            self.append("(void)other;")
             self.append("return true;")
             self.stop_block()
         else:
@@ -571,6 +571,9 @@ class CppGenerator:
         if message["dynamic_fields_cnt"] == 0:
             self.append(ignore_variable(INPUT_ALLOC_NAME))
 
+        if len(message["fields"]) == 0:
+            self.append("(void)len;")
+
         self.extend([
             "const uint8_t * ptr = %s;" % INPUT_BUF_NAME,
             "char * string_tmp_buf;",
@@ -579,10 +582,6 @@ class CppGenerator:
             "(void)dyn_parsed_len;",
             ""
         ])
-
-        dyn_field_id = 0
-        dyn_ptr_var = None
-        dyn_size_var = None
 
         ### Process plain fields
         copy_size, current_field_pos = self.__get_plain_fields_size_and_last_field_position(message["fields"])
@@ -709,7 +708,7 @@ class CppGenerator:
         fields_description += "\""
         nested_structs_metadata += "nullptr}"
 
-        self.append("static const messgen::Metadata *nested_msgs[] = %s;" % nested_structs_metadata);
+        self.append("static const messgen::Metadata *nested_msgs[] = %s;" % nested_structs_metadata)
         self.start_block("const messgen::Metadata %s::METADATA = " % message_obj["name"])
         self.extend([
             "\"%s\"," % message_obj["name"],

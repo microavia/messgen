@@ -26,6 +26,12 @@ struct MessageInfo {
     }
 };
 
+
+template <class T>
+size_t get_serialized_size(const T & msg) {
+    return msg.get_size() + MessageInfo::HEADER_SIZE;
+}
+
 template<typename T>
 size_t serialize(const T &msg, uint8_t *buf, size_t buf_len) {
     size_t payload_size = msg.get_size();
@@ -38,7 +44,7 @@ size_t serialize(const T &msg, uint8_t *buf, size_t buf_len) {
     // info.seq and info.cls must be filled by caller
     buf[0] = T::TYPE;
     buf[1] = payload_size;
-    buf[2] = payload_size >> 8;
+    buf[2] = payload_size >> 8U;
 
     msg.serialize_msg(buf + MessageInfo::HEADER_SIZE);
     return ser_total_size;
@@ -70,6 +76,23 @@ int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
     }
 
     return 0;
+}
+
+template <class F>
+size_t for_each_message(const uint8_t *data, size_t data_size, F f) {
+    const uint8_t *buf = data;
+    size_t remaining = data_size;
+
+    messgen::MessageInfo msg_info{};
+    while (0 == get_message_info(buf, remaining, msg_info)) {
+        f(msg_info);
+
+        const auto total_size = msg_info.get_total_size();
+        buf += total_size;
+        remaining -= total_size;
+    }
+
+    return buf - data;
 }
 
 }
