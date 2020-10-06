@@ -29,8 +29,10 @@ PLAIN2CPP_TYPES_MAP = {
     "float64": "double",
 }
 
+
 def strlen(s):
     return "strlen(%s)" % s
+
 
 def to_cpp_type(_type):
     if _type in PLAIN2CPP_TYPES_MAP:
@@ -120,8 +122,6 @@ def simplify_type_namespace(typename, current_namespace):
     typename_entries = typename.split("::")
     ns_entries = current_namespace.split("::")
 
-    iter_size = min(len(typename_entries), len(ns_entries))
-
     i = 0
     while typename_entries[i] == ns_entries[i]:
         i += 1
@@ -151,15 +151,27 @@ def generate_constants_file(namespace, constants):
     code = [
         "#pragma once",
         "",
+        "#include <messgen/bitmasks.h>",
         "#include <cstdint>",
         "",
         *open_namespace(namespace),
     ]
 
+    # Generate enums
     for const in constants:
+        code.append("")
         code.extend(make_enum(const["name"], to_cpp_type(const["basetype"]), const["fields"]))
 
     code.extend(close_namespace(namespace))
+
+    # Enable bitmask operations for generated enums
+    code.extend(open_namespace("messgen"))
+    for const in constants:
+        if const.get("bitmask") is True:
+            full_type = namespace + "::" + const["name"]
+            code.append("ENABLE_BITMASK_OPERATORS(%s);" % full_type)
+    code.extend(close_namespace("messgen"))
+
     return code
 
 
