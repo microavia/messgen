@@ -30,7 +30,7 @@ PLAIN2CPP_TYPES_MAP = {
 }
 
 def strlen(s):
-    return "strlen(%s)" % s
+    return "%s.length()" % s
 
 def to_cpp_type(_type):
     if _type in PLAIN2CPP_TYPES_MAP:
@@ -371,6 +371,7 @@ class CppGenerator:
 
         includes = ["#include <cstdint>",
                     "#include <cstring>",
+                    "#include <string_view>",
                     "#include <messgen/Metadata.h>",
                     "#include <messgen/Dynamic.h>",
                     "#include <messgen/MemoryAllocator.h>",
@@ -424,9 +425,7 @@ class CppGenerator:
                 self.append(set_inc_var("size", "%s.get_dynamic_size()" % field["name"]))
 
             elif field["type"] == "string":
-                self.start_block(if_not_null(field["name"]))
                 self.append(set_inc_var("size", strlen(field["name"])))
-                self.stop_block()
 
         self.append("return size;")
         self.stop_block()
@@ -442,16 +441,7 @@ class CppGenerator:
             for field in datatype["fields"]:
                 typeinfo = self._data_types_map[field["type"]]
 
-                if field["type"] == "string":
-                    self.extend([
-                        "if ((%s) && (%s)) {return false;}" % (is_null(field["name"]), is_not_null("other." + field["name"])),
-                        "if ((%s) && (%s)) {return false;}" % (is_not_null(field["name"]), is_null("other." + field["name"])),
-                        "if ((%s) && (%s)) { " % (is_not_null(field["name"]), is_not_null("other." + field["name"])),
-                        INDENT + "if (strcmp(%s, %s) != 0) {return false;}" % (field["name"], "other." + field["name"]),
-                        "}",
-                        ""
-                    ])
-                elif not field["is_array"]:
+                if not field["is_array"]:
                     self.append("if (!(%s == other.%s)) {return false;}" % (field["name"], field["name"]))
                 else:
                     if field["is_dynamic"]:
@@ -534,16 +524,12 @@ class CppGenerator:
                 if field["is_array"]:
                     raise MessgenException("Array of strings is not supported in C++ generator")
 
-                self.start_block(if_not_null(field["name"]))
                 self.append(set_var("dyn_field_len", strlen(field["name"])))
                 self.__serialize_dynamic_field_length("dyn_field_len")
                 self.extend([
-                    memcpy("ptr", field["name"], "dyn_field_len"),
+                    memcpy("ptr", field["name"] + ".data()", "dyn_field_len"),
                     set_inc_var("ptr", "dyn_field_len"),
                 ])
-                self.continue_block("else")
-                self.__serialize_dynamic_field_length(0)
-                self.stop_block()
                 self.append("")
             else:
                 dyn_ptr, dyn_size = get_dyn_field_vars(field)
@@ -630,17 +616,16 @@ class CppGenerator:
                 self.start_block("if (dyn_parsed_len > 0)")
                 self.extend([
                     # Increase allocation size by 1 byte for null terminator
-                    *allocate_memory("string_tmp_buf", "char", "dyn_parsed_len + 1"),
+                    *allocate_memory("string_tmp_buf", "char", "dyn_parsed_len"),
                     "if (len < dyn_parsed_len) {return 0;}",
                     memcpy("string_tmp_buf", "ptr", "dyn_parsed_len"),
-                    set_var(arr_item("string_tmp_buf", "dyn_parsed_len"), "'\\0'"),
-                    set_var(field["name"], "string_tmp_buf"),
+                    set_var(field["name"], "std::string_view{string_tmp_buf, dyn_parsed_len}"),
                     set_inc_var("ptr", "dyn_parsed_len"),
                     set_dec_var("len", "dyn_parsed_len"),
                     ""
                 ])
                 self.continue_block("else")
-                self.append(set_var(field["name"], "nullptr"))
+                self.append(set_var(field["name"], "{}"))
                 self.stop_block()
             else:
                 dyn_ptr_var, dyn_size_var = get_dyn_field_vars(field)
@@ -671,7 +656,7 @@ class CppGenerator:
     def generate_data_fields(self, fields):
         for field in fields:
             if field["type"] == "string":
-                var = make_variable(field["name"], "const char *", 0)
+                var = make_variable(field["name"], "std::string_view", 0)
             else:
                 c_type = to_cpp_type(field["type"])
                 if field["is_dynamic"]:
