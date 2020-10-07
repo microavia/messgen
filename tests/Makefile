@@ -15,7 +15,7 @@ all: cpp_tests_run
 
 messages: .done.messages
 .done.messages: $(MESSAGES_YAML)
-	python3 ../generate.py --basedirs $(shell pwd)/messages --modules messgen/messgen_test --outdir $(shell pwd)/cpp --lang c
+	python3 ../generate.py --basedirs $(shell pwd)/messages --modules messgen/messgen_test --outdir $(shell pwd)/cpp --lang cpp
 	touch .done.messages
 
 cpp_tests_run: cpp_tests_build
