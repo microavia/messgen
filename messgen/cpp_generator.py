@@ -371,7 +371,9 @@ class CppGenerator:
 
         includes = ["#include <cstdint>",
                     "#include <cstring>",
-                    "#include <string_view>",
+                    "#if (__cplusplus >= 201703L)",
+                    "#    include <string_view>",
+                    "#endif",
                     "#include <messgen/Metadata.h>",
                     "#include <messgen/Dynamic.h>",
                     "#include <messgen/MemoryAllocator.h>",
