@@ -59,8 +59,8 @@ def load_modules(basedirs, modules):
                         for m in module_messages:
                             if m["id"] == msg["id"]:
                                 raise MessgenException(
-                                    "Duplicate ID=%s for messages '%s' and '%s' in module module_name"
-                                    % (m["id"], m["name"], msg["name"]))
+                                    "Duplicate ID=%s for messages '%s' and '%s' in module %s"
+                                    % (m["id"], m["name"], msg["name"], module_name))
                         module_messages.append(msg)
 
         modules_map[module_name] = {
