@@ -43,15 +43,15 @@ size_t get_serialized_size(const T & msg) {
  * @param msg       -   message instance
  * @param buf       -   buffer to serialize into
  * @param buf_len   -   buffer size
- * @return number of bytes written into buffer or 0 in case of failure
+ * @return number 0 in case of success, -1 in case of error
  */
 template<typename T>
-size_t serialize(const T &msg, uint8_t *buf, size_t buf_len) {
+int serialize(const T &msg, uint8_t *buf, size_t buf_len) {
     size_t payload_size = msg.get_size();
     size_t ser_total_size = payload_size + MessageInfo::HEADER_SIZE;
 
     if (buf_len < ser_total_size) {
-        return 0;
+        return -1;
     }
 
     // info.seq and info.cls must be filled by caller
@@ -99,11 +99,7 @@ int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
         return -1;
     }
 
-    if (msg.parse_msg(info.payload, info.size, allocator) == 0) {
-        return -1;
-    }
-
-    return 0;
+    return msg.parse_msg(info.payload, info.size, allocator);
 }
 
 /**
