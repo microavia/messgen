@@ -74,7 +74,7 @@ protected:
         _embedded_dyn_d1_msg.f5[0] = gen_random_simple_dynamic_msg();
         _embedded_dyn_d1_msg.f5[1] = gen_random_simple_dynamic_msg();
         _embedded_dyn_d1_msg.f6 = gen_random_simple_dynamic_msg();
-        _embedded_dyn_d1_msg.f7 = nullptr;
+        _embedded_dyn_d1_msg.f7 = "";
         _embedded_dyn_d1_msg.f8 = "Embedded string";
 
         memset(&_ser_buf[0], 0, SERIALIZE_BUF_SIZE);
