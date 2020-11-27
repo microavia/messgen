@@ -6,6 +6,7 @@
 
 
 namespace messgen {
+namespace stl {
 
 /**
  * @brief Class which allows to dynamically allocate memory for messgen parsing
@@ -15,10 +16,10 @@ namespace messgen {
 class DynamicMemoryAllocator {
 public:
     explicit DynamicMemoryAllocator(size_t size) :
-        _memory(size),
-        _alloc(&_memory[0], _memory.size()) {}
+            _memory(size),
+            _alloc(&_memory[0], _memory.size()) {}
 
-    operator MemoryAllocator& () noexcept {
+    operator MemoryAllocator &() noexcept {
         _alloc = MemoryAllocator(&_memory[0], _memory.size());
         return _alloc;
     }
@@ -34,10 +35,10 @@ private:
  * @warning Each parse call on this class will clear memory, so if you want to do multiple parse calls
  *          store it into temporary MemoryAllocator& variable.
  */
-template <size_t MEM_SIZE>
+template<size_t MEM_SIZE>
 class StaticMemoryAllocator {
 public:
-    explicit StaticMemoryAllocator() noexcept :
+    explicit StaticMemoryAllocator() noexcept:
             _alloc(_memory.begin(), _memory.size()) {}
 
     operator MemoryAllocator &() noexcept {
@@ -57,21 +58,21 @@ private:
  * @tparam T    -   message type
  * @param msg   -   message instance
  * @param buf   -   vector to serialize to
- * @return  0 in case of failure, number of bytes written in case of success
+ * @return  0 in case of success, -1 in case of error
  */
-template <class T>
-size_t serialize(const T &msg, std::vector<uint8_t> & buf) {
+template<class T>
+int serialize(const T &msg, std::vector<uint8_t> &buf) {
     const size_t initial_size = buf.size();
     const size_t serialized_size = get_serialized_size(msg);
     const size_t total_size = initial_size + serialized_size;
 
     if (buf.capacity() < total_size) {
-        return 0;
+        return -1;
     }
 
     buf.resize(total_size);
-    size_t res = serialize(msg, &buf[initial_size], serialized_size);
-    if (res == 0) {
+    int res = messgen::serialize(msg, &buf[initial_size], serialized_size);
+    if (res == -1) {
         buf.resize(initial_size);
     }
 
@@ -79,26 +80,42 @@ size_t serialize(const T &msg, std::vector<uint8_t> & buf) {
 }
 
 /**
+ * @brief Parse message with std::vector as memory pool
+ * @tparam T            -   message type
+ * @param info          -   message info
+ * @param msg           -   message to parse
+ * @param memory_pool   -   memory pool
+ * @return  0 in case of success, -1 in case of error
+ */
+template<class T>
+inline int parse(const messgen::MessageInfo &info, T &msg,
+                 std::vector<uint8_t> memory_pool = std::vector<uint8_t>()) {
+    messgen::MemoryAllocator allocator(&memory_pool[0], memory_pool.capacity());
+    return messgen::parse(info, msg, allocator);
+}
+
+/**
  * @brief Helper wrapper around std::vector. See messgen.h get_message_info().
  */
-inline int get_message_info(const std::vector<uint8_t> & buf, MessageInfo &info) {
+inline int get_message_info(const std::vector<uint8_t> &buf, MessageInfo &info) {
     return get_message_info(&buf[0], buf.size(), info);
 }
 
 /**
  * @brief Helper wrapper around std::vector. See messgen.h for_each_message().
  */
-template <class F>
-size_t for_each_message(const std::vector<uint8_t> &payload, F& f) {
+template<class F>
+size_t for_each_message(const std::vector<uint8_t> &payload, F &f) {
     return for_each_message(&payload[0], payload.size(), f);
 }
 
 /**
  * @brief Create Dynamic<T> from std::vector<T>.
  */
-template <class T>
-Dynamic<T> make_dynamic(std::vector<T> & vec) {
+template<class T>
+Dynamic <T> make_dynamic(std::vector<T> &vec) {
     return Dynamic<T>{&vec[0], vec.size()};
 }
 
+}
 }
