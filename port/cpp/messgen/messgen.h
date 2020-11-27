@@ -43,7 +43,7 @@ size_t get_serialized_size(const T & msg) {
  * @param msg       -   message instance
  * @param buf       -   buffer to serialize into
  * @param buf_len   -   buffer size
- * @return number 0 in case of success, -1 in case of error
+ * @return number of bytes written in case of success, -1 in case of error
  */
 template<typename T>
 int serialize(const T &msg, uint8_t *buf, size_t buf_len) {
@@ -91,7 +91,7 @@ inline int get_message_info(const uint8_t *buf, size_t buf_len, MessageInfo &inf
  * @param info          -   message info. See get_message_info.
  * @param msg           -   message instance to parse into
  * @param allocator     -   memory allocator instance
- * @return -1 in case of error, 0 in case of success
+ * @return number of bytes parsed in case of success, -1 in case of error
  */
 template<class T>
 int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
