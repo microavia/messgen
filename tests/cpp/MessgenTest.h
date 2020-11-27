@@ -95,6 +95,7 @@ protected:
     messgen::msgs::messgen_test::embedded_message_d2 _embedded_d2_msg{};
     messgen::msgs::messgen_test::simple_dynamic_message _simple_dynamic_msg{};
     messgen::msgs::messgen_test::embedded_dynamic_message_d1 _embedded_dyn_d1_msg{};
+    messgen::msgs::messgen_test::empty _empty_msg{};
 
     static constexpr size_t MEMORY_POOL_SIZE = 1024*10;
     static constexpr size_t SERIALIZE_BUF_SIZE = 1024*2;
@@ -198,6 +199,19 @@ TEST_F(TestMessgen, PlainMessageTest) {
     ASSERT_EQ(_simple_msg, parsed_msg);
 }
 
+TEST_F(TestMessgen, EmptyMessgenTest) {
+    using namespace messgen::msgs::messgen_test;
+
+    serialize_and_assert(_empty_msg);
+
+    messgen::MessageInfo msg_info{};
+    ASSERT_EQ(messgen::stl::get_message_info(_ser_buf, msg_info), OK);
+    ASSERT_EQ(msg_info.msg_id, _empty_msg.TYPE);
+
+    messgen::msgs::messgen_test::empty parsed_msg{};
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg), msg_info.size);
+    ASSERT_EQ(_empty_msg, parsed_msg);
+}
 
 TEST_F(TestMessgen, NestedMessagesTest) {
     using namespace messgen::msgs::messgen_test;
