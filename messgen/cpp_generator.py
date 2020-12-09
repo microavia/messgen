@@ -775,10 +775,10 @@ class CppGenerator:
         parse_call = "%s[i].parse_msg(%s, len, %s)" % (field_ptr, "ptr", INPUT_ALLOC_NAME)
         self.start_for_cycle(str(size))
         self.extend([
-            set_var("dyn_parsed_len", parse_call),
-            "if (dyn_parsed_len < 0) {return -1;}",
-            set_inc_var("ptr", "dyn_parsed_len"),
-            set_dec_var("len", "dyn_parsed_len"),
+            set_var("parse_result", parse_call),
+            "if (parse_result < 0) {return -1;}",
+            set_inc_var("ptr", "parse_result"),
+            set_dec_var("len", "parse_result"),
         ])
         self.stop_cycle()
         self.append("")
