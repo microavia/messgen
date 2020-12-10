@@ -546,18 +546,8 @@ class CppGenerator:
                 ])
                 self.append("")
             else:
-                dyn_ptr, dyn_size = get_dyn_field_vars(field)
-                self.__serialize_dynamic_field_length(dyn_size)
-
-                if typeinfo["plain"]:
-                    mem_size = dyn_size + "*" + str(typeinfo["static_size"])
-                    self.extend([
-                        memcpy("ptr", dyn_ptr, mem_size),
-                        set_inc_var("ptr", mem_size),
-                        ""
-                    ])
-                else:
-                    self.__serialize_struct_array(dyn_ptr, dyn_size)
+                serialize_call = "%s.serialize_msg(%s)" % (field["name"], "ptr")
+                self.append(set_inc_var("ptr", serialize_call))
 
         self.append("return ptr - %s;" % INPUT_BUF_NAME)
         self.stop_block()
@@ -649,25 +639,14 @@ class CppGenerator:
                 self.append(set_var(field["name"], "{}"))
                 self.stop_block()
             else:
-                dyn_ptr_var, dyn_size_var = get_dyn_field_vars(field)
+                parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
                 self.extend([
-                    set_var(dyn_size_var, dyn_field_items_num),
-                    set_inc_var("ptr", DYN_FIELD_LEN_SIZE),
-                    set_dec_var("len", DYN_FIELD_LEN_SIZE),
-                    *allocate_memory(dyn_ptr_var, to_cpp_type(field["type"]), dyn_size_var)
+                    parse_call,
+                    "if (parse_result < 0) { return -1; }"
                 ])
 
-                if typeinfo["plain"]:
-                    mem_size = dyn_size_var + " * " + str(typeinfo["static_size"])
-                    self.extend([
-                        "if (len < %s) {return -1;}" % mem_size,
-                        memcpy(dyn_ptr_var, "ptr", mem_size),
-                        set_inc_var("ptr", mem_size),
-                        set_dec_var("len", mem_size),
-                        ""
-                    ])
-                else:
-                    self.__parse_struct_array(dyn_ptr_var, dyn_size_var)
+                self.append(set_inc_var("ptr", "parse_result"))
+
 
         self.append("return static_cast<int>(ptr - %s);" % INPUT_BUF_NAME)
         self.stop_block()
