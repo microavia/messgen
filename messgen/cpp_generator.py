@@ -309,6 +309,7 @@ class CppGenerator:
     def __generate_message_header(self, namespace, message):
         self.reset()
         msg_struct, msg_includes = self.generate_message(message)
+        msg_simple_detector = self.generate_detector(namespace, message)
 
         header = [
             "#pragma once",
@@ -320,7 +321,9 @@ class CppGenerator:
             "",
             *msg_struct,
             "",
-            *close_namespace(namespace)
+            *close_namespace(namespace),
+            "",
+            *msg_simple_detector
         ]
 
         return header
@@ -400,6 +403,24 @@ class CppGenerator:
             includes.append(inc)
 
         return list(self._code), includes
+
+    def generate_detector(self, namespace, message_obj):
+        declaration = ["struct SimpleDetector<%s::%s> {" % (namespace, message_obj["name"])]
+        using = ["    using suspect = %s::%s;" % (namespace, message_obj["name"])]
+        fields = ["        && SimpleDetector<decltype(suspect::%s)>::is_simple_enough" % field["name"] for field in message_obj["fields"]]
+        return [
+            *open_namespace("messgen"),
+            "",
+            "template<>",
+            *declaration,
+            *using,
+            "    static const bool is_simple_enough = sizeof(suspect) == suspect::STATIC_SIZE",
+            *fields,
+            "    ;",
+            "};",
+            "",
+            *close_namespace("messgen")
+        ]
 
     def generate_get_size_method(self):
         self.start_block("size_t get_size() const")

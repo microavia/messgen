@@ -316,3 +316,69 @@ TEST_F(TestMessgen, TestEmbeddedDynamicMessage) {
     ASSERT_EQ(messgen::stl::parse(msg_info, parsed_embedded_dyn_msg, _memory_pool), msg_info.size);
     ASSERT_EQ(_embedded_dyn_d1_msg, parsed_embedded_dyn_msg);
 }
+
+TEST_F(TestMessgen, SimpleDetectorIntegrals) {
+    static_assert(messgen::SimpleDetector<char>::is_simple_enough, "char");
+    static_assert(messgen::SimpleDetector<uint8_t>::is_simple_enough, "uint8_t");
+    static_assert(messgen::SimpleDetector<uint16_t>::is_simple_enough, "uint16_t");
+    static_assert(messgen::SimpleDetector<uint32_t>::is_simple_enough, "uint32_t");
+    static_assert(messgen::SimpleDetector<uint64_t>::is_simple_enough, "uint64_t");
+    static_assert(messgen::SimpleDetector<int8_t>::is_simple_enough,"int8_t");
+    static_assert(messgen::SimpleDetector<int16_t>::is_simple_enough, "int16_t");
+    static_assert(messgen::SimpleDetector<int32_t>::is_simple_enough, "int32_t");
+    static_assert(messgen::SimpleDetector<int64_t>::is_simple_enough, "int64_t");
+    static_assert(messgen::SimpleDetector<float>::is_simple_enough, "float");
+    static_assert(messgen::SimpleDetector<double>::is_simple_enough, "double");
+    SUCCEED();
+}
+
+TEST_F(TestMessgen, SimpleDetectorDynamics) {
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<char>>::is_simple_enough, "char");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<uint8_t>>::is_simple_enough, "uint8_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<uint16_t>>::is_simple_enough, "uint16_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<uint32_t>>::is_simple_enough, "uint32_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<uint64_t>>::is_simple_enough, "uint64_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<int8_t>>::is_simple_enough,"int8_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<int16_t>>::is_simple_enough, "int16_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<int32_t>>::is_simple_enough, "int32_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<int64_t>>::is_simple_enough, "int64_t");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<float>>::is_simple_enough, "float");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<double>>::is_simple_enough, "double");
+    SUCCEED();
+}
+
+TEST_F(TestMessgen, SimpleDetectorArrays) {
+    static_assert(messgen::SimpleDetector<char[]>::is_simple_enough, "char");
+    static_assert(messgen::SimpleDetector<uint8_t[]>::is_simple_enough, "uint8_t");
+    static_assert(messgen::SimpleDetector<uint16_t[]>::is_simple_enough, "uint16_t");
+    static_assert(messgen::SimpleDetector<uint32_t[]>::is_simple_enough, "uint32_t");
+    static_assert(messgen::SimpleDetector<uint64_t[]>::is_simple_enough, "uint64_t");
+    static_assert(messgen::SimpleDetector<int8_t[]>::is_simple_enough,"int8_t");
+    static_assert(messgen::SimpleDetector<int16_t[]>::is_simple_enough, "int16_t");
+    static_assert(messgen::SimpleDetector<int32_t[]>::is_simple_enough, "int32_t");
+    static_assert(messgen::SimpleDetector<int64_t[]>::is_simple_enough, "int64_t");
+    static_assert(messgen::SimpleDetector<float[]>::is_simple_enough, "float");
+    static_assert(messgen::SimpleDetector<double[]>::is_simple_enough, "double");
+
+    static_assert(false == messgen::SimpleDetector<std::string_view[2]>::is_simple_enough, "string_view");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<double>[4]>::is_simple_enough, "double");
+
+    SUCCEED();
+}
+
+TEST_F(TestMessgen, SimpleDetectorStrings) {
+    static_assert(messgen::SimpleDetector<char[5]>::is_simple_enough, "char");
+
+    static_assert(false == messgen::SimpleDetector<std::string_view>::is_simple_enough, "string_view");
+    static_assert(false == messgen::SimpleDetector<messgen::Dynamic<char>>::is_simple_enough, "dynamic char");
+
+    SUCCEED();
+}
+
+TEST_F(TestMessgen, SimpleDetectorStructs) {
+    static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::simple_message>::is_simple_enough, "simple_message");
+    static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::implicit_padding>::is_simple_enough, "implicit_padding");
+    static_assert(true == messgen::SimpleDetector<messgen::msgs::messgen_test::explicit_padding>::is_simple_enough, "explicit_padding"
+                                                                                                                    );
+    SUCCEED();
+}
