@@ -611,13 +611,13 @@ class CppGenerator:
         for field in message["fields"][current_field_pos:]:
             typeinfo = self._data_types_map[field["type"]]
 
-            self.extend([
-                "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,
-            ])
-
-            dyn_field_items_num = get_dynamic_field_items_num()
-
             if field["type"] == "string":
+                self.extend([
+                    "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,
+                ])
+
+                dyn_field_items_num = get_dynamic_field_items_num()
+
                 self.extend([
                     set_var("dyn_parsed_len", dyn_field_items_num),
                     set_inc_var("ptr", DYN_FIELD_LEN_SIZE),
