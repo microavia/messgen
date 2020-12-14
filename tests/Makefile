@@ -5,8 +5,8 @@ CPP := g++
 CPPFLAGS = -Wall -std=c++17 -O0 -g -c -I${PWD}/cpp -I${PWD}/../port/cpp
 LDFLAGS = -pthread -lgtest
 
-CPP_HEADERS := ${wildcard cpp/*.h} ${wildcard cpp/messgen/msgs/messgen_test/*.h}
-CPP_SOURCES := ${wildcard cpp/*.cpp} ${wildcard cpp/messgen/msgs/messgen_test/*.cpp}
+CPP_HEADERS := ${wildcard cpp/*.h} ${wildcard cpp/super/duper/project/*.h} ${wildcard cpp/messgen/msgs/messgen_test/*.h}
+CPP_SOURCES := ${wildcard cpp/*.cpp} ${wildcard cpp/super/duper/project/*.cpp} ${wildcard cpp/messgen/msgs/messgen_test/*.cpp}
 CPP_OBJECTS := ${CPP_SOURCES:.cpp=.o}
 
 .PHONY: all cpp_tests_run messages clean

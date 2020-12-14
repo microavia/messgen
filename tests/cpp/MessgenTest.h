@@ -378,7 +378,15 @@ TEST_F(TestMessgen, SimpleDetectorStrings) {
 TEST_F(TestMessgen, SimpleDetectorStructs) {
     static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::simple_message>::is_simple_enough, "simple_message");
     static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::implicit_padding>::is_simple_enough, "implicit_padding");
-    static_assert(true == messgen::SimpleDetector<messgen::msgs::messgen_test::explicit_padding>::is_simple_enough, "explicit_padding"
-                                                                                                                    );
+    static_assert(true == messgen::SimpleDetector<messgen::msgs::messgen_test::explicit_padding>::is_simple_enough, "explicit_padding");
+
+    SUCCEED();
+}
+
+TEST_F(TestMessgen, UseExisting) {
+    static_assert(true == messgen::SimpleDetector<entities::msgs::Existing>::is_simple_enough, "existing");
+    static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::use_existing>::is_simple_enough, "use existing");
+
+    static_assert(std::is_same<entities::msgs::Existing, super::duper::project::existing>::value, "aliasing");
     SUCCEED();
 }
