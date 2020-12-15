@@ -28,12 +28,14 @@ struct SimpleDetector<T[N]> {
 template<typename T, bool S>
 struct Dynamic;
 
+namespace detail {
+
 template<typename T>
 struct Serializer;
 
 template<typename T>
 struct Serializer<Dynamic<T, true>> {
-    static size_t write(uint8_t* buf, const Dynamic<T, true> dynamic) {
+    static size_t serialize(uint8_t* buf, const Dynamic<T, true>& dynamic) {
         auto bytes = dynamic.size * sizeof(T);
         std::memcpy(buf, dynamic.ptr, bytes);
         return bytes;
@@ -42,7 +44,7 @@ struct Serializer<Dynamic<T, true>> {
 
 template<typename T>
 struct Serializer<Dynamic<T, false>> {
-    static size_t write(uint8_t* buf, const Dynamic<T, false> dynamic) {
+    static size_t serialize(uint8_t* buf, const Dynamic<T, false>& dynamic) {
         uint8_t* dst = buf;
         for (size_t i = 0; i < dynamic.size; ++i) {
             dst += dynamic.ptr[i].serialize_msg(dst);
@@ -50,6 +52,37 @@ struct Serializer<Dynamic<T, false>> {
         return dst - buf;
     }
 };
+
+template<typename T>
+struct Parser;
+
+template<typename T>
+struct Parser<Dynamic<T, true>> {
+    static size_t parse(const uint8_t* buf, uint16_t, MemoryAllocator& allocator, Dynamic<T, true>& dynamic) {
+        auto bytes = dynamic.size * sizeof(T);
+        memcpy(dynamic.ptr, buf, bytes);
+        return bytes;
+    }
+};
+
+template<typename T>
+struct Parser<Dynamic<T, false>> {
+    static size_t parse(const uint8_t* buf, uint16_t len, MemoryAllocator& allocator, Dynamic<T, false>& dynamic) {
+        const uint8_t *src = buf;
+        for (size_t i = 0; i < dynamic.size; ++i) {
+            auto dyn_parsed_len = dynamic.ptr[i].parse_msg(src, len, allocator);
+            if (dyn_parsed_len == 0) {
+                return 0;
+            }
+            src += dyn_parsed_len;
+            len -= dyn_parsed_len;
+        }
+
+        return src - buf;
+    }
+};
+
+}
 
 template<class T, bool SIMPLE = SimpleDetector<T>::is_simple_enough>
 struct Dynamic {
@@ -78,7 +111,7 @@ struct Dynamic {
         std::memcpy(dst, std::addressof(this->size), sizeof(this->size));
         dst += sizeof(this->size);
 
-        dst += Serializer<this_type>::write(dst, *this);
+        dst += detail::Serializer<this_type>::serialize(dst, *this);
 
         return dst - buf;
     }
@@ -95,20 +128,7 @@ struct Dynamic {
         this->ptr = allocator.alloc<T>(this->size);
         if (nullptr == this->ptr) { return 0; }
 
-        if constexpr (SIMPLE) {
-            auto bytes = this->size * sizeof(T);
-            memcpy(this->ptr, src, bytes);
-            src += bytes;
-        } else {
-            for (size_t i = 0; i < this->size; ++i) {
-                auto dyn_parsed_len = this->ptr[i].parse_msg(src, len, allocator);
-                if (dyn_parsed_len == 0) {
-                    return 0;
-                }
-                src += dyn_parsed_len;
-                len -= dyn_parsed_len;
-            }
-        }
+        src += detail::Parser<this_type>::parse(src, len, allocator, *this);
 
         return src - buf;
     }
