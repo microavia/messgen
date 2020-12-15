@@ -25,8 +25,36 @@ struct SimpleDetector<T[N]> {
     static const bool is_simple_enough = std::is_integral<T>::value || std::is_floating_point<T>::value;
 };
 
+template<typename T, bool S>
+struct Dynamic;
+
+template<typename T>
+struct Serializer;
+
+template<typename T>
+struct Serializer<Dynamic<T, true>> {
+    static size_t write(uint8_t* buf, const Dynamic<T, true> dynamic) {
+        auto bytes = dynamic.size * sizeof(T);
+        std::memcpy(buf, dynamic.ptr, bytes);
+        return bytes;
+    }
+};
+
+template<typename T>
+struct Serializer<Dynamic<T, false>> {
+    static size_t write(uint8_t* buf, const Dynamic<T, false> dynamic) {
+        uint8_t* dst = buf;
+        for (size_t i = 0; i < dynamic.size; ++i) {
+            dst += dynamic.ptr[i].serialize_msg(dst);
+        }
+        return dst - buf;
+    }
+};
+
 template<class T, bool SIMPLE = SimpleDetector<T>::is_simple_enough>
 struct Dynamic {
+    using this_type = Dynamic<T, SIMPLE>;
+
     T *ptr;
     uint16_t size;
 
@@ -50,15 +78,7 @@ struct Dynamic {
         std::memcpy(dst, std::addressof(this->size), sizeof(this->size));
         dst += sizeof(this->size);
 
-        if constexpr (SIMPLE) {
-            auto bytes = this->size * sizeof(T);
-            std::memcpy(dst, this->ptr, bytes);
-            dst += bytes;
-        } else {
-            for (size_t i = 0; i < this->size; ++i) {
-                dst += this->ptr[i].serialize_msg(dst);
-            }
-        }
+        dst += Serializer<this_type>::write(dst, *this);
 
         return dst - buf;
     }
