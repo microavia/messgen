@@ -67,12 +67,12 @@ struct Parser<Dynamic<T, true>> {
 
 template<typename T>
 struct Parser<Dynamic<T, false>> {
-    static size_t parse(const uint8_t* buf, uint16_t len, MemoryAllocator& allocator, Dynamic<T, false>& dynamic) {
+    static int parse(const uint8_t* buf, uint16_t len, MemoryAllocator& allocator, Dynamic<T, false>& dynamic) {
         const uint8_t *src = buf;
         for (size_t i = 0; i < dynamic.size; ++i) {
             auto dyn_parsed_len = dynamic.ptr[i].parse_msg(src, len, allocator);
-            if (dyn_parsed_len == 0) {
-                return 0;
+            if (dyn_parsed_len < 0) {
+                return -1;
             }
             src += dyn_parsed_len;
             len -= dyn_parsed_len;
@@ -116,20 +116,24 @@ struct Dynamic {
         return dst - buf;
     }
 
-    size_t parse_msg(const uint8_t *buf, uint16_t len, messgen::MemoryAllocator & allocator) {
+    int parse_msg(const uint8_t *buf, uint16_t len, messgen::MemoryAllocator & allocator) {
         const uint8_t* src = buf;
 
-        if (len < sizeof(this->size)) { return 0; }
+        if (len < sizeof(this->size)) { return -1; }
 
         memcpy(std::addressof(this->size), src, sizeof(this->size));
         src += sizeof(this->size);
         len -= sizeof(this->size);
 
         this->ptr = allocator.alloc<T>(this->size);
-        if (nullptr == this->ptr) { return 0; }
+        if (nullptr == this->ptr) { return -1; }
 
-        src += detail::Parser<this_type>::parse(src, len, allocator, *this);
+        int res = detail::Parser<this_type>::parse(src, len, allocator, *this);
+        if (res < 0) {
+            return -1;
+        }
 
+        src += res;
         return src - buf;
     }
 
