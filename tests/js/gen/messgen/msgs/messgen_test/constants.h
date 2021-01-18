@@ -3,15 +3,11 @@
 #include <messgen/bitmasks.h>
 #include <cstdint>
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 
 namespace messgen {

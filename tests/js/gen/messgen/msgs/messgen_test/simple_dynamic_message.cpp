@@ -1,9 +1,7 @@
 #include "simple_dynamic_message.h"
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 static const messgen::Metadata *nested_msgs[] = {nullptr};
@@ -13,9 +11,7 @@ const messgen::Metadata simple_dynamic_message::METADATA =  {
     nested_msgs
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

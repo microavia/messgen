@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CPP_PORT_DIRECTORY ../../port/cpp)
-set(MSGS_DIRECTORY msgs)
+set(MSGS_DIRECTORY gen/)
 
 set(SOURCE_EXE main.cpp)
 

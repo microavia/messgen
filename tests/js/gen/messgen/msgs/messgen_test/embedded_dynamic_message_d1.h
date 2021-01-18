@@ -10,14 +10,12 @@
 #include <messgen/MemoryAllocator.h>
 #include "proto.h"
 #include "constants.h"
-#include <./msgs/messages/messgen/messgen_test/simple_dynamic_message.h>
-#include <./msgs/messages/messgen/messgen_test/simple_message.h>
+#include <messgen/msgs/messgen_test/simple_dynamic_message.h>
+#include <messgen/msgs/messgen_test/simple_message.h>
 
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct embedded_dynamic_message_d1 {
@@ -26,16 +24,16 @@ struct embedded_dynamic_message_d1 {
     static constexpr uint8_t PROTO = PROTO_ID;
     
     uint8_t f3;
-    .::msgs::messages::messgen::messgen_test::simple_dynamic_message f5[2];
-    .::msgs::messages::messgen::messgen_test::simple_dynamic_message f6;
+    messgen::msgs::messgen_test::simple_dynamic_message f5[2];
+    messgen::msgs::messgen_test::simple_dynamic_message f6;
     messgen::Dynamic<uint64_t> f0; // Test comment f0
-    messgen::Dynamic<.::msgs::messages::messgen::messgen_test::simple_dynamic_message> f1; // Test comment f1
-    messgen::Dynamic<.::msgs::messages::messgen::messgen_test::simple_message> f2;
+    messgen::Dynamic<messgen::msgs::messgen_test::simple_dynamic_message> f1; // Test comment f1
+    messgen::Dynamic<messgen::msgs::messgen_test::simple_message> f2;
     messgen::Dynamic<int8_t> f4;
     std::string_view f7; // Test comment f7
     std::string_view f8;
     
-    bool operator== (const .::msgs::messages::messgen::messgen_test::embedded_dynamic_message_d1& other) const {
+    bool operator== (const messgen::msgs::messgen_test::embedded_dynamic_message_d1& other) const {
         if (!(f3 == other.f3)) {return false;}
         
         for (size_t i = 0; i < 2; ++i) {
@@ -166,7 +164,7 @@ struct embedded_dynamic_message_d1 {
         f1.size =  (ptr[0] << (0U*8U)) | (ptr[1] << (1U*8U));
         ptr += 2;
         len -= 2;
-        f1.ptr = allocator.alloc<.::msgs::messages::messgen::messgen_test::simple_dynamic_message>(f1.size);
+        f1.ptr = allocator.alloc<messgen::msgs::messgen_test::simple_dynamic_message>(f1.size);
         if (f1.ptr == nullptr) {return -1;}
         for (size_t i = 0; i < f1.size; ++i) {
             parse_result = f1.ptr[i].parse_msg(ptr, len, allocator);
@@ -179,7 +177,7 @@ struct embedded_dynamic_message_d1 {
         f2.size =  (ptr[0] << (0U*8U)) | (ptr[1] << (1U*8U));
         ptr += 2;
         len -= 2;
-        f2.ptr = allocator.alloc<.::msgs::messages::messgen::messgen_test::simple_message>(f2.size);
+        f2.ptr = allocator.alloc<messgen::msgs::messgen_test::simple_message>(f2.size);
         if (f2.ptr == nullptr) {return -1;}
         for (size_t i = 0; i < f2.size; ++i) {
             parse_result = f2.ptr[i].parse_msg(ptr, len, allocator);
@@ -263,9 +261,7 @@ struct embedded_dynamic_message_d1 {
     
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

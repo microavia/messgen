@@ -10,14 +10,12 @@
 #include <messgen/MemoryAllocator.h>
 #include "proto.h"
 #include "constants.h"
-#include <./msgs/messages/messgen/messgen_test/embedded_message_d1.h>
-#include <./msgs/messages/messgen/messgen_test/simple_message.h>
+#include <messgen/msgs/messgen_test/embedded_message_d1.h>
+#include <messgen/msgs/messgen_test/simple_message.h>
 
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct embedded_message_d2 {
@@ -28,11 +26,11 @@ struct embedded_message_d2 {
     double f1[2];
     uint8_t f0;
     uint8_t f4;
-    .::msgs::messages::messgen::messgen_test::embedded_message_d1 f2;
-    .::msgs::messages::messgen::messgen_test::simple_message f3; // Test comment f3
-    .::msgs::messages::messgen::messgen_test::embedded_message_d1 f5;
+    messgen::msgs::messgen_test::embedded_message_d1 f2;
+    messgen::msgs::messgen_test::simple_message f3; // Test comment f3
+    messgen::msgs::messgen_test::embedded_message_d1 f5;
     
-    bool operator== (const .::msgs::messages::messgen::messgen_test::embedded_message_d2& other) const {
+    bool operator== (const messgen::msgs::messgen_test::embedded_message_d2& other) const {
         if (memcmp(f1, other.f1, 8 * 2) != 0) {return false;}
         
         if (!(f0 == other.f0)) {return false;}
@@ -109,9 +107,7 @@ struct embedded_message_d2 {
     
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

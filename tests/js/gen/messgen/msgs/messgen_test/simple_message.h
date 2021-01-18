@@ -12,10 +12,8 @@
 #include "constants.h"
 
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct simple_message {
@@ -34,7 +32,7 @@ struct simple_message {
     uint8_t f8;
     int8_t f9;
     
-    bool operator== (const .::msgs::messages::messgen::messgen_test::simple_message& other) const {
+    bool operator== (const messgen::msgs::messgen_test::simple_message& other) const {
         if (!(f0 == other.f0)) {return false;}
         
         if (!(f1 == other.f1)) {return false;}
@@ -104,9 +102,7 @@ struct simple_message {
     
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

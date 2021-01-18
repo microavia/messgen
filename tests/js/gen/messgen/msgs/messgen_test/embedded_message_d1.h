@@ -10,13 +10,11 @@
 #include <messgen/MemoryAllocator.h>
 #include "proto.h"
 #include "constants.h"
-#include <./msgs/messages/messgen/messgen_test/simple_message.h>
+#include <messgen/msgs/messgen_test/simple_message.h>
 
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct embedded_message_d1 {
@@ -26,10 +24,10 @@ struct embedded_message_d1 {
     
     uint64_t f2[5];
     uint8_t f0[10];
-    .::msgs::messages::messgen::messgen_test::simple_message f1[2];
-    .::msgs::messages::messgen::messgen_test::simple_message f3;
+    messgen::msgs::messgen_test::simple_message f1[2];
+    messgen::msgs::messgen_test::simple_message f3;
     
-    bool operator== (const .::msgs::messages::messgen::messgen_test::embedded_message_d1& other) const {
+    bool operator== (const messgen::msgs::messgen_test::embedded_message_d1& other) const {
         if (memcmp(f2, other.f2, 8 * 5) != 0) {return false;}
         
         if (memcmp(f0, other.f0, 1 * 10) != 0) {return false;}
@@ -108,9 +106,7 @@ struct embedded_message_d1 {
     
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

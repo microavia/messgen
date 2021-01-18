@@ -12,10 +12,8 @@
 #include "constants.h"
 
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct empty {
@@ -24,7 +22,7 @@ struct empty {
     static constexpr uint8_t PROTO = PROTO_ID;
     
     
-    bool operator== (const .::msgs::messages::messgen::messgen_test::empty& other) const {
+    bool operator== (const messgen::msgs::messgen_test::empty& other) const {
         (void)other;
         return true;
     }
@@ -68,9 +66,7 @@ struct empty {
     
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

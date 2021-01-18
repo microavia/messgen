@@ -12,10 +12,8 @@
 #include "constants.h"
 
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct simple_dynamic_message {
@@ -37,7 +35,7 @@ struct simple_dynamic_message {
     std::string_view non_null_string1;
     std::string_view non_null_string2;
     
-    bool operator== (const .::msgs::messages::messgen::messgen_test::simple_dynamic_message& other) const {
+    bool operator== (const messgen::msgs::messgen_test::simple_dynamic_message& other) const {
         if (!(f1 == other.f1)) {return false;}
         
         if (!(f2 == other.f2)) {return false;}
@@ -263,9 +261,7 @@ struct simple_dynamic_message {
     
 };
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 

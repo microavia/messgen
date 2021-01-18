@@ -1,9 +1,7 @@
 #pragma once
 
-namespace . {
-namespace msgs {
-namespace messages {
 namespace messgen {
+namespace msgs {
 namespace messgen_test {
 
 struct ProtoInfo {
@@ -14,9 +12,7 @@ struct ProtoInfo {
 static constexpr uint8_t PROTO_ID = 100;
 static constexpr uint32_t PROTO_MAX_MESSAGE_SIZE = 412;
 
-} // .
-} // msgs
-} // messages
 } // messgen
+} // msgs
 } // messgen_test
 
