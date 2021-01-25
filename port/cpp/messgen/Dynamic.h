@@ -7,28 +7,14 @@
 #include <type_traits>
 
 #include "MemoryAllocator.h"
+#include "SimpleDetector.h"
 
 namespace messgen {
-
-template<typename T>
-struct SimpleDetector {
-    static const bool is_simple_enough = std::is_integral<T>::value || std::is_floating_point<T>::value;
-};
-
-template<typename T>
-struct SimpleDetector<T[]> {
-    static const bool is_simple_enough = std::is_integral<T>::value || std::is_floating_point<T>::value;
-};
-
-template<typename T, size_t N>
-struct SimpleDetector<T[N]> {
-    static const bool is_simple_enough = std::is_integral<T>::value || std::is_floating_point<T>::value;
-};
 
 template<typename T, bool S>
 struct Dynamic;
 
-namespace detail {
+namespace dynamic::detail {
 
 template<typename T>
 struct Serializer;
@@ -111,24 +97,24 @@ struct Dynamic {
         std::memcpy(dst, std::addressof(this->size), sizeof(this->size));
         dst += sizeof(this->size);
 
-        dst += detail::Serializer<this_type>::serialize(dst, *this);
+        dst += dynamic::detail::Serializer<this_type>::serialize(dst, *this);
 
         return dst - buf;
     }
 
-    int parse_msg(const uint8_t *buf, uint16_t len, messgen::MemoryAllocator & allocator) {
+    int parse_msg(const uint8_t *buf, uint16_t len, MemoryAllocator & allocator) {
         const uint8_t* src = buf;
 
         if (len < sizeof(this->size)) { return -1; }
 
-        memcpy(std::addressof(this->size), src, sizeof(this->size));
+        std::memcpy(std::addressof(this->size), src, sizeof(this->size));
         src += sizeof(this->size);
         len -= sizeof(this->size);
 
         this->ptr = allocator.alloc<T>(this->size);
         if (nullptr == this->ptr) { return -1; }
 
-        int res = detail::Parser<this_type>::parse(src, len, allocator, *this);
+        int res = dynamic::detail::Parser<this_type>::parse(src, len, allocator, *this);
         if (res < 0) {
             return -1;
         }
