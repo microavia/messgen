@@ -621,10 +621,10 @@ class CppGenerator:
                 parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
                 self.extend([
                     parse_call,
-                    "if (parse_result < 0) { return -1; }"
+                    "if (parse_result < 0) { return -1; }",
+                    set_inc_var("ptr", "parse_result"),
+                    set_dec_var("len", "parse_result")
                 ])
-
-                self.append(set_inc_var("ptr", "parse_result"))
 
         self.append("")
 
@@ -663,11 +663,11 @@ class CppGenerator:
                 parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
                 self.extend([
                     parse_call,
-                    "if (parse_result < 0) { return -1; }"
+                    "if (parse_result < 0) { return -1; }",
+                    set_inc_var("ptr", "parse_result"),
+                    set_dec_var("len", "parse_result"),
+                    ""
                 ])
-
-                self.append(set_inc_var("ptr", "parse_result"))
-
 
         self.append("return static_cast<int>(ptr - %s);" % INPUT_BUF_NAME)
         self.stop_block()
