@@ -10,7 +10,7 @@ namespace super::duper::project {
 struct existing{
     int data;
 
-    bool operator==(const existing& other) { return data == other.data; }
+    bool operator==(const existing& other) const { return data == other.data; }
 
     std::size_t get_size() const { return sizeof(data); }
 
