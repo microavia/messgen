@@ -18,6 +18,10 @@ struct Serializer<T, true> {
         std::memcpy(buf, &value, bytes);
         return bytes;
     }
+
+    static size_t get_dynamic_size(const T&) {
+        return 0;
+    }
 };
 
 template<typename T>
@@ -25,14 +29,22 @@ struct Serializer<T, false> {
     static size_t serialize(uint8_t *buf, const T &value) {
         return value.serialize_msg(buf);
     }
+
+    static size_t get_dynamic_size(const T& value) {
+        return value.get_dynamic_size();
+    }
 };
 
 }
 
 template<typename T>
-class Serializer {
+struct Serializer {
     static size_t serialize(uint8_t *buf, const T &value) {
-        return detail::Serializer<T>::serialize(dst, value);
+        return detail::Serializer<T>::serialize(buf, value);
+    }
+
+    static size_t get_dynamic_size(const T& value) {
+        return detail::Serializer<T>::get_dynamic_size(value);
     }
 };
 

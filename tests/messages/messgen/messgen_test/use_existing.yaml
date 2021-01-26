@@ -6,6 +6,6 @@ fields:
   - name: one
     type: entities/Existing
     descr: "use one non generated object"
-  - name: two
-    type: entities/Existing[2]
-    descr: "use array of two non generated objects"
+#  - name: two
+#    type: entities/Existing[2]
+#    descr: "use array of two non generated objects"

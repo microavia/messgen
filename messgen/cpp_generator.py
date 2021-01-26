@@ -394,6 +394,8 @@ class CppGenerator:
                     "#include <messgen/Metadata.h>",
                     "#include <messgen/Dynamic.h>",
                     "#include <messgen/MemoryAllocator.h>",
+                    "#include <messgen/Serializer.h>",
+                    "#include <messgen/Parser.h>",
                     "#include \"proto.h\"",
                     "#include \"constants.h\""
                     ]
@@ -457,7 +459,7 @@ class CppGenerator:
                     self.stop_cycle()
 
             elif not typeinfo["plain"]:
-                self.append(set_inc_var("size", "%s.get_dynamic_size()" % field["name"]))
+                self.append(set_inc_var("size", "messgen::Serializer<decltype(%s)>::get_dynamic_size(%s)" % (field["name"], field["name"])))
 
             elif field["type"] == "string":
                 self.append(set_inc_var("size", strlen(field["name"])))
@@ -546,7 +548,7 @@ class CppGenerator:
             if field["is_array"]:
                 self.__serialize_struct_array(field["name"], field["num"])
             else:
-                serialize_call = "%s.serialize_msg(%s)" % (field["name"], "ptr")
+                serialize_call = "messgen::Serializer<decltype(%s)>::serialize(%s, %s)" % (field["name"], "ptr", field["name"])
                 self.append(set_inc_var("ptr", serialize_call))
 
         self.append("")
@@ -618,7 +620,7 @@ class CppGenerator:
             if field["is_array"]:
                 self.__parse_struct_array(field["name"], field["num"])
             else:
-                parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
+                parse_call = "parse_result = messgen::Parser<decltype(%s)>::parse(%s, len, %s, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME, field["name"])
                 self.extend([
                     parse_call,
                     "if (parse_result < 0) { return -1; }",

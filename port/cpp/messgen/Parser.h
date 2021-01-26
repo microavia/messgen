@@ -39,7 +39,7 @@ struct Parser<T, false> {
 template<typename T>
 struct Parser {
     static int parse(const uint8_t *buf, uint16_t len, MemoryAllocator & allocator, T& value) {
-        return detail::Parser<T>::parse(src, len, allocator, value);
+        return detail::Parser<T>::parse(buf, len, allocator, value);
     }
 };
 
