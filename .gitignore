@@ -12,3 +12,5 @@ dump.txt
 *.elf
 tests/cpp/messgen
 .done.*
+
+tests/js/tmp

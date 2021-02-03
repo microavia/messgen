@@ -1,0 +1,75 @@
+{
+  "simple_message": {
+    "id": 0,
+    "fields": [
+      {"name": "f0", "type": "Uint64"},
+      {"name": "f1", "type": "Int64"},
+      {"name": "f2", "type": "Float64"},
+      {"name": "f3", "type": "Uint32"},
+      {"name": "f4", "type": "Int32"},
+      {"name": "f5", "type": "Float32"},
+      {"name": "f6", "type": "Uint16"},
+      {"name": "f7", "type": "Int16"},
+      {"name": "f8", "type": "Uint8"},
+      {"name": "f9", "type": "Int8"}
+    ]
+  },
+  "embedded_message_d1": {
+    "id": 1,
+    "fields": [
+      {"name": "f2", "type": "Uint64[5]"},
+      {"name": "f0", "type": "Uint8[10]"},
+      {"name": "f1", "type": "./msgs/messages/messgen/messgen_test/simple_message[2]"},
+      {"name": "f3", "type": "./msgs/messages/messgen/messgen_test/simple_message"}
+    ]
+  },
+  "embedded_message_d2": {
+    "id": 2,
+    "fields": [
+      {"name": "f1", "type": "Float64[2]"},
+      {"name": "f0", "type": "Uint8"},
+      {"name": "f4", "type": "Uint8"},
+      {"name": "f2", "type": "./msgs/messages/messgen/messgen_test/embedded_message_d1"},
+      {"name": "f3", "type": "./msgs/messages/messgen/messgen_test/simple_message"},
+      {"name": "f5", "type": "./msgs/messages/messgen/messgen_test/embedded_message_d1"}
+    ]
+  },
+  "simple_dynamic_message": {
+    "id": 3,
+    "fields": [
+      {"name": "f1", "type": "Int64"},
+      {"name": "f2", "type": "Float64"},
+      {"name": "f4", "type": "Int32"},
+      {"name": "f5", "type": "Float32"},
+      {"name": "f6", "type": "Uint16"},
+      {"name": "f7", "type": "Int16"},
+      {"name": "f0", "type": "Uint64[]"},
+      {"name": "f3", "type": "Uint32[]"},
+      {"name": "f8", "type": "Uint8[]"},
+      {"name": "f9", "type": "Int8[]"},
+      {"name": "my_null_string", "type": "String"},
+      {"name": "non_null_string1", "type": "String"},
+      {"name": "non_null_string2", "type": "String"}
+    ]
+  },
+  "embedded_dynamic_message_d1": {
+    "id": 4,
+    "fields": [
+      {"name": "f3", "type": "Uint8"},
+      {"name": "f5", "type": "./msgs/messages/messgen/messgen_test/simple_dynamic_message[2]"},
+      {"name": "f6", "type": "./msgs/messages/messgen/messgen_test/simple_dynamic_message"},
+      {"name": "f0", "type": "Uint64[]"},
+      {"name": "f1", "type": "./msgs/messages/messgen/messgen_test/simple_dynamic_message[]"},
+      {"name": "f2", "type": "./msgs/messages/messgen/messgen_test/simple_message[]"},
+      {"name": "f4", "type": "Int8[]"},
+      {"name": "f7", "type": "String"},
+      {"name": "f8", "type": "String"}
+    ]
+  },
+  "empty": {
+    "id": 5,
+    "fields": [
+
+    ]
+  }
+}
