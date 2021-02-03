@@ -14,3 +14,4 @@ tests/cpp/messgen
 .done.*
 
 tests/js/tmp
+tests/js/coverage
