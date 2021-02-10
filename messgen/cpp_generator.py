@@ -632,8 +632,6 @@ class CppGenerator:
 
         # Process dynamic fields
         for field in message["fields"][current_field_pos:]:
-            typeinfo = self._data_types_map[field["type"]]
-
             if field["type"] == "string":
                 self.extend([
                     "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,
