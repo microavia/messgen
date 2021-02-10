@@ -309,6 +309,7 @@ class CppGenerator:
     def __generate_message_header(self, namespace, message):
         self.reset()
         msg_struct, msg_includes = self.generate_message(message)
+        msg_simple_detector = self.generate_detector(namespace, message)
 
         header = [
             "#pragma once",
@@ -320,7 +321,9 @@ class CppGenerator:
             "",
             *msg_struct,
             "",
-            *close_namespace(namespace)
+            *close_namespace(namespace),
+            "",
+            *msg_simple_detector
         ]
 
         return header
@@ -391,6 +394,8 @@ class CppGenerator:
                     "#include <messgen/Metadata.h>",
                     "#include <messgen/Dynamic.h>",
                     "#include <messgen/MemoryAllocator.h>",
+                    "#include <messgen/Serializer.h>",
+                    "#include <messgen/Parser.h>",
                     "#include \"proto.h\"",
                     "#include \"constants.h\""
                     ]
@@ -400,6 +405,24 @@ class CppGenerator:
             includes.append(inc)
 
         return list(self._code), includes
+
+    def generate_detector(self, namespace, message_obj):
+        declaration = ["struct SimpleDetector<%s::%s> {" % (namespace, message_obj["name"])]
+        using = ["    using suspect = %s::%s;" % (namespace, message_obj["name"])]
+        fields = ["        && SimpleDetector<decltype(suspect::%s)>::is_simple_enough" % field["name"] for field in message_obj["fields"]]
+        return [
+            *open_namespace("messgen"),
+            "",
+            "template<>",
+            *declaration,
+            *using,
+            "    static const bool is_simple_enough = sizeof(suspect) == suspect::STATIC_SIZE",
+            *fields,
+            "    ;",
+            "};",
+            "",
+            *close_namespace("messgen")
+        ]
 
     def generate_get_size_method(self):
         self.start_block("size_t get_size() const")
@@ -436,7 +459,7 @@ class CppGenerator:
                     self.stop_cycle()
 
             elif not typeinfo["plain"]:
-                self.append(set_inc_var("size", "%s.get_dynamic_size()" % field["name"]))
+                self.append(set_inc_var("size", "messgen::Serializer<decltype(%s)>::get_dynamic_size(%s)" % (field["name"], field["name"])))
 
             elif field["type"] == "string":
                 self.append(set_inc_var("size", strlen(field["name"])))
@@ -525,7 +548,7 @@ class CppGenerator:
             if field["is_array"]:
                 self.__serialize_struct_array(field["name"], field["num"])
             else:
-                serialize_call = "%s.serialize_msg(%s)" % (field["name"], "ptr")
+                serialize_call = "messgen::Serializer<decltype(%s)>::serialize(%s, %s)" % (field["name"], "ptr", field["name"])
                 self.append(set_inc_var("ptr", serialize_call))
 
         self.append("")
@@ -546,18 +569,8 @@ class CppGenerator:
                 ])
                 self.append("")
             else:
-                dyn_ptr, dyn_size = get_dyn_field_vars(field)
-                self.__serialize_dynamic_field_length(dyn_size)
-
-                if typeinfo["plain"]:
-                    mem_size = dyn_size + "*" + str(typeinfo["static_size"])
-                    self.extend([
-                        memcpy("ptr", dyn_ptr, mem_size),
-                        set_inc_var("ptr", mem_size),
-                        ""
-                    ])
-                else:
-                    self.__serialize_struct_array(dyn_ptr, dyn_size)
+                serialize_call = "%s.serialize_msg(%s)" % (field["name"], "ptr")
+                self.append(set_inc_var("ptr", serialize_call))
 
         self.append("return ptr - %s;" % INPUT_BUF_NAME)
         self.stop_block()
@@ -607,13 +620,13 @@ class CppGenerator:
             if field["is_array"]:
                 self.__parse_struct_array(field["name"], field["num"])
             else:
-                parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
+                parse_call = "parse_result = messgen::Parser<decltype(%s)>::parse(%s, len, %s, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME, field["name"])
                 self.extend([
                     parse_call,
-                    "if (parse_result < 0) { return -1; }"
+                    "if (parse_result < 0) { return -1; }",
+                    set_inc_var("ptr", "parse_result"),
+                    set_dec_var("len", "parse_result")
                 ])
-
-                self.append(set_inc_var("ptr", "parse_result"))
 
         self.append("")
 
@@ -621,13 +634,13 @@ class CppGenerator:
         for field in message["fields"][current_field_pos:]:
             typeinfo = self._data_types_map[field["type"]]
 
-            self.extend([
-                "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,
-            ])
-
-            dyn_field_items_num = get_dynamic_field_items_num()
-
             if field["type"] == "string":
+                self.extend([
+                    "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,
+                ])
+
+                dyn_field_items_num = get_dynamic_field_items_num()
+
                 self.extend([
                     set_var("dyn_parsed_len", dyn_field_items_num),
                     set_inc_var("ptr", DYN_FIELD_LEN_SIZE),
@@ -649,25 +662,14 @@ class CppGenerator:
                 self.append(set_var(field["name"], "{}"))
                 self.stop_block()
             else:
-                dyn_ptr_var, dyn_size_var = get_dyn_field_vars(field)
+                parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
                 self.extend([
-                    set_var(dyn_size_var, dyn_field_items_num),
-                    set_inc_var("ptr", DYN_FIELD_LEN_SIZE),
-                    set_dec_var("len", DYN_FIELD_LEN_SIZE),
-                    *allocate_memory(dyn_ptr_var, to_cpp_type(field["type"]), dyn_size_var)
+                    parse_call,
+                    "if (parse_result < 0) { return -1; }",
+                    set_inc_var("ptr", "parse_result"),
+                    set_dec_var("len", "parse_result"),
+                    ""
                 ])
-
-                if typeinfo["plain"]:
-                    mem_size = dyn_size_var + " * " + str(typeinfo["static_size"])
-                    self.extend([
-                        "if (len < %s) {return -1;}" % mem_size,
-                        memcpy(dyn_ptr_var, "ptr", mem_size),
-                        set_inc_var("ptr", mem_size),
-                        set_dec_var("len", mem_size),
-                        ""
-                    ])
-                else:
-                    self.__parse_struct_array(dyn_ptr_var, dyn_size_var)
 
         self.append("return static_cast<int>(ptr - %s);" % INPUT_BUF_NAME)
         self.stop_block()

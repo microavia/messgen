@@ -85,6 +85,10 @@ class DataTypesPreprocessor:
                 message_type = self.__normalize_typename(module_name, message["name"])
                 self._lookup_table[message_type] = message
 
+            for message in module["existing_types"]:
+                message_type = self.__normalize_typename(message["namespace"], message["name"])
+                self._lookup_table[message_type] = message
+
     def __load_constants(self, modules_map):
         for module_name, module in modules_map.items():
             for constant_type in module["constants"]:

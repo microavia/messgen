@@ -3,7 +3,8 @@
 #include "MemoryAllocator.h"
 #include "Dynamic.h"
 #include "Metadata.h"
-
+#include "Serializer.h"
+#include "Parser.h"
 
 namespace messgen {
 

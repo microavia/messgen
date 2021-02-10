@@ -7,6 +7,7 @@ from .messgen_ex import MessgenException
 CONFIG_EXT = ".yaml"
 PROTOCOL_FILE = "_protocol" + CONFIG_EXT
 CONSTANTS_FILE = "_constants" + CONFIG_EXT
+EXISTING_TYPES_FILE = "_types" + CONFIG_EXT
 
 
 def load_modules(basedirs, modules):
@@ -16,6 +17,7 @@ def load_modules(basedirs, modules):
     for module_name in modules:
         module_messages = []
         module_constants = []
+        module_existing_types = []
         for basedir in basedirs:
             module_path = basedir + os.path.sep + module_name
 
@@ -51,6 +53,12 @@ def load_modules(basedirs, modules):
 
                             continue
 
+                        if item == EXISTING_TYPES_FILE:
+                            if msg is not None:
+                                module_existing_types = msg
+
+                            continue
+
                         if (msg is None) or (msg.get("id") is None):
                             raise MessgenException("Wrong message file format in %s" % msg_file_path)
 
@@ -66,6 +74,7 @@ def load_modules(basedirs, modules):
         modules_map[module_name] = {
             "proto_id": proto_id,
             "constants": module_constants,
+            "existing_types": module_existing_types,
             "messages": list(
                 sorted(module_messages,
                        key=lambda msg: msg["id"])
