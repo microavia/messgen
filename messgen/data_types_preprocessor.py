@@ -167,7 +167,7 @@ class DataTypesPreprocessor:
                 children_number = field["num"]
             elif field["is_dynamic"]:
                 children_number = 0
-                static_size += 2
+                static_size += 4
             elif not field["is_array"]:
                 children_number = 1
 

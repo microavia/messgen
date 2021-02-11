@@ -11,9 +11,9 @@ namespace messgen {
 using MessageID = uint8_t;
 
 struct MessageInfo {
-    static constexpr size_t HEADER_SIZE = 3;
+    static constexpr size_t HEADER_SIZE = 5;
 
-    uint16_t size;              //!< Message payload size
+    uint32_t size;              //!< Message payload size
     MessageID msg_id;           //!< Message type ID
 
     const uint8_t *payload;     //!< Pointer to message payload
@@ -57,8 +57,10 @@ int serialize(const T &msg, uint8_t *buf, size_t buf_len) {
 
     // info.seq and info.cls must be filled by caller
     buf[0] = T::TYPE;
-    buf[1] = payload_size;
-    buf[2] = payload_size >> 8U;
+    buf[1] = payload_size & 0xFF;
+    buf[2] = (payload_size >> 8U) & 0xFF;
+    buf[3] = (payload_size >> 16U) & 0xFF;
+    buf[4] = (payload_size >> 24U) & 0xFF;
 
     msg.serialize_msg(buf + MessageInfo::HEADER_SIZE);
     return ser_total_size;
@@ -77,12 +79,16 @@ inline int get_message_info(const uint8_t *buf, size_t buf_len, MessageInfo &inf
     }
 
     info.msg_id = buf[0];
-    info.size = (uint16_t) (buf[2] << 8U) | buf[1];
+    info.size = (buf[4] << 24U) |
+                (buf[3] << 16U) |
+                (buf[2] << 8U)  |
+                (buf[1]);
+
     if (buf_len < info.size + MessageInfo::HEADER_SIZE) {
         return -1;
     }
-    info.payload = buf + MessageInfo::HEADER_SIZE;
 
+    info.payload = buf + MessageInfo::HEADER_SIZE;
     return 0;
 }
 
