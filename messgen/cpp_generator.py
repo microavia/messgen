@@ -578,7 +578,7 @@ class CppGenerator:
         return list(self._code)
 
     def generate_parse_method(self, message):
-        self.start_block("int parse_msg(const uint8_t *%s, uint16_t len, messgen::MemoryAllocator & %s)" %
+        self.start_block("int parse_msg(const uint8_t *%s, uint32_t len, messgen::MemoryAllocator & %s)" %
                          (INPUT_BUF_NAME, INPUT_ALLOC_NAME))
 
         if message["dynamic_fields_cnt"] == 0:
