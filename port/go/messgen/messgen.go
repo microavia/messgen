@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	HeaderSize = 3
+	HeaderSize = 5
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 func Serialize(msg Message) ([]byte, error) {
 	buf := make([]byte, msg.MsgSize()+HeaderSize)
 	buf[0] = byte(msg.MsgId())
-	binary.LittleEndian.PutUint16(buf[1:3], uint16(msg.MsgSize()))
+	binary.LittleEndian.PutUint32(buf[1:5], uint32(msg.MsgSize()))
 	_, err := msg.Pack(buf[HeaderSize:])
 	if err != nil {
 		return buf, err
@@ -43,7 +43,7 @@ func SerializeToBuffer(msg Message, buf []byte) (int, error) {
 	}
 
 	buf[0] = byte(msg.MsgId())
-	binary.LittleEndian.PutUint16(buf[1:3], uint16(msg.MsgSize()))
+	binary.LittleEndian.PutUint32(buf[1:5], uint32(msg.MsgSize()))
 	_, err := msg.Pack(buf[HeaderSize:])
 	if err != nil {
 		return 0, err
@@ -59,7 +59,7 @@ func Parse(buf []byte) (*MessageInfo, int) {
 	}
 	var info MessageInfo
 	info.Id = MessageId(buf[0])
-	msgSize := int(binary.LittleEndian.Uint16(buf[1:3]))
+	msgSize := int(binary.LittleEndian.Uint32(buf[1:5]))
 	serMsgSize := HeaderSize + msgSize
 	if len(buf) < serMsgSize {
 		return nil, 0
@@ -70,21 +70,21 @@ func Parse(buf []byte) (*MessageInfo, int) {
 }
 
 func ReadString(b []byte) string {
-	n := int(binary.LittleEndian.Uint16(b))
-	return string(b[2 : 2+n])
+	n := int(binary.LittleEndian.Uint32(b))
+	return string(b[4 : 4+n])
 }
 
 func WriteString(b []byte, v string) {
-	binary.LittleEndian.PutUint16(b, uint16(len(v)))
-	copy(b[2:], []byte(v))
+	binary.LittleEndian.PutUint32(b, uint32(len(v)))
+	copy(b[4:], []byte(v))
 }
 
 func ReadBytes(b []byte) []byte {
-	n := int(binary.LittleEndian.Uint16(b))
-	return b[2 : 2+n]
+	n := int(binary.LittleEndian.Uint32(b))
+	return b[4 : 4+n]
 }
 
 func WriteBytes(b []byte, v []byte) {
-	binary.LittleEndian.PutUint16(b, uint16(len(v)))
-	copy(b[2:], v)
+	binary.LittleEndian.PutUint32(b, uint32(len(v)))
+	copy(b[4:], v)
 }
