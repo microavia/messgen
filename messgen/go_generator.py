@@ -52,7 +52,7 @@ def parse_custom(t_info):
 
 
 def sizeof_dynamic(var, t_info):
-    return "2 + %i*len(v.%s)" % (t_info["element_size"], var)
+    return "4 + %i*len(v.%s)" % (t_info["element_size"], var)
 
 
 def fmt_string(var, t_info):
