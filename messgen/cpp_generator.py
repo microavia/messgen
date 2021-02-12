@@ -10,7 +10,7 @@ MESSAGE_SIZE_C_TYPE = "size_t"
 MESSAGE_PROTO_C_TYPE = "uint8_t"
 
 TYPE_FIELD_SIZE = 1
-DYN_FIELD_LEN_SIZE = 2
+DYN_FIELD_LEN_SIZE = 4
 INPUT_BUF_NAME = "buf"
 INPUT_ALLOC_NAME = "allocator"
 INDENT = "    "
@@ -578,7 +578,7 @@ class CppGenerator:
         return list(self._code)
 
     def generate_parse_method(self, message):
-        self.start_block("int parse_msg(const uint8_t *%s, uint16_t len, messgen::MemoryAllocator & %s)" %
+        self.start_block("int parse_msg(const uint8_t *%s, uint32_t len, messgen::MemoryAllocator & %s)" %
                          (INPUT_BUF_NAME, INPUT_ALLOC_NAME))
 
         if message["dynamic_fields_cnt"] == 0:
@@ -632,8 +632,6 @@ class CppGenerator:
 
         # Process dynamic fields
         for field in message["fields"][current_field_pos:]:
-            typeinfo = self._data_types_map[field["type"]]
-
             if field["type"] == "string":
                 self.extend([
                     "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,

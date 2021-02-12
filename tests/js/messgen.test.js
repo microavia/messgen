@@ -46,7 +46,6 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-
     it('Basic types fixed array size', () => {
 
         const ARRAY_SIZE = 100;
@@ -106,7 +105,6 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-
     it('Basic types dynamic array size', () => {
 
         const ARRAY_SIZE = 100;
@@ -139,7 +137,7 @@ describe('Serialization deserialization tests', () => {
             type_Uint64: new Array(ARRAY_SIZE),
             type_String: new Array(ARRAY_SIZE),
             type_Double: new Array(ARRAY_SIZE),
-            type_Char: new Array(ARRAY_SIZE),
+            type_Char: new Array(ARRAY_SIZE)
         };
 
         for (let i = 0; i < ARRAY_SIZE; i++) {

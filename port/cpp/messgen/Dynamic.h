@@ -75,7 +75,7 @@ struct Dynamic {
     using this_type = Dynamic<T, SIMPLE>;
 
     T *ptr;
-    uint16_t size;
+    uint32_t size;
 
     bool operator==(const Dynamic<T> &other) const {
         if (size != other.size) {
@@ -102,7 +102,7 @@ struct Dynamic {
         return dst - buf;
     }
 
-    int parse_msg(const uint8_t *buf, uint16_t len, MemoryAllocator & allocator) {
+    int parse_msg(const uint8_t *buf, uint32_t len, MemoryAllocator & allocator) {
         const uint8_t* src = buf;
 
         if (len < sizeof(this->size)) { return -1; }
@@ -123,11 +123,11 @@ struct Dynamic {
         return src - buf;
     }
 
-    T &operator[](uint16_t idx) {
+    T &operator[](uint32_t idx) {
         return ptr[idx];
     }
 
-    const T &operator[](uint16_t idx) const {
+    const T &operator[](uint32_t idx) const {
         return ptr[idx];
     }
 };

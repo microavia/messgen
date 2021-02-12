@@ -52,7 +52,7 @@ def parse_custom(t_info):
 
 
 def sizeof_dynamic(var, t_info):
-    return "2 + %i*len(v.%s)" % (t_info["element_size"], var)
+    return "4 + %i*len(v.%s)" % (t_info["element_size"], var)
 
 
 def fmt_string(var, t_info):
@@ -196,8 +196,8 @@ class GoGenerator:
             if type_info == None:
                 raise Exception("Unsupported type: " + field["type"] + " in message " + msg["name"])
             if type_info["is_dynamic"]:
-                code.append("\tbinary.LittleEndian.PutUint16(buf[ptr:], uint16(len(v.%s)))" % field_name)
-                code.append("\tptr += 2")
+                code.append("\tbinary.LittleEndian.PutUint32(buf[ptr:], uint32(len(v.%s)))" % field_name)
+                code.append("\tptr += 4")
                 if type_info["element_size"] == 1:
                     code.append("\tcopy(buf[ptr:], []byte(v.%s))" % field_name)
                     code.append("\tptr += len(v.%s)" % field_name)
@@ -235,16 +235,16 @@ class GoGenerator:
             if type_info["is_dynamic"]:
                 if type_info["element_size"] == 1:
                     code.append("\t{")
-                    code.append("\t\tn := int(binary.LittleEndian.Uint16(buf[ptr:]))")
-                    code.append("\t\tptr += 2")
+                    code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
+                    code.append("\t\tptr += 4")
                     code.append("\t\tv.%s = make([]%s, n)" % (field_name, type_info["element_type"]))
                     code.append("\t\tcopy(v.%s, buf[ptr : ptr+n])" % field_name)
                     code.append("\t\tptr += len(v.%s)" % field_name)
                     code.append("\t}")
                 else:
                     code.append("\t{")
-                    code.append("\t\tn := int(binary.LittleEndian.Uint16(buf[ptr:]))")
-                    code.append("\t\tptr += 2")
+                    code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
+                    code.append("\t\tptr += 4")
                     code.append("\t\tfor i := 0; i < n; i++ {")
                     code.append("\t\t\tv.%s[i]%s" % (field_name, type_info["parse"](type_info)))
                     code.append("\t\t\tptr += %s" % type_info["element_size"])
