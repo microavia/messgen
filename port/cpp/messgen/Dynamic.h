@@ -14,7 +14,8 @@ namespace messgen {
 template<typename T, bool S>
 struct Dynamic;
 
-namespace dynamic::detail {
+namespace dynamic {
+namespace detail {
 
 template<typename T>
 struct Serializer;
@@ -68,6 +69,7 @@ struct Parser<Dynamic<T, false>> {
     }
 };
 
+}
 }
 
 template<class T, bool SIMPLE = SimpleDetector<T>::is_simple_enough>
