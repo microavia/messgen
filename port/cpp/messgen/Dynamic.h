@@ -45,7 +45,7 @@ struct Parser;
 
 template<typename T>
 struct Parser<Dynamic<T, true>> {
-    static size_t parse(const uint8_t* buf, uint16_t, MemoryAllocator& allocator, Dynamic<T, true>& dynamic) {
+    static size_t parse(const uint8_t* buf, uint16_t, MemoryAllocator&, Dynamic<T, true>& dynamic) {
         auto bytes = dynamic.size * sizeof(T);
         memcpy(dynamic.ptr, buf, bytes);
         return bytes;
