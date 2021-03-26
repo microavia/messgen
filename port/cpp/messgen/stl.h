@@ -89,8 +89,7 @@ int serialize(const T &msg, std::vector<uint8_t> &buf) {
  */
 template<class T>
 inline int parse(const messgen::MessageInfo &info, T &msg,
-                 std::vector<uint8_t> memory_pool = std::vector<uint8_t>()) {
-    messgen::MemoryAllocator allocator(&memory_pool[0], memory_pool.capacity());
+                 messgen::MemoryAllocator &allocator) {
     return messgen::parse(info, msg, allocator);
 }
 
