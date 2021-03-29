@@ -12,11 +12,11 @@ namespace messgen {
  */
 class MemoryAllocator {
 public:
-    MemoryAllocator(uint8_t *mem, size_t memory_size) :
+    MemoryAllocator(uint8_t *mem, size_t memory_size) noexcept:
             _mem_start(mem), _size(memory_size) {}
 
     template<class T>
-    T * alloc(size_t num) {
+    T * alloc(size_t num) noexcept {
         if (num == 0) {
             return reinterpret_cast<T *>(_mem_start);
         }
@@ -70,7 +70,7 @@ public:
         return get();
     }
 
-    MemoryAllocator &get() {
+    MemoryAllocator &get() noexcept {
         _alloc = MemoryAllocator(_memory, MEM_SIZE);
         return _alloc;
     }

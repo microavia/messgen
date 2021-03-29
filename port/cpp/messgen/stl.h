@@ -95,5 +95,14 @@ Dynamic <T> make_dynamic(std::vector<T> &vec) {
     return Dynamic<T>{&vec[0], vec.size()};
 }
 
+/**
+ * @brief Create memory allocator from std::vector<T>
+ * @param vec   -    vector which memory is to be used for objects allocations. Only capacity() matters
+ * @return  Memory allocator object
+ */
+inline MemoryAllocator make_memory_allocator(std::vector<uint8_t> &vec) {
+    return MemoryAllocator(&vec[0], vec.capacity());
+}
+
 }
 }
