@@ -54,4 +54,31 @@ private:
     size_t _size;
 };
 
+/**
+ * @brief Class which allows to statically allocate memory for messgen parsing
+ * @tparam MEM_SIZE     -   memory size
+ * @warning Each parse call on this class will clear memory, so if you want to do multiple parse calls
+ *          store it into temporary MemoryAllocator& variable.
+ */
+template<size_t MEM_SIZE>
+class StaticMemoryAllocator {
+public:
+    explicit StaticMemoryAllocator() noexcept:
+            _alloc(_memory, MEM_SIZE) {}
+
+    operator MemoryAllocator &() noexcept {
+        return get();
+    }
+
+    MemoryAllocator &get() {
+        _alloc = MemoryAllocator(_memory, MEM_SIZE);
+        return _alloc;
+    }
+
+private:
+    uint8_t _memory[MEM_SIZE]{};
+    MemoryAllocator _alloc;
+};
+
+
 }

@@ -29,27 +29,6 @@ private:
     MemoryAllocator _alloc;
 };
 
-/**
- * @brief Class which allows to statically allocate memory for messgen parsing
- * @tparam MEM_SIZE     -   memory size
- * @warning Each parse call on this class will clear memory, so if you want to do multiple parse calls
- *          store it into temporary MemoryAllocator& variable.
- */
-template<size_t MEM_SIZE>
-class StaticMemoryAllocator {
-public:
-    explicit StaticMemoryAllocator() noexcept:
-            _alloc(_memory.begin(), _memory.size()) {}
-
-    operator MemoryAllocator &() noexcept {
-        _alloc = MemoryAllocator(_memory.begin(), _memory.size());
-        return _alloc;
-    }
-
-private:
-    std::array<uint8_t, MEM_SIZE> _memory{};
-    MemoryAllocator _alloc;
-};
 
 /**
  * @brief Serialize message into std::vector
