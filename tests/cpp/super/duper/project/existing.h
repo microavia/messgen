@@ -10,9 +10,11 @@ namespace super::duper::project {
 struct existing{
     int data;
 
+    static const size_t STATIC_SIZE = sizeof(data);
+
     bool operator==(const existing& other) const { return data == other.data; }
 
-    std::size_t get_size() const { return sizeof(data); }
+    std::size_t get_size() const { return STATIC_SIZE; }
 
     static const messgen::Metadata METADATA;
 };

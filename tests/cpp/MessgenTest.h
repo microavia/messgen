@@ -386,7 +386,13 @@ TEST_F(TestMessgen, SimpleDetectorStructs) {
 TEST_F(TestMessgen, UseExisting) {
     static_assert(true == messgen::SimpleDetector<entities::msgs::Existing>::is_simple_enough, "existing");
     static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::use_existing>::is_simple_enough, "use existing");
-
+    static_assert(sizeof(uint32_t) == messgen::msgs::messgen_test::use_existing::STATIC_SIZE, "static size");
     static_assert(std::is_same<entities::msgs::Existing, super::duper::project::existing>::value, "aliasing");
+    SUCCEED();
+}
+
+TEST_F(TestMessgen, UseOneExisting) {
+    static_assert(true == messgen::SimpleDetector<messgen::msgs::messgen_test::use_one_existing>::is_simple_enough, "simple enough");
+    static_assert(sizeof(entities::msgs::Existing) == messgen::msgs::messgen_test::use_one_existing::STATIC_SIZE, "same size");
     SUCCEED();
 }

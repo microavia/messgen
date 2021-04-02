@@ -1,0 +1,5 @@
+id: 13
+fields:
+  - name: one
+    type: entities/Existing
+    descr: "use one non generated object"
