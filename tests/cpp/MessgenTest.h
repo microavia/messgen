@@ -22,7 +22,6 @@ inline void compact(std::vector<T> & vec, size_t N) {
 class TestMessgen : public ::testing::Test {
 public:
     TestMessgen() :
-            _memory_pool(MEMORY_POOL_SIZE),
             gen(SEED) {
         _ser_buf.reserve(SERIALIZE_BUF_SIZE);
     }
@@ -77,8 +76,9 @@ protected:
         _embedded_dyn_d1_msg.f7 = "";
         _embedded_dyn_d1_msg.f8 = "Embedded string";
 
+        _use_one_existing.one = {42};
+
         memset(&_ser_buf[0], 0, SERIALIZE_BUF_SIZE);
-        memset(&_memory_pool[0], 0, MEMORY_POOL_SIZE);
     }
 
 
@@ -96,13 +96,14 @@ protected:
     messgen::msgs::messgen_test::simple_dynamic_message _simple_dynamic_msg{};
     messgen::msgs::messgen_test::embedded_dynamic_message_d1 _embedded_dyn_d1_msg{};
     messgen::msgs::messgen_test::empty _empty_msg{};
+    messgen::msgs::messgen_test::use_one_existing _use_one_existing{};
 
     static constexpr size_t MEMORY_POOL_SIZE = 1024*10;
     static constexpr size_t SERIALIZE_BUF_SIZE = 1024*2;
     static constexpr size_t SEED = 14;
 
     std::vector<uint8_t> _ser_buf;
-    std::vector<uint8_t> _memory_pool;
+    messgen::StaticMemoryAllocator<1024*10> _messgen_alloc;
     std::default_random_engine gen;
 
     template <class T>
@@ -195,7 +196,7 @@ TEST_F(TestMessgen, PlainMessageTest) {
     ASSERT_EQ(msg_info.msg_id, _simple_msg.TYPE);
 
     messgen::msgs::messgen_test::simple_message parsed_msg{};
-    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_simple_msg, parsed_msg);
 }
 
@@ -209,7 +210,7 @@ TEST_F(TestMessgen, EmptyMessgenTest) {
     ASSERT_EQ(msg_info.msg_id, _empty_msg.TYPE);
 
     messgen::msgs::messgen_test::empty parsed_msg{};
-    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_empty_msg, parsed_msg);
 }
 
@@ -223,7 +224,7 @@ TEST_F(TestMessgen, NestedMessagesTest) {
     ASSERT_EQ(msg_info.msg_id, embedded_message_d2::TYPE);
 
     embedded_message_d2 parsed_msg{};
-    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_msg, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_embedded_d2_msg, parsed_msg);
 }
 
@@ -255,7 +256,7 @@ TEST_F(TestMessgen, MultipleMessagesSerializeParse) {
     ASSERT_EQ(messgen::stl::get_message_info(_ser_buf, msg_info), OK);
     ASSERT_EQ(msg_info.msg_id, embedded_message_d1::TYPE);
 
-    ASSERT_EQ(messgen::stl::parse(msg_info, d1_parsed), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, d1_parsed, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_embedded_d1_msg, d1_parsed);
     compact(_ser_buf, msg_info.get_total_size());
 
@@ -269,7 +270,7 @@ TEST_F(TestMessgen, MultipleMessagesSerializeParse) {
     ASSERT_EQ(msg_info.msg_id, embedded_message_d2::TYPE);
 
     // Parse d2
-    ASSERT_EQ(messgen::stl::parse(msg_info, d2_parsed), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, d2_parsed, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_embedded_d2_msg, d2_parsed);
     compact(_ser_buf, msg_info.get_total_size());
 
@@ -277,7 +278,7 @@ TEST_F(TestMessgen, MultipleMessagesSerializeParse) {
     ASSERT_EQ(messgen::stl::get_message_info(_ser_buf, msg_info), OK);
     ASSERT_EQ(msg_info.msg_id, simple_message::TYPE);
 
-    ASSERT_EQ(messgen::stl::parse(msg_info, simple_parsed), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, simple_parsed, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_simple_msg, simple_parsed);
 
     // All message parser -> slice must be empty.
@@ -297,7 +298,7 @@ TEST_F(TestMessgen, TestSimpleDynamicMessage) {
     ASSERT_EQ(msg_info.msg_id, simple_dynamic_message::TYPE);
 
     messgen::msgs::messgen_test::simple_dynamic_message parsed_simple_dyn_msg{};
-    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_simple_dyn_msg, _memory_pool), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_simple_dyn_msg, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_simple_dynamic_msg, parsed_simple_dyn_msg);
 }
 
@@ -313,7 +314,7 @@ TEST_F(TestMessgen, TestEmbeddedDynamicMessage) {
     ASSERT_EQ(msg_info.msg_id, embedded_dynamic_message_d1::TYPE);
 
     messgen::msgs::messgen_test::embedded_dynamic_message_d1 parsed_embedded_dyn_msg{};
-    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_embedded_dyn_msg, _memory_pool), msg_info.size);
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_embedded_dyn_msg, _messgen_alloc), msg_info.size);
     ASSERT_EQ(_embedded_dyn_d1_msg, parsed_embedded_dyn_msg);
 }
 
@@ -394,5 +395,17 @@ TEST_F(TestMessgen, UseExisting) {
 TEST_F(TestMessgen, UseOneExisting) {
     static_assert(true == messgen::SimpleDetector<messgen::msgs::messgen_test::use_one_existing>::is_simple_enough, "simple enough");
     static_assert(sizeof(entities::msgs::Existing) == messgen::msgs::messgen_test::use_one_existing::STATIC_SIZE, "same size");
-    SUCCEED();
+
+    using namespace messgen::msgs::messgen_test;
+
+    serialize_and_assert(_use_one_existing);
+
+    messgen::MessageInfo msg_info{};
+
+    ASSERT_EQ(messgen::stl::get_message_info(_ser_buf, msg_info), OK);
+    ASSERT_EQ(msg_info.msg_id, use_one_existing::TYPE);
+
+    messgen::msgs::messgen_test::use_one_existing parsed_use_one_existing_msg{};
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_use_one_existing_msg, _messgen_alloc), msg_info.size);
+    ASSERT_EQ(_use_one_existing, parsed_use_one_existing_msg);
 }

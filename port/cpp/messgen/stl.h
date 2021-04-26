@@ -29,27 +29,6 @@ private:
     MemoryAllocator _alloc;
 };
 
-/**
- * @brief Class which allows to statically allocate memory for messgen parsing
- * @tparam MEM_SIZE     -   memory size
- * @warning Each parse call on this class will clear memory, so if you want to do multiple parse calls
- *          store it into temporary MemoryAllocator& variable.
- */
-template<size_t MEM_SIZE>
-class StaticMemoryAllocator {
-public:
-    explicit StaticMemoryAllocator() noexcept:
-            _alloc(_memory.begin(), _memory.size()) {}
-
-    operator MemoryAllocator &() noexcept {
-        _alloc = MemoryAllocator(_memory.begin(), _memory.size());
-        return _alloc;
-    }
-
-private:
-    std::array<uint8_t, MEM_SIZE> _memory{};
-    MemoryAllocator _alloc;
-};
 
 /**
  * @brief Serialize message into std::vector
@@ -89,8 +68,7 @@ int serialize(const T &msg, std::vector<uint8_t> &buf) {
  */
 template<class T>
 inline int parse(const messgen::MessageInfo &info, T &msg,
-                 std::vector<uint8_t> memory_pool = std::vector<uint8_t>()) {
-    messgen::MemoryAllocator allocator(&memory_pool[0], memory_pool.capacity());
+                 messgen::MemoryAllocator &allocator) {
     return messgen::parse(info, msg, allocator);
 }
 
@@ -98,7 +76,7 @@ inline int parse(const messgen::MessageInfo &info, T &msg,
  * @brief Helper wrapper around std::vector. See messgen.h get_message_info().
  */
 inline int get_message_info(const std::vector<uint8_t> &buf, MessageInfo &info) {
-    return get_message_info(&buf[0], buf.size(), info);
+    return messgen::get_message_info(&buf[0], buf.size(), info);
 }
 
 /**
@@ -106,7 +84,7 @@ inline int get_message_info(const std::vector<uint8_t> &buf, MessageInfo &info) 
  */
 template<class F>
 size_t for_each_message(const std::vector<uint8_t> &payload, F &f) {
-    return for_each_message(&payload[0], payload.size(), f);
+    return messgen::for_each_message(&payload[0], payload.size(), f);
 }
 
 /**
@@ -115,6 +93,15 @@ size_t for_each_message(const std::vector<uint8_t> &payload, F &f) {
 template<class T>
 Dynamic <T> make_dynamic(std::vector<T> &vec) {
     return Dynamic<T>{&vec[0], vec.size()};
+}
+
+/**
+ * @brief Create memory allocator from std::vector<T>
+ * @param vec   -    vector which memory is to be used for objects allocations. Only capacity() matters
+ * @return  Memory allocator object
+ */
+inline MemoryAllocator make_memory_allocator(std::vector<uint8_t> &vec) {
+    return MemoryAllocator(&vec[0], vec.capacity());
 }
 
 }

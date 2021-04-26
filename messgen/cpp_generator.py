@@ -644,10 +644,11 @@ class CppGenerator:
 
                 self.start_block("if (dyn_parsed_len > 0)")
                 self.extend([
-                    # Increase allocation size by 1 byte for null terminator
-                    *allocate_memory("string_tmp_buf", "char", "dyn_parsed_len"),
                     "if (len < dyn_parsed_len) {return -1;}",
+                    # Increase allocation size by 1 byte for null terminator
+                    *allocate_memory("string_tmp_buf", "char", "dyn_parsed_len + 1"),
                     memcpy("string_tmp_buf", "ptr", "dyn_parsed_len"),
+                    "string_tmp_buf[dyn_parsed_len] = '\\0';",
                     set_var(field["name"], "std::string_view{string_tmp_buf, dyn_parsed_len}"),
                     set_inc_var("ptr", "dyn_parsed_len"),
                     set_dec_var("len", "dyn_parsed_len"),
