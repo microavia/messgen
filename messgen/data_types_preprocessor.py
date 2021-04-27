@@ -16,7 +16,8 @@ class DataTypesPreprocessor:
             self._types_map[k] = {
                 "align": v["align"],
                 "static_size": v["size"],
-                "plain": True
+                "plain": True,
+                "generated": True
             }
 
         # TODO make aliases in correct way
@@ -24,7 +25,8 @@ class DataTypesPreprocessor:
             self._types_map[k] = {
                 "align": v["align"],
                 "static_size": v["size"],
-                "plain": True
+                "plain": True,
+                "generated": True
             }
 
     def create_types_map(self, modules_map):
@@ -84,10 +86,12 @@ class DataTypesPreprocessor:
             for message in module["messages"]:
                 message_type = self.__normalize_typename(module_name, message["name"])
                 self._lookup_table[message_type] = message
+                self._lookup_table[message_type]["generated"] = True
 
             for message in module["existing_types"]:
                 message_type = self.__normalize_typename(message["namespace"], message["name"])
                 self._lookup_table[message_type] = message
+                self._lookup_table[message_type]["generated"] = False
 
     def __load_constants(self, modules_map):
         for module_name, module in modules_map.items():
@@ -191,7 +195,8 @@ class DataTypesPreprocessor:
             "align": alignment,
             "static_size": static_size,
             "dynamic_fields_cnt": data_type["dynamic_fields_cnt"],
-            "plain": False
+            "plain": False,
+            "generated": data_type["generated"]
         }
 
         self._types_map[typename] = data_type_entry

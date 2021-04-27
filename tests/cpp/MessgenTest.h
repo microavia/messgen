@@ -76,6 +76,8 @@ protected:
         _embedded_dyn_d1_msg.f7 = "";
         _embedded_dyn_d1_msg.f8 = "Embedded string";
 
+        _use_one_existing.one = {42};
+
         memset(&_ser_buf[0], 0, SERIALIZE_BUF_SIZE);
     }
 
@@ -94,6 +96,7 @@ protected:
     messgen::msgs::messgen_test::simple_dynamic_message _simple_dynamic_msg{};
     messgen::msgs::messgen_test::embedded_dynamic_message_d1 _embedded_dyn_d1_msg{};
     messgen::msgs::messgen_test::empty _empty_msg{};
+    messgen::msgs::messgen_test::use_one_existing _use_one_existing{};
 
     static constexpr size_t MEMORY_POOL_SIZE = 1024*10;
     static constexpr size_t SERIALIZE_BUF_SIZE = 1024*2;
@@ -384,7 +387,25 @@ TEST_F(TestMessgen, SimpleDetectorStructs) {
 TEST_F(TestMessgen, UseExisting) {
     static_assert(true == messgen::SimpleDetector<entities::msgs::Existing>::is_simple_enough, "existing");
     static_assert(false == messgen::SimpleDetector<messgen::msgs::messgen_test::use_existing>::is_simple_enough, "use existing");
-
+    static_assert(sizeof(uint32_t) == messgen::msgs::messgen_test::use_existing::STATIC_SIZE, "static size");
     static_assert(std::is_same<entities::msgs::Existing, super::duper::project::existing>::value, "aliasing");
     SUCCEED();
+}
+
+TEST_F(TestMessgen, UseOneExisting) {
+    static_assert(true == messgen::SimpleDetector<messgen::msgs::messgen_test::use_one_existing>::is_simple_enough, "simple enough");
+    static_assert(sizeof(entities::msgs::Existing) == messgen::msgs::messgen_test::use_one_existing::STATIC_SIZE, "same size");
+
+    using namespace messgen::msgs::messgen_test;
+
+    serialize_and_assert(_use_one_existing);
+
+    messgen::MessageInfo msg_info{};
+
+    ASSERT_EQ(messgen::stl::get_message_info(_ser_buf, msg_info), OK);
+    ASSERT_EQ(msg_info.msg_id, use_one_existing::TYPE);
+
+    messgen::msgs::messgen_test::use_one_existing parsed_use_one_existing_msg{};
+    ASSERT_EQ(messgen::stl::parse(msg_info, parsed_use_one_existing_msg, _messgen_alloc), msg_info.size);
+    ASSERT_EQ(_use_one_existing, parsed_use_one_existing_msg);
 }

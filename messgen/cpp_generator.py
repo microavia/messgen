@@ -345,13 +345,10 @@ class CppGenerator:
 
     def generate_message(self, message_obj):
         data_type = self._data_types_map[message_obj["typename"]]
-        msg_static_size = data_type["static_size"]
 
         message_id_const = "static constexpr %s TYPE = %d;" % \
                            (MESSAGE_ID_C_TYPE, message_obj["id"])
-        message_size_const = "static constexpr %s STATIC_SIZE = %d; " \
-                             "/*<! Plain fields size + dynamic fields length */" % \
-                             (MESSAGE_SIZE_C_TYPE, msg_static_size)
+        message_size_const = self.generate_static_size(data_type)
         message_proto_id_const = "static constexpr %s PROTO = PROTO_ID;" % MESSAGE_PROTO_C_TYPE
 
         self.start_block("struct " + message_obj["name"])
@@ -674,6 +671,16 @@ class CppGenerator:
         self.stop_block()
 
         return list(self._code)
+
+    def generate_static_size(self, data_type):
+        var = "static constexpr {} STATIC_SIZE = {}".format(MESSAGE_SIZE_C_TYPE, data_type["static_size"])
+        fields = data_type["fields"]
+        for field in fields:
+            typeinfo = self._data_types_map[field["type"]]
+            if not typeinfo["generated"] and not field["is_dynamic"]:
+                var += " + {}::STATIC_SIZE".format(to_cpp_type(field["type"]))
+        var += ";"
+        return var
 
     def generate_data_fields(self, fields):
         for field in fields:
