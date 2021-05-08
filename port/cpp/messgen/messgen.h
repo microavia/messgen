@@ -6,6 +6,7 @@
 #include "Serializer.h"
 #include "Parser.h"
 #include "MessageInfo.h"
+#include "Storage.h"
 
 namespace messgen {
 
@@ -18,34 +19,6 @@ namespace messgen {
 template <class T>
 size_t get_serialized_size(const T & msg) {
     return msg.get_size() + MessageInfo::HEADER_SIZE;
-}
-
-/**
- * @brief Serialize message into given buffer
- * @tparam T        -   message type
- * @param msg       -   message instance
- * @param buf       -   buffer to serialize into
- * @param buf_len   -   buffer size
- * @return number of bytes written in case of success, -1 in case of error
- */
-template<typename T>
-int serialize(const T &msg, uint8_t *buf, size_t buf_len) {
-    size_t payload_size = msg.get_size();
-    size_t ser_total_size = payload_size + MessageInfo::HEADER_SIZE;
-
-    if (buf_len < ser_total_size) {
-        return -1;
-    }
-
-    // info.seq and info.cls must be filled by caller
-    buf[0] = T::TYPE;
-    buf[1] = payload_size & 0xFF;
-    buf[2] = (payload_size >> 8U) & 0xFF;
-    buf[3] = (payload_size >> 16U) & 0xFF;
-    buf[4] = (payload_size >> 24U) & 0xFF;
-
-    msg.serialize_msg(buf + MessageInfo::HEADER_SIZE);
-    return ser_total_size;
 }
 
 /**
@@ -74,6 +47,35 @@ inline int get_message_info(const uint8_t *buf, size_t buf_len, MessageInfo &inf
     return 0;
 }
 
+
+/**
+ * @brief Serialize message into a given buffer
+ * @tparam T        -   message type
+ * @param msg       -   message instance
+ * @param buf       -   buffer to serialize into
+ * @param buf_len   -   buffer size
+ * @return number of bytes written in case of success, -1 in case of error
+ */
+template<typename T>
+int serialize(const T &msg, uint8_t *buf, size_t buf_len) {
+    size_t payload_size = msg.get_size();
+    size_t ser_total_size = payload_size + MessageInfo::HEADER_SIZE;
+
+    if (buf_len < ser_total_size) {
+        return -1;
+    }
+
+    // info.seq and info.cls must be filled by caller
+    buf[0] = T::TYPE;
+    buf[1] = payload_size & 0xFF;
+    buf[2] = (payload_size >> 8U) & 0xFF;
+    buf[3] = (payload_size >> 16U) & 0xFF;
+    buf[4] = (payload_size >> 24U) & 0xFF;
+
+    msg.serialize_msg(buf + MessageInfo::HEADER_SIZE);
+    return ser_total_size;
+}
+
 /**
  * @brief Parse message
  * @tparam T            -   message type
@@ -89,6 +91,24 @@ int parse(const MessageInfo &info, T &msg, MemoryAllocator &allocator) {
     }
 
     return msg.parse_msg(info.payload, info.size, allocator);
+}
+
+/**
+ * @brief   Function for parsing buffer into Storage wrapper.
+ * @tparam T    -   message type
+ * @tparam S    -   storage size
+ * @tparam D    -   indicates whether storage contains dynamic fields
+ * @param info  -   message info to parse
+ * @param msg   -   storage wrapper to parse message to
+ * @return  number of bytes parsed in case of success, -1 in case of error
+ */
+template <class T, size_t S, bool D>
+int parse(const MessageInfo &info, Storage<T, S, D> &msg) {
+    if (info.msg_id != T::TYPE) {
+        return -1;
+    }
+
+    return msg.parse_msg(info.payload, info.size);
 }
 
 /**
