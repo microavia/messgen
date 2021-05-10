@@ -328,7 +328,7 @@ class GoGenerator:
             if isinstance(s, int):
                 ptr = ptr + s
             else:
-                ptr += 2
+                ptr += 4
         return ptr
 
     @staticmethod
