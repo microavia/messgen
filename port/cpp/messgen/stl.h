@@ -59,20 +59,6 @@ int serialize(const T &msg, std::vector<uint8_t> &buf) {
 }
 
 /**
- * @brief Parse message with std::vector as memory pool
- * @tparam T            -   message type
- * @param info          -   message info
- * @param msg           -   message to parse
- * @param memory_pool   -   memory pool
- * @return  0 in case of success, -1 in case of error
- */
-template<class T>
-inline int parse(const messgen::MessageInfo &info, T &msg,
-                 messgen::MemoryAllocator &allocator) {
-    return messgen::parse(info, msg, allocator);
-}
-
-/**
  * @brief Helper wrapper around std::vector. See messgen.h get_message_info().
  */
 inline int get_message_info(const std::vector<uint8_t> &buf, MessageInfo &info) {
