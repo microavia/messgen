@@ -118,7 +118,9 @@ class DataTypesPreprocessor:
             "fields": [],
             "align": basetype_info["align"],
             "static_size": basetype_info["static_size"],
-            "plain": True
+            "plain": True,
+            "has_dynamics": False,
+            "generated": True
         }
 
         self._types_map[typename] = data_type_entry
