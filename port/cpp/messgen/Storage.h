@@ -131,4 +131,23 @@ private:
     MemoryAllocator _memory_allocator{nullptr, 0};
 };
 
+
+/**
+ * @brief   Function for parsing buffer into Storage wrapper.
+ * @tparam T    -   message type
+ * @tparam S    -   storage size
+ * @tparam D    -   indicates whether storage contains dynamic fields
+ * @param info  -   message info to parse
+ * @param msg   -   storage wrapper to parse message to
+ * @return  number of bytes parsed in case of success, -1 in case of error
+ */
+template <class T, size_t S, bool D>
+int parse(const MessageInfo &info, Storage<T, S, D> &msg) {
+    if (info.msg_id != T::TYPE) {
+        return -1;
+    }
+
+    return msg.parse_msg(info.payload, info.size);
+}
+
 }

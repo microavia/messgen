@@ -3,6 +3,7 @@
 #include <messgen/msgs/messgen_test/messages.h>
 #include <messgen/messgen.h>
 #include <messgen/stl.h>
+#include <messgen/Storage.h>
 #include <random>
 #include <vector>
 
