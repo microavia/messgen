@@ -7,6 +7,10 @@ def to_camelcase(str):
     return ''.join(x for x in str.title().replace('_', '') if not x.isspace())
 
 
+def imported_module_name(m):
+    return m + "_message"
+
+
 def fmt_int8(var, t_info):
     return "buf[ptr] = byte(v.%s)" % var
 
@@ -43,11 +47,11 @@ def parse_float(t_info):
     return " = math.Float%sfrombits(binary.LittleEndian.Uint%s(buf[ptr:]))" % (bits, bits)
 
 
-def fmt_custom(var, t_info):
+def fmt_embedded(var, t_info):
     return "v.%s.Pack(buf[ptr:])" % var
 
 
-def parse_custom(t_info):
+def parse_embedded(t_info):
     return ".Unpack(buf[ptr:])"
 
 
@@ -63,7 +67,7 @@ def parse_string(t_info):
     return " = messgen.ReadString(buf[ptr:])"
 
 
-maproto_types = {
+messgen_types_go = {
     "char": {"fmt": fmt_int8, "parse": parse_int8, "storage_type": "byte"},
     "int8": {"fmt": fmt_int8, "parse": parse_int8},
     "uint8": {"fmt": fmt_int8, "parse": parse_int8},
@@ -130,15 +134,19 @@ class GoGenerator:
             struct_code.append("\t%s %s" % (field_name, type_info["storage_type"]))
             if "imports" in type_info:
                 for i in type_info["imports"]:
-                    if "$MESSGEN_MODULE" in i:
+                    if type(i) is tuple:
+                        imp = "%s \"%s\"" % i
+                    else:
+                        imp = "\"%s\"" % i
+                    if "$MESSGEN_MODULE" in imp:
                         try:
                             messgen_go_module = self._variables["messgen_go_module"]
                         except KeyError:
                             raise MessgenException(
                                 "Variable 'messgen_go_module' required but not set, set it with -D option")
 
-                        i = i.replace("$MESSGEN_MODULE", messgen_go_module)
-                    s = '    \"' + i + '\"'
+                        imp = imp.replace("$MESSGEN_MODULE", messgen_go_module)
+                    s = '    ' + imp
                     if s not in imports_code:
                         imports_code.append(s)
         imports_code.append('    "fmt"')
@@ -279,9 +287,24 @@ class GoGenerator:
     def get_type_info(self, f):
         t = f["type"]
 
-        type_info = dict(maproto_types[t])
+        type_info = dict(self._data_types_map[t])
+
+        if type_info["plain"]:
+            # Plain type
+            mt = messgen_types_go.get(t)
+            if mt == None:
+                raise Exception("Unknown type for Go generator: " + t)
+            type_info.update(mt)
+        elif not type_info["plain"]:
+            # Embedded type
+            tp = t.split("/")
+            type_info["storage_type"] = "%s.%s" % (imported_module_name(tp[-2]), to_camelcase(tp[-1]))
+            type_info["imports"] = [(imported_module_name(tp[2]), "$MESSGEN_MODULE/%s/message" % tp[2])]
+            type_info["fmt"] = fmt_embedded
+            type_info["parse"] = parse_embedded
+
         type_info["name"] = f["name"]
-        static_size = self._data_types_map[t]["static_size"]
+        static_size = type_info["static_size"]
         type_info["is_array"] = f["is_array"]
         type_info["array_size"] = f["num"]
 
