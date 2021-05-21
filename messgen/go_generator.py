@@ -12,59 +12,85 @@ def imported_module_name(m):
 
 
 def fmt_int8(var, t_info):
-    return "buf[ptr] = byte(v.%s)" % var
+    return "buf[ptr] = byte(v.%s)\n" \
+           "ptr += 1" % var
 
 
-def parse_int8(t_info):
-    return " = %s(buf[ptr])" % t_info["element_type"]
+def parse_int8(var, t_info):
+    return "v.%s = %s(buf[ptr])\n" \
+           "ptr += 1" % (var, t_info["element_type"])
 
 
 def fmt_int(var, t_info):
     et = t_info["element_type"]
     if et.startswith("u"):
-        return "binary.LittleEndian.Put%s(buf[ptr:], v.%s)" % (to_camelcase(et), var)
+        return "binary.LittleEndian.Put%s(buf[ptr:], v.%s)\n" \
+               "ptr += %s" % (to_camelcase(et), var, t_info["element_size"])
     else:
-        return "binary.LittleEndian.PutU%s(buf[ptr:], u%s(v.%s))" % (et, et, var)
+        return "binary.LittleEndian.PutU%s(buf[ptr:], u%s(v.%s))\n" \
+               "ptr += %s" % (et, et, var, t_info["element_size"])
 
 
-def parse_int(t_info):
+def parse_int(var, t_info):
     et = t_info["element_type"]
     if et.startswith("u"):
-        return " = binary.LittleEndian.%s(buf[ptr:])" % to_camelcase(et)
+        return "v.%s = binary.LittleEndian.%s(buf[ptr:])\n" \
+               "ptr += %s" % (var, to_camelcase(et), t_info["element_size"])
     else:
-        return " = %s(binary.LittleEndian.U%s(buf[ptr:]))" % (et, et)
+        return "v.%s = %s(binary.LittleEndian.U%s(buf[ptr:]))\n" \
+               "ptr += %s" % (var, et, et, t_info["element_size"])
 
 
 def fmt_float(var, t_info):
     et = t_info["element_type"]
     bits = et[5:]
-    return "binary.LittleEndian.PutUint%s(buf[ptr:], math.Float%sbits(v.%s))" % (bits, bits, var)
+    return "binary.LittleEndian.PutUint%s(buf[ptr:], math.Float%sbits(v.%s))\n" \
+           "ptr += %s" % (bits, bits, var, t_info["element_size"])
 
 
-def parse_float(t_info):
+def parse_float(var, t_info):
     et = t_info["element_type"]
     bits = et[5:]
-    return " = math.Float%sfrombits(binary.LittleEndian.Uint%s(buf[ptr:]))" % (bits, bits)
+    return "v.%s = math.Float%sfrombits(binary.LittleEndian.Uint%s(buf[ptr:]))\n" \
+           "ptr += %s" % (var, bits, bits, t_info["element_size"])
 
 
 def fmt_embedded(var, t_info):
-    return "v.%s.Pack(buf[ptr:])" % var
+    return "pn, err := v.%s.Pack(buf[ptr:])\n" \
+           "if err != nil {\n" \
+           "\treturn 0, err\n" \
+           "}\n" \
+           "ptr += pn" % var
 
 
-def parse_embedded(t_info):
-    return ".Unpack(buf[ptr:])"
+def parse_embedded(var, t_info):
+    return "err := v.%s.Unpack(buf[ptr:])\n" \
+           "if err != nil {\n" \
+           "\treturn err\n" \
+           "}\n" \
+           "ptr += v.%s.MsgSize()" % (var, var)
 
 
 def sizeof_dynamic(var, t_info):
-    return "4 + %i*len(v.%s)" % (t_info["element_size"], var)
+    return "4 + %s*len(v.%s)" % (t_info["element_size"], var)
+
+
+def sizeof_embedded(var, t_info):
+    return "%s.MsgSize()" % var
+
+
+def sizeof_dynamic_of_dynamic(var, t_info):
+    return "ArrayOfDynamicSize(v.%s)" % var
 
 
 def fmt_string(var, t_info):
-    return "messgen.WriteString(buf[ptr:], v.%s)" % var
+    return "messgen.WriteString(buf[ptr:], v.%s)\n" \
+           "ptr += 4 + len(v.%s)" % (var, var)
 
 
-def parse_string(t_info):
-    return " = messgen.ReadString(buf[ptr:])"
+def parse_string(var, t_info):
+    return "v.%s = messgen.ReadString(buf[ptr:])\n" \
+           "ptr += 4 + len(v.%s)" % (var, var)
 
 
 messgen_types_go = {
@@ -173,25 +199,65 @@ class GoGenerator:
             code.append("")
 
         # Size
+        code.extend(self.generate_msg_size(msg))
+
+        # Pack
+        code.extend(self.generate_pack(msg))
+
+        # Unpack
+        code.extend(self.generate_unpack(msg))
+
+        # String()
+        code.append('func (v *%s) String() string {' % msg_name)
+        s = []
+        for field in fields:
+            s.append("%s=%%v" % (field["name"],))
+        code.append('\treturn fmt.Sprintf("<%s %s>",' % (msg_name, " ".join(s),))
+        a = []
+        for field in fields:
+            a.append("v.%s" % (to_camelcase(field["name"])))
+        code.append("\t\t%s)" % (", ".join(a),))
+        code.append("}")
+        code.append("")
+        return code
+
+    def generate_msg_size(self, msg):
+        msg_name = to_camelcase(msg["name"])
+        fields = msg["fields"]
+
+        code = []
+
         code.append("func (v *%s) MsgSize() int {" % msg_name)
+        static_size = 0
         size_str_p = []
         for field in fields:
             field_name = to_camelcase(field["name"])
             type_info = self.get_type_info(msg, field)
-            s = type_info["total_size"]
-            if isinstance(s, int):
-                size_str_p.append(str(s))
+            total_size = type_info["field_size"]
+            if isinstance(total_size, int):
+                static_size += total_size
             else:
-                size_str_p.append(s(field_name, type_info))
+                size_str_p.append(total_size(field_name, type_info))
+
+        size_str = ""
+        if static_size != 0:
+            size_str_p = [str(static_size)] + size_str_p
+
         if len(size_str_p) > 0:
-            size_str = " + ".join(size_str_p)
+            size_str += " + ".join(size_str_p)
         else:
             size_str = "0"
         code.append("\treturn %s" % size_str)
         code.append("}")
         code.append("")
 
-        # Pack
+        return code
+
+    def generate_pack(self, msg):
+        msg_name = to_camelcase(msg["name"])
+        fields = msg["fields"]
+
+        code = []
         code.append("func (v *%s) Pack(buf []byte) (int, error) {" % msg_name)
         code.append("\tif len(buf) < v.MsgSize() {")
         code.append(
@@ -200,10 +266,12 @@ class GoGenerator:
         code.append("\tptr := 0")
         for field in fields:
             field_name = to_camelcase(field["name"])
+            var = field_name
             type_info = self.get_type_info(msg, field)
             if type_info == None:
                 raise Exception("Unsupported type: " + field["type"] + " in message " + msg["name"])
             if type_info["is_dynamic"]:
+                var += "[i]"
                 code.append("\tbinary.LittleEndian.PutUint32(buf[ptr:], uint32(len(v.%s)))" % field_name)
                 code.append("\tptr += 4")
                 if type_info["element_size"] == 1:
@@ -211,24 +279,26 @@ class GoGenerator:
                     code.append("\tptr += len(v.%s)" % field_name)
                 else:
                     code.append("\tfor i := 0; i < len(v.%s); i++ {" % field_name)
-                    code.append("\t\t%s" % (type_info["fmt"](field_name + "[i]", type_info)))
-                    code.append("\t\tptr += %s" % type_info["element_size"])
+                    code.append(type_info["fmt"](var, type_info))
                     code.append("\t}")
             elif type_info["is_array"]:
-                var = "%s[i]" % to_camelcase(field["name"])
+                var += "[i]"
                 code.append("\tfor i := 0; i < %s; i++ {" % type_info["array_size"])
-                code.append("\t\t%s" % (type_info["fmt"](var, type_info)))
-                code.append("\t\tptr += %s" % type_info["element_size"])
+                code.append(type_info["fmt"](var, type_info))
                 code.append("\t}")
             else:
-                var = to_camelcase(field["name"])
-                code.append("\t%s" % (type_info["fmt"](var, type_info)))
-                code.append("\tptr += %s" % self.total_size_str(field_name, type_info))
+                code.append(type_info["fmt"](var, type_info))
         code.append("\treturn ptr, nil")
         code.append("}")
         code.append("")
 
-        # Unpack
+        return code
+
+    def generate_unpack(self, msg):
+        msg_name = to_camelcase(msg["name"])
+        fields = msg["fields"]
+
+        code = []
         code.append("func (v *%s) Unpack(buf []byte) error {" % msg_name)
         code.append("\tif len(buf) < %sMinMsgSize {" % msg_name)
         code.append(
@@ -254,40 +324,26 @@ class GoGenerator:
                     code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
                     code.append("\t\tptr += 4")
                     code.append("\t\tfor i := 0; i < n; i++ {")
-                    code.append("\t\t\tv.%s[i]%s" % (field_name, type_info["parse"](type_info)))
-                    code.append("\t\t\tptr += %s" % type_info["element_size"])
+                    code.append(type_info["parse"](field_name + "[i]", type_info))
                     code.append("\t\t}")
                     code.append("\t}")
             elif type_info["is_array"]:
                 code.append("\tfor i := 0; i < %s; i++ {" % type_info["array_size"])
-                code.append("\t\tv.%s[i]%s" % (field_name, type_info["parse"](type_info)))
-                code.append("\t\tptr += %s" % type_info["element_size"])
+                code.append(type_info["parse"](field_name + "[i]", type_info))
                 code.append("\t}")
             else:
-                code.append("\tv.%s%s" % (field_name, type_info["parse"](type_info)))
-                code.append("\tptr += %s" % self.total_size_str(field_name, type_info))
+                code.append(type_info["parse"](field_name, type_info))
         code.append("\treturn nil")
         code.append("}")
         code.append("")
 
-        # String()
-        code.append('func (v *%s) String() string {' % msg_name)
-        s = []
-        for field in fields:
-            s.append("%s=%%v" % (field["name"],))
-        code.append('\treturn fmt.Sprintf("<%s %s>",' % (msg_name, " ".join(s),))
-        a = []
-        for field in fields:
-            a.append("v.%s" % (to_camelcase(field["name"])))
-        code.append("\t\t%s)" % (", ".join(a),))
-        code.append("}")
-        code.append("")
         return code
 
     def get_type_info(self, parent_msg, f):
         t = f["type"]
 
         type_info = dict(self._data_types_map[t])
+        type_info["typename"] = t
 
         if type_info["plain"]:
             # Plain type
@@ -295,13 +351,14 @@ class GoGenerator:
             if mt == None:
                 raise Exception("Unknown type for Go generator: " + t)
             type_info.update(mt)
-        elif not type_info["plain"]:
+        else:
             # Embedded type
             tp = t.split("/")
             ptp = parent_msg["typename"].split("/")
             if tp[0] != ptp[0] or tp[2] != ptp[2]:
                 # Add import for embedded messages from other modules
-                type_info["imports"] = [(imported_module_name(tp[2]), "$MESSGEN_MODULE_PATH/%s/%s/message" % (tp[0], tp[2]))]
+                type_info["imports"] = [
+                    (imported_module_name(tp[2]), "$MESSGEN_MODULE_PATH/%s/%s/message" % (tp[0], tp[2]))]
                 type_info["storage_type"] = "%s.%s" % (imported_module_name(tp[-2]), to_camelcase(tp[-1]))
             else:
                 type_info["storage_type"] = "%s" % to_camelcase(tp[-1])
@@ -317,48 +374,67 @@ class GoGenerator:
         if "storage_type" not in type_info:
             type_info["storage_type"] = t
 
-        # TODO: FIXME
-        if t != "string":
-            type_info["is_dynamic"] = f["is_dynamic"]
-        else:
+        type_info["is_dynamic"] = f["is_dynamic"]
+        if t == "string":
             type_info["is_dynamic"] = False
-            type_info["total_size"] = sizeof_dynamic
 
         type_info["element_type"] = type_info["storage_type"]
-        type_info["element_size"] = static_size
+        if type_info["has_dynamics"]:
+            type_info["element_size"] = "INVALID"
+        else:
+            type_info["element_size"] = static_size
         if "imports" not in type_info:
             type_info["imports"] = []
 
+        if type_info["plain"]:
+            if type_info["is_dynamic"]:
+                type_info["min_size"] = 4
+                type_info["field_size"] = sizeof_dynamic
+            elif type_info["is_array"]:
+                type_info["min_size"] = static_size * f["num"]
+                type_info["field_size"] = static_size * f["num"]
+            elif t == "string":
+                type_info["min_size"] = 4
+                type_info["field_size"] = sizeof_dynamic
+            else:
+                type_info["min_size"] = static_size
+                type_info["field_size"] = static_size
+        else:
+            if type_info["has_dynamics"]:
+                if type_info["is_dynamic"] or type_info["is_array"]:
+                    type_info["field_size"] = sizeof_dynamic_of_dynamic
+                else:
+                    type_info["field_size"] = sizeof_embedded
+            else:
+                type_info["field_size"] = sizeof_embedded
+
         if type_info["is_dynamic"]:
-            type_info["total_size"] = sizeof_dynamic
             type_info["storage_type"] = "[]" + type_info["storage_type"]
             type_info["imports"].append("encoding/binary")
         elif type_info["is_array"]:
-            type_info["total_size"] = static_size * f["num"]
             type_info["storage_type"] = "[" + str(f["num"]) + "]" + type_info["storage_type"]
-        else:
-            if "total_size" not in type_info:
-                type_info["total_size"] = static_size
 
         return type_info
 
-    def total_size_str(self, field_name, type_info):
-        s = type_info["total_size"]
-        if isinstance(s, int):
-            return str(s)
-        else:
-            return s(field_name, type_info)
-
     def min_msg_size(self, msg):
-        ptr = 0
+        msg_sz = 0
         for f in msg["fields"]:
-            t_info = self.get_type_info(msg, f)
-            s = t_info["total_size"]
-            if isinstance(s, int):
-                ptr = ptr + s
+            t = f["type"]
+            type_info = self.get_type_info(msg, f)
+            static_size = type_info["static_size"]
+
+            if type_info["plain"]:
+                if type_info["is_dynamic"]:
+                    msg_sz = 4
+                elif type_info["is_array"]:
+                    msg_sz = static_size * f["num"]
+                elif t == "string":
+                    msg_sz = 4
+                else:
+                    msg_sz = static_size
             else:
-                ptr += 4
-        return ptr
+                msg_sz = self.min_msg_size(type_info)
+        return msg_sz
 
     @staticmethod
     def __write_file(fpath, code):
