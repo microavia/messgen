@@ -79,7 +79,7 @@ messgen_types_go = {
     "uint64": {"fmt": fmt_int, "parse": parse_int, "imports": ["encoding/binary"]},
     "float32": {"fmt": fmt_float, "parse": parse_float, "imports": ["math", "encoding/binary"]},
     "float64": {"fmt": fmt_float, "parse": parse_float, "imports": ["math", "encoding/binary"]},
-    "string": {"fmt": fmt_string, "parse": parse_string, "imports": ["$MESSGEN_MODULE"]},
+    "string": {"fmt": fmt_string, "parse": parse_string, "imports": ["$MESSGEN_MODULE_PATH/messgen"]},
 }
 
 
@@ -130,7 +130,7 @@ class GoGenerator:
         struct_code = ["type %s struct {" % msg_name]
         for field in fields:
             field_name = to_camelcase(field["name"])
-            type_info = self.get_type_info(field)
+            type_info = self.get_type_info(msg, field)
             struct_code.append("\t%s %s" % (field_name, type_info["storage_type"]))
             if "imports" in type_info:
                 for i in type_info["imports"]:
@@ -138,14 +138,14 @@ class GoGenerator:
                         imp = "%s \"%s\"" % i
                     else:
                         imp = "\"%s\"" % i
-                    if "$MESSGEN_MODULE" in imp:
+                    if "$MESSGEN_MODULE_PATH" in imp:
                         try:
                             messgen_go_module = self._variables["messgen_go_module"]
                         except KeyError:
                             raise MessgenException(
                                 "Variable 'messgen_go_module' required but not set, set it with -D option")
 
-                        imp = imp.replace("$MESSGEN_MODULE", messgen_go_module)
+                        imp = imp.replace("$MESSGEN_MODULE_PATH", messgen_go_module)
                     s = '    ' + imp
                     if s not in imports_code:
                         imports_code.append(s)
@@ -162,7 +162,7 @@ class GoGenerator:
         # Constants
         if "id" in msg:
             code.append("const %sMsgId = %i" % (msg_name, msg["id"]))
-        code.append("const %sMinMsgSize = %i" % (msg_name, self.min_msg_size(fields)))
+        code.append("const %sMinMsgSize = %i" % (msg_name, self.min_msg_size(msg)))
         code.append("")
 
         # Type
@@ -177,7 +177,7 @@ class GoGenerator:
         size_str_p = []
         for field in fields:
             field_name = to_camelcase(field["name"])
-            type_info = self.get_type_info(field)
+            type_info = self.get_type_info(msg, field)
             s = type_info["total_size"]
             if isinstance(s, int):
                 size_str_p.append(str(s))
@@ -200,7 +200,7 @@ class GoGenerator:
         code.append("\tptr := 0")
         for field in fields:
             field_name = to_camelcase(field["name"])
-            type_info = self.get_type_info(field)
+            type_info = self.get_type_info(msg, field)
             if type_info == None:
                 raise Exception("Unsupported type: " + field["type"] + " in message " + msg["name"])
             if type_info["is_dynamic"]:
@@ -239,7 +239,7 @@ class GoGenerator:
             code.append("\tptr := 0")
         for field in fields:
             field_name = to_camelcase(field["name"])
-            type_info = self.get_type_info(field)
+            type_info = self.get_type_info(msg, field)
             if type_info["is_dynamic"]:
                 if type_info["element_size"] == 1:
                     code.append("\t{")
@@ -284,7 +284,7 @@ class GoGenerator:
         code.append("")
         return code
 
-    def get_type_info(self, f):
+    def get_type_info(self, parent_msg, f):
         t = f["type"]
 
         type_info = dict(self._data_types_map[t])
@@ -298,8 +298,14 @@ class GoGenerator:
         elif not type_info["plain"]:
             # Embedded type
             tp = t.split("/")
-            type_info["storage_type"] = "%s.%s" % (imported_module_name(tp[-2]), to_camelcase(tp[-1]))
-            type_info["imports"] = [(imported_module_name(tp[2]), "$MESSGEN_MODULE/%s/message" % tp[2])]
+            ptp = parent_msg["typename"].split("/")
+            if tp[0] != ptp[0] or tp[2] != ptp[2]:
+                # Add import for embedded messages from other modules
+                type_info["imports"] = [(imported_module_name(tp[2]), "$MESSGEN_MODULE_PATH/%s/%s/message" % (tp[0], tp[2]))]
+                type_info["storage_type"] = "%s.%s" % (imported_module_name(tp[-2]), to_camelcase(tp[-1]))
+            else:
+                type_info["storage_type"] = "%s" % to_camelcase(tp[-1])
+
             type_info["fmt"] = fmt_embedded
             type_info["parse"] = parse_embedded
 
@@ -343,10 +349,10 @@ class GoGenerator:
         else:
             return s(field_name, type_info)
 
-    def min_msg_size(self, fields):
+    def min_msg_size(self, msg):
         ptr = 0
-        for f in fields:
-            t_info = self.get_type_info(f)
+        for f in msg["fields"]:
+            t_info = self.get_type_info(msg, f)
             s = t_info["total_size"]
             if isinstance(s, int):
                 ptr = ptr + s
