@@ -368,7 +368,6 @@ class GoGenerator:
             # Embedded type
             tp = t.split("/")
             ptp = parent_msg["typename"].split("/")
-            type_info["imports"].append("$MESSGEN_MODULE_PATH/messgen")
             if tp[0] != ptp[0] or tp[2] != ptp[2]:
                 # Add import for embedded messages from other modules
                 type_info["imports"].append(
@@ -399,7 +398,8 @@ class GoGenerator:
                 type_info["total_size"] = sizeof_dynamic
                 type_info["min_size"] = 4
             type_info["storage_type"] = "[]" + type_info["element_type"]
-            type_info["imports"].append("encoding/binary")
+            if t != "string":
+                type_info["imports"].append("encoding/binary")
         elif type_info["is_array"]:
             # Fixed size array
             if type_info["has_dynamics"]:
