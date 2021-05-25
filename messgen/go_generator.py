@@ -75,12 +75,20 @@ def sizeof_dynamic(var, t_info):
     return "4 + %s*len(v.%s)" % (t_info["element_size"], var)
 
 
+def sizeof_array_of_dynamic(var, t_info):
+    return "func(a %s) int { sz := 0; for _, i := range(a) { sz += i.MsgSize() }; return sz }(v.%s)" % (t_info["storage_type"], var)
+
+
+def min_sizeof_array_of_dynamic(var, t_info):
+    return "messgen.ArrayOfDynamicMinSize(v.%s)" % var
+
+
 def sizeof_embedded(var, t_info):
-    return "%s.MsgSize()" % var
+    return "v.%s.MsgSize()" % var
 
 
-def sizeof_dynamic_of_dynamic(var, t_info):
-    return "ArrayOfDynamicSize(v.%s)" % var
+def min_sizeof_embedded(var, t_info):
+    return t_info["element_type"] + "MinMsgSize"
 
 
 def fmt_string(var, t_info):
@@ -94,7 +102,7 @@ def parse_string(var, t_info):
 
 
 messgen_types_go = {
-    "char": {"fmt": fmt_int8, "parse": parse_int8, "storage_type": "byte"},
+    "char": {"fmt": fmt_int8, "parse": parse_int8, "element_type": "byte"},
     "int8": {"fmt": fmt_int8, "parse": parse_int8},
     "uint8": {"fmt": fmt_int8, "parse": parse_int8},
     "int16": {"fmt": fmt_int, "parse": parse_int, "imports": ["encoding/binary"]},
@@ -233,11 +241,11 @@ class GoGenerator:
         for field in fields:
             field_name = to_camelcase(field["name"])
             type_info = self.get_type_info(msg, field)
-            total_size = type_info["field_size"]
-            if isinstance(total_size, int):
-                static_size += total_size
+            s = type_info["total_size"]
+            if isinstance(s, int):
+                static_size += s
             else:
-                size_str_p.append(total_size(field_name, type_info))
+                size_str_p.append(s(field_name, type_info))
 
         size_str = ""
         if static_size != 0:
@@ -283,7 +291,7 @@ class GoGenerator:
                     code.append("\t}")
             elif type_info["is_array"]:
                 var += "[i]"
-                code.append("\tfor i := 0; i < %s; i++ {" % type_info["array_size"])
+                code.append("\tfor i := 0; i < %s; i++ {" % type_info["num"])
                 code.append(type_info["fmt"](var, type_info))
                 code.append("\t}")
             else:
@@ -328,7 +336,7 @@ class GoGenerator:
                     code.append("\t\t}")
                     code.append("\t}")
             elif type_info["is_array"]:
-                code.append("\tfor i := 0; i < %s; i++ {" % type_info["array_size"])
+                code.append("\tfor i := 0; i < %s; i++ {" % type_info["num"])
                 code.append(type_info["parse"](field_name + "[i]", type_info))
                 code.append("\t}")
             else:
@@ -343,7 +351,12 @@ class GoGenerator:
         t = f["type"]
 
         type_info = dict(self._data_types_map[t])
-        type_info["typename"] = t
+        type_info["name"] = f["name"]
+        type_info["is_array"] = f["is_array"]
+        type_info["is_dynamic"] = f["is_dynamic"]
+        type_info["num"] = f["num"]
+        type_info["element_type"] = t
+        type_info["imports"] = []
 
         if type_info["plain"]:
             # Plain type
@@ -355,86 +368,81 @@ class GoGenerator:
             # Embedded type
             tp = t.split("/")
             ptp = parent_msg["typename"].split("/")
+            type_info["imports"].append("$MESSGEN_MODULE_PATH/messgen")
             if tp[0] != ptp[0] or tp[2] != ptp[2]:
                 # Add import for embedded messages from other modules
-                type_info["imports"] = [
-                    (imported_module_name(tp[2]), "$MESSGEN_MODULE_PATH/%s/%s/message" % (tp[0], tp[2]))]
-                type_info["storage_type"] = "%s.%s" % (imported_module_name(tp[-2]), to_camelcase(tp[-1]))
+                type_info["imports"].append(
+                    (imported_module_name(tp[2]), "$MESSGEN_MODULE_PATH/%s/%s/message" % (tp[0], tp[2])))
+                type_info["element_type"] = "%s.%s" % (imported_module_name(tp[-2]), to_camelcase(tp[-1]))
             else:
-                type_info["storage_type"] = "%s" % to_camelcase(tp[-1])
+                # Embedded message from the same module
+                type_info["element_type"] = "%s" % to_camelcase(tp[-1])
 
             type_info["fmt"] = fmt_embedded
             type_info["parse"] = parse_embedded
 
-        type_info["name"] = f["name"]
         static_size = type_info["static_size"]
-        type_info["is_array"] = f["is_array"]
-        type_info["array_size"] = f["num"]
 
-        if "storage_type" not in type_info:
-            type_info["storage_type"] = t
-
-        type_info["is_dynamic"] = f["is_dynamic"]
-        if t == "string":
-            type_info["is_dynamic"] = False
-
-        type_info["element_type"] = type_info["storage_type"]
         if type_info["has_dynamics"]:
-            type_info["element_size"] = "INVALID"
+            type_info["element_size"] = "INVALID"  # Must not be used
         else:
             type_info["element_size"] = static_size
-        if "imports" not in type_info:
-            type_info["imports"] = []
 
-        if type_info["plain"]:
-            if type_info["is_dynamic"]:
-                type_info["min_size"] = 4
-                type_info["field_size"] = sizeof_dynamic
-            elif type_info["is_array"]:
-                type_info["min_size"] = static_size * f["num"]
-                type_info["field_size"] = static_size * f["num"]
-            elif t == "string":
-                type_info["min_size"] = 4
-                type_info["field_size"] = sizeof_dynamic
-            else:
-                type_info["min_size"] = static_size
-                type_info["field_size"] = static_size
-        else:
-            if type_info["has_dynamics"]:
-                if type_info["is_dynamic"] or type_info["is_array"]:
-                    type_info["field_size"] = sizeof_dynamic_of_dynamic
-                else:
-                    type_info["field_size"] = sizeof_embedded
-            else:
-                type_info["field_size"] = sizeof_embedded
+        type_info["storage_type"] = type_info["element_type"]
 
         if type_info["is_dynamic"]:
-            type_info["storage_type"] = "[]" + type_info["storage_type"]
+            # Dynamic array
+            if type_info["has_dynamics"]:
+                type_info["total_size"] = sizeof_array_of_dynamic
+                type_info["min_size"] = 4
+            else:
+                type_info["total_size"] = sizeof_dynamic
+                type_info["min_size"] = 4
+            type_info["storage_type"] = "[]" + type_info["element_type"]
             type_info["imports"].append("encoding/binary")
         elif type_info["is_array"]:
-            type_info["storage_type"] = "[" + str(f["num"]) + "]" + type_info["storage_type"]
+            # Fixed size array
+            if type_info["has_dynamics"]:
+                type_info["total_size"] = sizeof_array_of_dynamic
+                type_info["min_size"] = min_sizeof_array_of_dynamic
+            else:
+                type_info["total_size"] = static_size * f["num"]
+                type_info["min_size"] = type_info["total_size"]
+            type_info["storage_type"] = "[" + str(f["num"]) + "]" + type_info["element_type"]
+        else:
+            # Non-array field
+            if type_info["has_dynamics"]:
+                type_info["total_size"] = sizeof_embedded
+                type_info["min_size"] = min_sizeof_embedded
+            else:
+                type_info["total_size"] = static_size
+                type_info["min_size"] = static_size
+
+        # TODO: FIXME
+        if t == "string":
+            type_info["is_dynamic"] = False
+            type_info["total_size"] = sizeof_dynamic
+            type_info["storage_type"] = "string"
 
         return type_info
 
-    def min_msg_size(self, msg):
-        msg_sz = 0
-        for f in msg["fields"]:
-            t = f["type"]
-            type_info = self.get_type_info(msg, f)
-            static_size = type_info["static_size"]
+    def total_size_str(self, field_name, type_info):
+        s = type_info["total_size"]
+        if isinstance(s, int):
+            return str(s)
+        else:
+            return s(field_name, type_info)
 
-            if type_info["plain"]:
-                if type_info["is_dynamic"]:
-                    msg_sz = 4
-                elif type_info["is_array"]:
-                    msg_sz = static_size * f["num"]
-                elif t == "string":
-                    msg_sz = 4
-                else:
-                    msg_sz = static_size
+    def min_msg_size(self, msg):
+        sz = 0
+        for f in msg["fields"]:
+            t_info = self.get_type_info(msg, f)
+            s = t_info["total_size"]
+            if isinstance(s, int):
+                sz = sz + s
             else:
-                msg_sz = self.min_msg_size(type_info)
-        return msg_sz
+                sz += 4
+        return sz
 
     @staticmethod
     def __write_file(fpath, code):
