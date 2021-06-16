@@ -1,5 +1,6 @@
 import os
 from .messgen_ex import MessgenException
+from .json_generator import JsonGenerator
 
 PROTO_ID_VAR_TYPE = "uint8_t"
 PROTO_MAX_MESSAGE_SIZE_TYPE = "uint32_t"
@@ -260,6 +261,9 @@ class CppGenerator:
         self._indent_cnt = 0
         self._indent = ""
         self._code = []
+        self._metadata_json = (self._variables.get("metadata_json", "false").lower() == "true")
+        if self._metadata_json:
+            self._json_generator = JsonGenerator(modules_map, data_types_map, module_sep, variables)
 
     def generate(self, out_dir):
         for module_name, module in self._modules_map.items():
@@ -350,7 +354,7 @@ class CppGenerator:
                            (MESSAGE_ID_C_TYPE, message_obj["id"])
 
         message_size_const = self.generate_static_size(data_type)
-        
+
         message_proto_id_const = "static constexpr %s PROTO = PROTO_ID;" % MESSAGE_PROTO_C_TYPE
 
         message_has_dynamics = "static constexpr bool HAS_DYNAMICS = %s;" % str(data_type["has_dynamics"]).lower()
@@ -411,7 +415,8 @@ class CppGenerator:
     def generate_detector(self, namespace, message_obj):
         declaration = ["struct SimpleDetector<%s::%s> {" % (namespace, message_obj["name"])]
         using = ["    using suspect = %s::%s;" % (namespace, message_obj["name"])]
-        fields = ["        && SimpleDetector<decltype(suspect::%s)>::is_simple_enough" % field["name"] for field in message_obj["fields"]]
+        fields = ["        && SimpleDetector<decltype(suspect::%s)>::is_simple_enough" % field["name"] for field in
+                  message_obj["fields"]]
         return [
             *open_namespace("messgen"),
             "",
@@ -461,7 +466,8 @@ class CppGenerator:
                     self.stop_cycle()
 
             elif not typeinfo["plain"]:
-                self.append(set_inc_var("size", "messgen::Serializer<decltype(%s)>::get_dynamic_size(%s)" % (field["name"], field["name"])))
+                self.append(set_inc_var("size", "messgen::Serializer<decltype(%s)>::get_dynamic_size(%s)" % (
+                    field["name"], field["name"])))
 
             elif field["type"] == "string":
                 self.append(set_inc_var("size", strlen(field["name"])))
@@ -550,7 +556,8 @@ class CppGenerator:
             if field["is_array"]:
                 self.__serialize_struct_array(field["name"], field["num"])
             else:
-                serialize_call = "messgen::Serializer<decltype(%s)>::serialize(%s, %s)" % (field["name"], "ptr", field["name"])
+                serialize_call = "messgen::Serializer<decltype(%s)>::serialize(%s, %s)" % (
+                    field["name"], "ptr", field["name"])
                 self.append(set_inc_var("ptr", serialize_call))
 
         self.append("")
@@ -620,7 +627,8 @@ class CppGenerator:
             if field["is_array"]:
                 self.__parse_struct_array(field["name"], field["num"])
             else:
-                parse_call = "parse_result = messgen::Parser<decltype(%s)>::parse(%s, len, %s, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME, field["name"])
+                parse_call = "parse_result = messgen::Parser<decltype(%s)>::parse(%s, len, %s, %s);" % (
+                    field["name"], "ptr", INPUT_ALLOC_NAME, field["name"])
                 self.extend([
                     parse_call,
                     "if (parse_result < 0) { return -1; }",
@@ -701,26 +709,35 @@ class CppGenerator:
 
             self.append(var)
 
-    def generate_metadata(self, message_obj):
-        nested_structs_metadata = "{"
-        fields_description = "\""
+    def generate_metadata_fields_legacy(self, message_obj):
+        descr = ['"']
+        for field in message_obj["fields"]:
+            descr.append(to_cpp_type_short(field["type"]))
 
+            if field["is_array"]:
+                if field["is_dynamic"]:
+                    descr.append("[]")
+                else:
+                    descr.append("[%d]" % field["num"])
+
+            descr.append(" " + field["name"] + ";")
+        descr.append('"')
+        return "".join(descr)
+
+    def generate_metadata_fields_json(self, message_obj):
+        return '"[' + ",".join(self._json_generator.generate_fields(message_obj)).replace('"', '\\"') + ']"'
+
+    def generate_metadata(self, message_obj):
+        if self._metadata_json:
+            fields_description = self.generate_metadata_fields_json(message_obj)
+        else:
+            fields_description = self.generate_metadata_fields_legacy(message_obj)
+
+        nested_structs_metadata = "{"
         for field in message_obj["fields"]:
             typeinfo = self._data_types_map[field["type"]]
             if not typeinfo["plain"]:
                 nested_structs_metadata += "&" + to_cpp_type(field["type"]) + "::METADATA, "
-
-            fields_description += to_cpp_type_short(field["type"])
-
-            if field["is_array"]:
-                if field["is_dynamic"]:
-                    fields_description += "[]"
-                else:
-                    fields_description += "[%d]" % field["num"]
-
-            fields_description += " " + field["name"] + ";"
-
-        fields_description += "\""
         nested_structs_metadata += "nullptr}"
 
         self.append("static const messgen::Metadata *nested_msgs[] = %s;" % nested_structs_metadata)

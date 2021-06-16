@@ -4,6 +4,7 @@ json_types_map = {
     "bytes": "uint8[]",
 }
 
+
 def format_type(f):
     t = json_types_map.get(f["type"], f["type"])
     f_type = t[0].upper() + t[1:]
@@ -12,6 +13,7 @@ def format_type(f):
     elif f["is_dynamic"] and (f["type"] != "string"):
         f_type += "[]"
     return f_type
+
 
 class JsonGenerator:
     PROTO_TYPE_VAR_TYPE = "uint8"
@@ -49,15 +51,19 @@ class JsonGenerator:
         if "id" in msg:
             out.append('    "id": %s,' % msg["id"])
         out.append('    "fields": [')
+        fields_p = self.generate_fields(msg)
+        out.append(",\n".join(["      " + x for x in fields_p]))
+        out.append("    ]")
+        out.append("  }")
+        return out
+
+    def generate_fields(self, msg):
         fields_p = []
         for f in msg["fields"]:
             f_name = f["name"]
             f_type = format_type(f)
-            fields_p.append('      {"name": "%s", "type": "%s"}' % (f_name, f_type))
-        out.append(",\n".join(fields_p))
-        out.append("    ]")
-        out.append("  }")
-        return out
+            fields_p.append('{"name": "%s", "type": "%s"}' % (f_name, f_type))
+        return fields_p
 
     @staticmethod
     def __write_file(fpath, code):
