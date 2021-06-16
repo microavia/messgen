@@ -37,15 +37,29 @@ Each protocol should be placed in directory `base_dir/vendor/protocol`.
 
 Message generator usage:
 ```
-python3 generate.py -b <base_dir> -m <vendor>/<protocol> -l <lang> -o <out_dir>
+python3 generate.py -b <base_dir> -m <vendor>/<protocol> -l <lang> -o <out_dir> [-D variable=value]
 ```
+
+For some languages it's necessary to specify some variables using `-D` option.
+
+Generated messages placed in `out_dir` directory.
 
 #### Go
 
 Example for Go messages generation:
 
 ```
-python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l go -o out/go
+python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l go -o out/go -D messgen_go_module=example.com/path/to/messgen
 ```
 
-Generated messages for protocol `my_vendor/my_protocol` placed in out/go directory.
+Variable `messgen_go_module` must point to messgen Go module (`port/go/messgen`), to add necessary imports in generated messages.
+
+#### C++
+
+Example for C++ messages generation:
+
+```
+python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l cpp -o out/cpp
+```
+
+Variable `metadata_json=true` can be passed to generate metadata in JSON format, rather than legacy.
