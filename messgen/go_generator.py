@@ -331,6 +331,7 @@ class GoGenerator:
                     code.append("\t{")
                     code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
                     code.append("\t\tptr += 4")
+                    code.append("\t\tv.%s = make([]%s, n)" % (field_name, type_info["element_type"]))
                     code.append("\t\tfor i := 0; i < n; i++ {")
                     code.append(type_info["parse"](field_name + "[i]", type_info))
                     code.append("\t\t}")
