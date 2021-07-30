@@ -99,7 +99,7 @@ for (let i = 0; i < basicTypes.length; i++) {
     typeSize[i] = ti.size;
     readFunc[i] = ti.read;
     writeFunc[i] = ti.write;
-};
+}
 
 const DYN_TYPE = typeIndex[DYNAMIC_SIZE_TYPE];
 const DYN_TYPE_SIZE = typeSize[DYN_TYPE];
@@ -134,7 +134,7 @@ function parseType(typeStr, includeMessages) {
         isArray: a.length === 2,
         isComplex: isComplex
     };
-};
+}
 /**
  * class Struct
  */
@@ -208,7 +208,7 @@ export class Struct {
 
         this._size = offset;
     }
-};
+}
 
 // uint32 seq;             //!< Sequence number
 // uint16 size;              //!< Message payload size
@@ -351,9 +351,9 @@ export class Buffer {
 
     static serializeMessage(struct, obj, headerStruct = HEADER_STRUCT, includeMessages) {
 
-        let arr = Buffer.createValueArray(struct.fields, obj);
+        let arr = Buffer.createValueArray(struct.fields, obj, includeMessages);
 
-        let messageSize = Buffer.calcSize(arr);
+        let messageSize = Buffer.calcSize(arr, includeMessages);
 
         let headerBuf = Buffer.serializeObj(headerStruct.fields, {
             seq: obj.seq,
@@ -546,7 +546,7 @@ export class Buffer {
 
         return res;
     }
-};
+}
 
 /**
  * Creates message struct namespace
@@ -581,4 +581,4 @@ export function initializeMessages(messagesJson, headerSchema) {
     }
 
     return res;
-};
+}
