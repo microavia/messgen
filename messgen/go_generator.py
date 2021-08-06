@@ -76,7 +76,7 @@ def sizeof_dynamic(var, t_info):
 
 
 def sizeof_array_of_dynamic(var, t_info):
-    return "func(a %s) int { sz := 0; for _, i := range(a) { sz += i.MsgSize() }; return sz }(v.%s)" % (t_info["storage_type"], var)
+    return "4 + func(a %s) int { sz := 0; for _, i := range(a) { sz += i.MsgSize() }; return sz }(v.%s)" % (t_info["storage_type"], var)
 
 
 def min_sizeof_array_of_dynamic(var, t_info):
