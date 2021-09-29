@@ -31,7 +31,7 @@ def load_modules(basedirs, modules):
                     msg_name = item.replace(CONFIG_EXT, "")
 
                     with open(msg_file_path, "r") as f:
-                        msg = yaml.load(f)
+                        msg = yaml.safe_load(f)
 
                         if item == PROTOCOL_FILE:
                             if msg.get("proto_id") is None:
