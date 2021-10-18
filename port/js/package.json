@@ -10,7 +10,7 @@
     "gen-cpp": "python3 ../../generate.py -b ../../tests/ -m ./messages/messgen/messgen_test -l cpp -o ../../tests/js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@babel/preset-env": "^7.12.11",
     "babel-preset-env": "^1.7.0",
