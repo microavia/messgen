@@ -1,6 +1,4 @@
-'use strict';
-
-import { encodeUTF8, decodeUTF8 } from "./utf8.js";
+import { encodeUTF8, decodeUTF8 } from "./utf8";
 
 const IS_LITTLE_ENDIAN = true;
 
@@ -15,86 +13,86 @@ const basicTypes = [
     {
         name: "Char",
         size: 1,
-        read: (v, s) => String.fromCharCode(v.getInt8(s, IS_LITTLE_ENDIAN)),
-        write: (v, s, a) => { v.setInt8(s, a ? a.toString().charCodeAt(0) : 0, IS_LITTLE_ENDIAN); return 1; }
+        read: (v: DataView, s: number) => String.fromCharCode(v.getInt8(s)),
+        write: (v: DataView, s: number, a: number) => { v.setInt8(s, a ? a.toString().charCodeAt(0) : 0); return 1; }
     }, {
         name: "Int8",
         size: 1,
-        read: (v, s) => v.getInt8(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setInt8(s, a, IS_LITTLE_ENDIAN); return 1; }
+        read: (v: DataView, s: number) => v.getInt8(s),
+        write: (v: DataView, s: number, a: number) => { v.setInt8(s, a); return 1; }
     }, {
         name: "Uint8",
         size: 1,
-        read: (v, s) => v.getUint8(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setUint8(s, a, IS_LITTLE_ENDIAN); return 1; }
+        read: (v: DataView, s: number) => v.getUint8(s),
+        write: (v: DataView, s: number, a: number) => { v.setUint8(s, a); return 1; }
     }, {
         name: "Int16",
         size: 2,
-        read: (v, s) => v.getInt16(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setInt16(s, a, IS_LITTLE_ENDIAN); return 2; }
+        read: (v: DataView, s: number) => v.getInt16(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setInt16(s, a, IS_LITTLE_ENDIAN); return 2; }
     }, {
         name: "Uint16",
         size: 2,
-        read: (v, s) => v.getUint16(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setUint16(s, a, IS_LITTLE_ENDIAN); return 2; }
+        read: (v: DataView, s: number) => v.getUint16(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setUint16(s, a, IS_LITTLE_ENDIAN); return 2; }
     }, {
         name: "Int32",
         size: 4,
-        read: (v, s) => v.getInt32(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setInt32(s, a, IS_LITTLE_ENDIAN); return 4; }
+        read: (v: DataView, s: number) => v.getInt32(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setInt32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Uint32",
         size: 4,
-        read: (v, s) => v.getUint32(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setUint32(s, a, IS_LITTLE_ENDIAN); return 4; }
+        read: (v: DataView, s: number) => v.getUint32(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setUint32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Int64",
         size: 8,
-        read: (v, s) => v.getBigInt64(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setBigInt64(s, a, IS_LITTLE_ENDIAN); return 8; }
+        read: (v: DataView, s: number) => v.getBigInt64(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: bigint) => { v.setBigInt64(s, a, IS_LITTLE_ENDIAN); return 8; }
     }, {
         name: "Uint64",
         size: 8,
-        read: (v, s) => v.getBigUint64(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setBigUint64(s, a, IS_LITTLE_ENDIAN); return 8; }
+        read: (v: DataView, s: number) => v.getBigUint64(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: bigint) => { v.setBigUint64(s, a, IS_LITTLE_ENDIAN); return 8; }
     }, {
         name: "Float",
         size: 4,
-        read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setFloat32(s, a, IS_LITTLE_ENDIAN); return 4; }
+        read: (v: DataView, s: number) => v.getFloat32(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setFloat32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Float32",
         size: 4,
-        read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setFloat32(s, a, IS_LITTLE_ENDIAN); return 4; }
+        read: (v: DataView, s: number) => v.getFloat32(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setFloat32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Double",
         size: 8,
-        read: (v, s) => v.getFloat64(s, IS_LITTLE_ENDIAN),
-        write: (v, s, a) => { v.setFloat64(s, a, IS_LITTLE_ENDIAN); return 8; }
+        read: (v: DataView, s: number) => v.getFloat64(s, IS_LITTLE_ENDIAN),
+        write: (v: DataView, s: number, a: number) => { v.setFloat64(s, a, IS_LITTLE_ENDIAN); return 8; }
     }, {
         name: "String",
         size: 4,
-        read: (v, s) => decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN))),
-        write: (v, s, a) => {
+        read: (v: DataView, s: number) => decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN))),
+        write: (v: DataView, s: number, a: Uint8Array) => {
             let size = a.length;
             v.setUint32(s, size, true);
             for (let i = 0, s2 = s + 4; i < size; i++) {
-                v.setUint8(s2 + i, a[i], true);
+                v.setUint8(s2 + i, a[i]!);
             }
             return size + 4;
         }
     }
 ];
 
-let typeIndex = [],
-    typeSize = [];
+let typeIndex: Record<string, number> = {},
+    typeSize: number[] = Array(basicTypes.length);
 
-let readFunc = [],
-    writeFunc = [];
+let readFunc = Array(basicTypes.length),
+    writeFunc = Array(basicTypes.length);
 
 for (let i = 0; i < basicTypes.length; i++) {
-    let ti = basicTypes[i];
+    let ti = basicTypes[i]!;
     typeIndex[ti.name] = i;
     typeSize[i] = ti.size;
     readFunc[i] = ti.read;
@@ -106,7 +104,7 @@ const DYN_TYPE_SIZE = typeSize[DYN_TYPE];
 const DYN_READ = readFunc[DYN_TYPE];
 const DYN_WRITE = writeFunc[DYN_TYPE];
 
-function parseType(typeStr, includeMessages) {
+function parseType(typeStr: string, includeMessages) {
 
     let a = typeStr.split('['),
         name = a[0].trim();
@@ -119,6 +117,7 @@ function parseType(typeStr, includeMessages) {
         size = typeSize[type];
     } else if (includeMessages && includeMessages[name]) {
         type = includeMessages[name];
+        // @ts-ignore
         size = type.size;
         isComplex = true;
     } else {
@@ -135,16 +134,30 @@ function parseType(typeStr, includeMessages) {
         isComplex: isComplex
     };
 }
-/**
- * class Struct
- */
-export class Struct {
-    constructor(schema, includeMessages) {
 
-        this._id = 0;
-        this._size = 0;
-        this._fields = null;
-        this._schema = null;
+type TSchemaField = {
+    name: string;
+    type: string;
+};
+
+type TSchema = {
+    fields: TSchemaField[],
+};
+
+type TMessage = {};
+
+export class Struct {
+    _id: number = 0;
+
+    _size: number = 0;
+
+    _fields: Array<TSchemaField> | null = null;
+
+    _schema: TSchema = null;
+
+    _includeMessages?: TMessage[];
+
+    constructor(schema: TSchema, includeMessages?: TMessage[]) {
 
         this._includeMessages = includeMessages;
 
@@ -191,6 +204,7 @@ export class Struct {
             this._fields[i] = {
                 name: si.name,
                 type: si.type,
+                // @ts-ignore
                 _offset: offset,
                 _prop: tp
             };
@@ -228,6 +242,9 @@ export const HEADER_STRUCT = new Struct({
  * class Buffer
  */
 export class Buffer {
+    _dataView: DataView;
+    _dynamicOffset: number;
+
     constructor(arrayBuffer) {
         this._dataView = new DataView(arrayBuffer);
         this._dynamicOffset = 0;
@@ -237,12 +254,16 @@ export class Buffer {
     // а модуль messages генерализировать
     static deserialize(messages, data, headerStruct = HEADER_STRUCT, includeMessages) {
         let res = [];
+        // @ts-ignore
         let buf = new Buffer(data, includeMessages);
         let cur = 0;
         while (cur < buf.size) {
             let h = buf.deserialize(headerStruct, cur),
+                // @ts-ignore
                 m = buf.deserialize(messages.__id__[h.msg_id], cur + h.__SIZE__);
+            // @ts-ignore
             m.__MSG_ID__ = h.msg_id;
+            // @ts-ignore
             cur += h.__SIZE__ + m.__SIZE__;
             res.push(m);
         }
@@ -447,12 +468,13 @@ export class Buffer {
     deserialize(struct, offset = 0, sizeOffset = 0) {
         this._dynamicOffset = 0;
         let res = this.__deserialize__(struct, offset, sizeOffset);
+        // @ts-ignore
         res.__SIZE__ = struct.size + this._dynamicOffset + sizeOffset;
         return res;
     }
 
     __deserialize__(struct, offset, sizeOffset) {
-
+        // @ts-ignore
         this._includeMessages = struct._includeMessages;
 
         let fields = struct.fields,
@@ -568,6 +590,7 @@ export function initializeMessages(messagesJson, headerSchema) {
             id = messagesJson[m].id;
 
         if (!res.__id__[id]) {
+            // @ts-ignore
             let msg_struct = new Struct(messagesJson[m], res);
 
             res.__id__[id] = msg_struct;
@@ -582,3 +605,5 @@ export function initializeMessages(messagesJson, headerSchema) {
 
     return res;
 }
+
+export { encodeUTF8, decodeUTF8 };
