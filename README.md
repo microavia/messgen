@@ -63,3 +63,19 @@ python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l cpp -o out/cpp
 ```
 
 Variable `metadata_json=true` can be passed to generate metadata in JSON format, rather than legacy.
+
+#### JS/TS
+
+Example for JS messages generation:
+
+```
+python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l json -o out/json
+```
+This command will generate json messages. 
+
+The types of these messages for TS can be generated as follows:
+
+```
+python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l ts -o out/ts
+```
+
