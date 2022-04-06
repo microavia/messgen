@@ -26,7 +26,11 @@ def in_types_map(types_map, typename):
 
 
 def get_module_name(norm_typename):
-    return ""
+    items = norm_typename.split('/')
+    if len(items) != 4:
+        return ""
+
+    return items[0] + "/" + items[2]
 
 
 def is_array(typename):
