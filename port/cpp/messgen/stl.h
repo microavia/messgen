@@ -78,7 +78,11 @@ size_t for_each_message(const std::vector<uint8_t> &payload, F &f) {
  */
 template<class T>
 Dynamic <T> make_dynamic(std::vector<T> &vec) {
-    return Dynamic<T>{&vec[0], vec.size()};
+    if (vec.empty()) {
+        return Dynamic<T>{nullptr, 0};
+    } else {
+        return Dynamic<T>{vec.data(), static_cast<uint32_t>(vec.size())};
+    }
 }
 
 /**
