@@ -117,4 +117,9 @@ size_t for_each_message(const uint8_t *data, size_t data_size, F& f) {
     return buf - data;
 }
 
+template <class F>
+size_t for_each_message(const messgen::Dynamic<uint8_t> &message, F && f) {
+    return for_each_message(message.ptr, message.size, f);
+}
+
 }
