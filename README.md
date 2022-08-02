@@ -32,7 +32,7 @@ On Windows 10:
 
 Each protocol should be placed in directory `base_dir/vendor/protocol`.
 `base_dir` is base directory for message definitions (is allowed to specify multiple base directories).
-`vendor` is protocol vendor, it is used as namespace in generated massages allowing to avoid conflict between protocols from different vendors if used in one application.
+`vendor` is protocol vendor, it is used as namespace in generated messages allowing to avoid conflict between protocols from different vendors if used in one application.
 `protocol` is protocol name, each protocol has protocol ID, that allows to use multiple protocols on single connection, e.g. bootloader and application protocols.
 
 Message generator usage:
