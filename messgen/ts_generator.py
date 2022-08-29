@@ -24,11 +24,11 @@ def format_type(f):
     t = ts_types_map.get(f["type"], f["type"])
     f_type = t[0].lower() + t[1:]
 
-    if (f["is_dynamic"] and '/' in f["type"]):
+    if ('/' in f["type"]):
         din_type = to_camelcase(f_type.split('/').pop())
         f_type = din_type + "Message"
 
-    if (f["is_array"]):
+    if (f["is_array"] or f["is_dynamic"]):
         f_type += "[]"
 
     return f_type
