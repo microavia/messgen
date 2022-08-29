@@ -28,7 +28,7 @@ def format_type(f):
         din_type = to_camelcase(f_type.split('/').pop())
         f_type = din_type + "Message"
 
-    if (f["is_array"] or f["is_dynamic"]):
+    if (f["is_array"]):
         f_type += "[]"
 
     return f_type
