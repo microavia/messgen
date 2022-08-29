@@ -67,6 +67,8 @@ class TsGenerator:
         for f in msg["fields"]:
             f_name = f["name"]
             f_type = format_type(f)
+             if f.get("descr") is not None:
+                fields_p.append('    // %s ' % str(f.get("descr")))
             fields_p.append('    %s: %s' % (f_name, f_type))
         out.append("\n".join(fields_p))
         out.append("}")
