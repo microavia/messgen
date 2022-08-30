@@ -50,15 +50,19 @@ class TsGenerator:
             prefix = '// === AUTO GENERATED CODE ===\n'
             imports.append(prefix)
             imports.append('import * as Typings from "./%s"' % spl[1])
+            imports.append('import { MessageKeys } from  "./%s"' % spl[1])
             imports.append('import { Messages } from "messgen"; // TODO: add alias in project or crate npm module\n')
 
             dts = []
             methods = []
+            mes_names = []
 
             for msg in module["messages"]:
                 dts += self.generate_interface(msg)
+                mes_names.append(msg["name"])
                 methods.append(self.generate_send(msg["name"]))
                 methods.append(self.generate_on(msg["name"], msg["id"]))
+            dts = dts + self.generate_names(mes_names)
             self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
             self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods))
 
@@ -98,7 +102,7 @@ class TsGenerator:
 
     def generate_class(self, methods):
         out = []
-        out.append('export class SocketMethods<T extends Messages<string>> {')
+        out.append('export class SocketMethods<T extends Messages<MessageKeys>> {')
         out.append("    send(id:number, data: any) {}")
         out.append("    onmessage: {(args?: any): void}[] = []")
         out.append("    messages: T")
@@ -106,6 +110,12 @@ class TsGenerator:
         out.append("}")
         return out
 
+    def generate_names(self, names):
+        out = []
+        out.append("export type MessageKeys =")
+        for name in iter(names):
+            out.append('| "%s"' % name)
+        return out
 
     @staticmethod
     def __write_file(fpath, code):
