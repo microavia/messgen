@@ -47,27 +47,31 @@ class TsGenerator:
             module_out_dir = out_dir + os.path.sep + module_name.replace(self.MODULE_SEP, os.path.sep)
             spl = module_name.split(self.MODULE_SEP)
             class_path = '%s/%s' % (spl[0], to_camelcase(spl[1]))
-            imports.append('import "./%s"\n' % spl[1])
+            prefix = '// === AUTO GENERATED CODE ===\n'
+            imports.append(prefix)
+            imports.append('import * as Typings from "./%s"' % spl[1])
+            imports.append('import { Messages } from "messgen"; // TODO: add alias in project or crate npm module\n')
 
             dts = []
             methods = []
+
             for msg in module["messages"]:
                 dts += self.generate_interface(msg)
                 methods.append(self.generate_send(msg["name"]))
                 methods.append(self.generate_on(msg["name"], msg["id"]))
-            self.__write_file( out_dir + os.path.sep + module_name + ".d.ts", dts)
+            self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
             self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods))
 
     def generate_interface(self, msg):
         msg_name = msg["name"]
 
         out = []
-        out.append('interface %sMessage {' % to_camelcase(msg_name))
+        out.append('export interface %sMessage {' % to_camelcase(msg_name))
         fields_p = []
         for f in msg["fields"]:
             f_name = f["name"]
             f_type = format_type(f)
-             if f.get("descr") is not None:
+            if f.get("descr") is not None:
                 fields_p.append('    // %s ' % str(f.get("descr")))
             fields_p.append('    %s: %s' % (f_name, f_type))
         out.append("\n".join(fields_p))
@@ -81,23 +85,23 @@ class TsGenerator:
     def generate_send(self, name):
         msg_name = to_camelcase(name)
         return  '''
-    send_%s(data: Partial<%sMessage>) {
+    send_%s(data: Partial<Typings.%sMessage>) {
         return this.send(this.messages.MSG_%s, data);
     }''' % (msg_name, msg_name, name.upper())
 
     def generate_on(self, name, id):
         msg_name = to_camelcase(name)
         return  '''
-    on_%s(callback: (data: %sMessage) => any) {
+    on_%s(callback: (data: Typings.%sMessage) => any) {
         this.onmessage[%s] = callback;
     }''' % (msg_name, msg_name,  id)
 
     def generate_class(self, methods):
         out = []
-        out.append('export class SocketMethods {')
+        out.append('export class SocketMethods<T extends Messages<string>> {')
         out.append("    send(id:number, data: any) {}")
         out.append("    onmessage: {(args?: any): void}[] = []")
-        out.append("    messages: any")
+        out.append("    messages: T")
         out.append("\n".join(methods))
         out.append("}")
         return out
