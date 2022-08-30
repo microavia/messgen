@@ -15,3 +15,4 @@ tests/cpp/messgen
 
 tests/js/tmp
 tests/js/coverage
+tests/js/messgen
