@@ -50,7 +50,7 @@ class TsGenerator:
             prefix = '// === AUTO GENERATED CODE ===\n'
             imports.append(prefix)
             imports.append('import * as Typings from "./%s"' % spl[1])
-            imports.append('import { MessageKeys } from  "./%s"' % spl[1])
+            imports.append('import { MessageName } from  "./%s"' % spl[1])
             imports.append('import { Messages, Struct } from "messgen"; // TODO: add alias in project or crate npm module\n')
 
             dts = []
@@ -63,6 +63,7 @@ class TsGenerator:
                 methods.append(self.generate_send(msg["name"]))
                 methods.append(self.generate_on(msg["name"], msg["id"]))
             dts = dts + self.generate_names(mes_names)
+            dts = dts + self.generate_datas(mes_names)
             self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
             self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods, to_camelcase(spl[1])))
 
@@ -105,16 +106,28 @@ class TsGenerator:
         out.append('export default class %sHelper {' % (name_file))
         out.append("    send(struct: Struct, data: any) {}")
         out.append("    protected onmessage: {(args?: any): void}[] = []")
-        out.append("    protected messages!: Messages<MessageKeys>")
+        out.append("    protected messages!: Messages<MessageName>")
         out.append("\n".join(methods))
         out.append("}")
         return out
 
     def generate_names(self, names):
         out = []
-        out.append("export type MessageKeys =")
+        out.append("export type MessageName =")
         for name in iter(names):
             out.append('| "%s"' % name)
+        out.append('\n')
+        return out
+
+    def generate_datas(self, names):
+        out = []
+        out.append("export type MessageData<TMessageName extends MessageName = MessageName>  =")
+        for name in iter(names):
+            out.append('    TMessageName extends "%s" ? ' % name)
+            out.append('    %sMessage :' % to_camelcase(name))
+        for name in iter(names):
+            out.append('        | %sMessage ' % to_camelcase(name))
+        out.append('\n')
         return out
 
     @staticmethod
