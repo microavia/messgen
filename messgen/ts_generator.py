@@ -49,8 +49,7 @@ class TsGenerator:
             class_path = '%s/%s' % (spl[0], to_camelcase(spl[1]))
             prefix = '// === AUTO GENERATED CODE ===\n'
             imports.append(prefix)
-            imports.append('import * as Typings from "./%s"' % spl[1])
-            imports.append('import { MessageName } from  "./%s"' % spl[1])
+            imports.append('import { MessageName, MessageData } from  "./%s"' % spl[1])
             imports.append('import { Messages, Struct } from "messgen"; // TODO: add alias in project or crate npm module\n')
 
             dts = []
@@ -90,21 +89,21 @@ class TsGenerator:
     def generate_send(self, name):
         msg_name = to_camelcase(name)
         return  '''
-    send_%s(data: Partial<Typings.%sMessage>) {
+    send_%s(data: Partial<MessageData<"%s">>) {
         return this.send(this.messages.MSG_%s, data);
-    }''' % (msg_name, msg_name, name.upper())
+    }''' % (msg_name,name,  name.upper())
 
     def generate_on(self, name, id):
         msg_name = to_camelcase(name)
         return  '''
-    on_%s(callback: (data: Typings.%sMessage) => any) {
+    on_%s(callback: (data: MessageData<"%s">) => any) {
         this.onmessage[%s] = callback;
-    }''' % (msg_name, msg_name,  id)
+    }''' % (msg_name, name,  id)
 
     def generate_class(self, methods, name_file):
         out = []
         out.append('export default class %sHelper {' % (name_file))
-        out.append("    send(struct: Struct, data: any) {}")
+        out.append("    send(struct: Struct, data: MessageData) {}")
         out.append("    protected onmessage: {(args?: any): void}[] = []")
         out.append("    protected messages!: Messages<MessageName>")
         out.append("\n".join(methods))
