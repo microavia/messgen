@@ -71,6 +71,7 @@ class TsGenerator:
 
         out = []
         out.append('export interface %sMessage {' % to_camelcase(msg_name))
+        out.append('    __type__: "%s"' % msg_name)
         fields_p = []
         for f in msg["fields"]:
             f_name = f["name"]
