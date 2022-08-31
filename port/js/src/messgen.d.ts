@@ -39,13 +39,13 @@ export class Buffer {
   
   static mergeArrayBuffers(tArrs: Array<unknown>, type: Uint8ArrayConstructor): Uint8Array
   
-  static appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer)
+  static appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer): Uint8Array
   
   static calcSize(fields: Field[], includeMessages?: Messages<string>)
   
   static createValueArray(schemaFields: Schema["fields"], obj: Obj, includeMessages?: Messages<string>)
   
-  static serializeMessage(struct: Struct, obj: Obj, headerStruct ?: Struct, includeMessages?: Messages<string>)
+  static serializeMessage(struct: Struct, obj: Obj, headerStruct ?: Struct, includeMessages?: Messages<string>): Uint8Array
   
   static serializeObj(schemaFields: Schema["fields"], obj: Obj, includeMessages?: Messages<string>)
   
