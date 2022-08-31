@@ -63,7 +63,7 @@ class TsGenerator:
                 methods.append(self.generate_on(msg["name"], msg["id"]))
             dts = dts + self.generate_names(mes_names)
             dts = dts + self.generate_datas(mes_names)
-            dts += "export type ClearSystemInfo<T extends MessageData> = Omit<T, '__type__'> \n"
+            dts += ["export type ClearSystemInfo<T extends MessageData> = Omit<T, '__type__'> \n"]
             self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
             self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods, to_camelcase(spl[1])))
 
