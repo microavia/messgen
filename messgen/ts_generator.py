@@ -51,7 +51,7 @@ class TsGenerator:
             imports.append(prefix)
             imports.append('import * as Typings from "./%s"' % spl[1])
             imports.append('import { MessageKeys } from  "./%s"' % spl[1])
-            imports.append('import { Messages } from "messgen"; // TODO: add alias in project or crate npm module\n')
+            imports.append('import { Messages, Struct } from "messgen"; // TODO: add alias in project or crate npm module\n')
 
             dts = []
             methods = []
@@ -64,7 +64,7 @@ class TsGenerator:
                 methods.append(self.generate_on(msg["name"], msg["id"]))
             dts = dts + self.generate_names(mes_names)
             self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
-            self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods))
+            self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods, to_camelcase(spl[1])))
 
     def generate_interface(self, msg):
         msg_name = msg["name"]
@@ -100,12 +100,12 @@ class TsGenerator:
         this.onmessage[%s] = callback;
     }''' % (msg_name, msg_name,  id)
 
-    def generate_class(self, methods):
+    def generate_class(self, methods, name_file):
         out = []
-        out.append('export class SocketMethods<T extends Messages<MessageKeys>> {')
-        out.append("    send(id:number, data: any) {}")
+        out.append('export default class %sHelper {' % (name_file))
+        out.append("    send(struct: Struct, data: any) {}")
         out.append("    onmessage: {(args?: any): void}[] = []")
-        out.append("    messages: T")
+        out.append("    messages!: Messages<MessageKeys>")
         out.append("\n".join(methods))
         out.append("}")
         return out
