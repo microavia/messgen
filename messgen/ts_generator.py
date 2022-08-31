@@ -104,8 +104,8 @@ class TsGenerator:
         out = []
         out.append('export default class %sHelper {' % (name_file))
         out.append("    send(struct: Struct, data: any) {}")
-        out.append("    onmessage: {(args?: any): void}[] = []")
-        out.append("    messages!: Messages<MessageKeys>")
+        out.append("    protected onmessage: {(args?: any): void}[] = []")
+        out.append("    protected messages!: Messages<MessageKeys>")
         out.append("\n".join(methods))
         out.append("}")
         return out

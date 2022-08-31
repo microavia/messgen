@@ -27,7 +27,8 @@ declare type Messages<KEYS extends string> = {
   __name__: KEYS[]
 } &
   Record<KEYS, Struct> &
-  addPrefixToObject<UppercaseObjectKeys<Record<KEYS, Struct>>, 'MSG_'>;
+  addPrefixToObject<UppercaseObjectKeys<Record<KEYS, Struct>>, 'MSG_'> &
+  Record<string, Struct>;
 
 export const HEADER_STRUCT: Struct
 
@@ -36,7 +37,7 @@ type Obj = Record<string, any>;
 export class Buffer {
   static deserialize(messages, data, headerStruct?: Struct, includeMessages?: Messages<string>)
   
-  static mergeArrayBuffers(tArrs: Array<unknown>, type:Uint8ArrayConstructor):Uint8Array
+  static mergeArrayBuffers(tArrs: Array<unknown>, type: Uint8ArrayConstructor): Uint8Array
   
   static appendBuffer(buffer1: ArrayBuffer, buffer2: ArrayBuffer)
   
