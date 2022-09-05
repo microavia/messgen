@@ -237,7 +237,7 @@ export class Buffer {
     // а модуль messages генерализировать
     static deserialize(messages, data, headerStruct = HEADER_STRUCT, includeMessages) {
         let res = [];
-        let buf = new Buffer(data, includeMessages);
+        let buf = new Buffer(data);
         let cur = 0;
         while (cur < buf.size) {
             let h = buf.deserialize(headerStruct, cur),

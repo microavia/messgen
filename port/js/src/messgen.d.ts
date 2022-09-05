@@ -34,6 +34,8 @@ export const HEADER_STRUCT: Struct
 type Obj = Record<string, any>;
 
 export class Buffer {
+  constructor(arrayBuffer: ArrayBuffer)
+
   static deserialize(messages, data, headerStruct?: Struct, includeMessages?: Messages<string>)
   
   static mergeArrayBuffers(tArrs: Array<unknown>, type:Uint8ArrayConstructor):Uint8Array
