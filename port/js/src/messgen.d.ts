@@ -10,6 +10,8 @@ export type Schema = {
 
 
 export class Struct {
+  constructor(schema: Schema) {}
+  
   get schema(): Schema
   
   get id(): number
@@ -36,6 +38,7 @@ type Obj = Record<string, any>;
 
 export class Buffer {
   constructor(data: ArrayBufferLike)
+  
   static deserialize(messages, data, headerStruct?: Struct, includeMessages?: Messages<string>)
   
   static mergeArrayBuffers(tArrs: Array<unknown>, type: Uint8ArrayConstructor): Uint8Array
