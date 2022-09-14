@@ -49,24 +49,30 @@ class TsGenerator:
             class_path = '%s/%s' % (spl[0], to_camelcase(spl[1]))
             prefix = '// === AUTO GENERATED CODE ===\n'
             imports.append(prefix)
-            imports.append('import * as Typings from "./%s"' % spl[1])
-            imports.append('import { Messages } from "messgen"; // TODO: add alias in project or crate npm module\n')
+            imports.append('import { MessageName, MessageData, ClearSystemInfo } from  "./%s"' % spl[1])
+            imports.append('import { Messages, Struct } from "messgen"; // TODO: add alias in project or crate npm module\n')
 
             dts = []
             methods = []
+            mes_names = []
 
             for msg in module["messages"]:
                 dts += self.generate_interface(msg)
+                mes_names.append(msg["name"])
                 methods.append(self.generate_send(msg["name"]))
                 methods.append(self.generate_on(msg["name"], msg["id"]))
+            dts = dts + self.generate_names(mes_names)
+            dts = dts + self.generate_datas(mes_names)
+            dts += ["export type ClearSystemInfo<T extends MessageData> = Omit<T, '__type__'> \n"]
             self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
-            self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods))
+            self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods, to_camelcase(spl[1])))
 
     def generate_interface(self, msg):
         msg_name = msg["name"]
 
         out = []
         out.append('export interface %sMessage {' % to_camelcase(msg_name))
+        out.append('    __type__?: "%s"' % msg_name)
         fields_p = []
         for f in msg["fields"]:
             f_name = f["name"]
@@ -85,27 +91,45 @@ class TsGenerator:
     def generate_send(self, name):
         msg_name = to_camelcase(name)
         return  '''
-    send_%s(data: Partial<Typings.%sMessage>) {
+    send_%s(data: Partial<ClearSystemInfo<MessageData<"%s">>>) {
         return this.send(this.messages.MSG_%s, data);
-    }''' % (msg_name, msg_name, name.upper())
+    }''' % (msg_name,name,  name.upper())
 
     def generate_on(self, name, id):
         msg_name = to_camelcase(name)
         return  '''
-    on_%s(callback: (data: Typings.%sMessage) => any) {
+    on_%s(callback: (data: MessageData<"%s">) => any) {
         this.onmessage[%s] = callback;
-    }''' % (msg_name, msg_name,  id)
+    }''' % (msg_name, name,  id)
 
-    def generate_class(self, methods):
+    def generate_class(self, methods, name_file):
         out = []
-        out.append('export class SocketMethods<T extends Messages<string>> {')
-        out.append("    send(id:number, data: any) {}")
-        out.append("    onmessage: {(args?: any): void}[] = []")
-        out.append("    messages: T")
+        out.append('export default class %sHelper {' % (name_file))
+        out.append("    send(struct: Struct, data: Partial<ClearSystemInfo<MessageData>>) {}")
+        out.append("    protected onmessage: {(args?: any): void}[] = []")
+        out.append("    protected messages!: Messages<MessageName>")
         out.append("\n".join(methods))
         out.append("}")
         return out
 
+    def generate_names(self, names):
+        out = []
+        out.append("export type MessageName =")
+        for name in iter(names):
+            out.append('| "%s"' % name)
+        out.append('\n')
+        return out
+
+    def generate_datas(self, names):
+        out = []
+        out.append("export type MessageData<TMessageName extends MessageName = MessageName>  =")
+        for name in iter(names):
+            out.append('    TMessageName extends "%s" ? ' % name)
+            out.append('    %sMessage :' % to_camelcase(name))
+        for name in iter(names):
+            out.append('        | %sMessage ' % to_camelcase(name))
+        out.append('\n')
+        return out
 
     @staticmethod
     def __write_file(fpath, code):
