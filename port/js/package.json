@@ -8,7 +8,8 @@
     "test": "jest --coverage",
     "gen-json": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l json -o ../../tests/js",
     "gen-ts": "npm run gen-json && python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l ts -o ../../tests/js",
-    "gen-cpp": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l cpp -o ../../tests/js"
+    "gen-cpp": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l cpp -o ../../tests/js",
+    "gen-md": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l md -o ../../tests/js"
   },
   "author": "",
   "license": "ISC",

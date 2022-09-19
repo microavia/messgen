@@ -6,6 +6,7 @@ import os
 from messgen.go_generator import GoGenerator
 from messgen.json_generator import JsonGenerator
 from messgen.ts_generator import TsGenerator
+from messgen.md_generator import MdGenerator
 from messgen.parser import load_modules
 from messgen.cpp_generator import CppGenerator
 from messgen.data_types_preprocessor import DataTypesPreprocessor
@@ -18,6 +19,7 @@ generators = {
     "go": GoGenerator,
     "json": JsonGenerator,
     "ts": TsGenerator,
+    "md": MdGenerator
 }
 
 PLAIN_TYPES = {

@@ -79,3 +79,12 @@ The types of these messages for TS can be generated as follows:
 python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l ts -o out/ts
 ```
 
+
+
+#### MD
+
+Example for markdown messages generation:
+
+```
+python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l md -o out/md
+```
