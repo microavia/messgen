@@ -1,4 +1,5 @@
 id: 13
+descr: "use one non generated object"
 fields:
   - name: one
     type: entities/Existing

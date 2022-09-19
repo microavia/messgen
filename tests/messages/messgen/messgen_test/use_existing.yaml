@@ -1,4 +1,5 @@
 id: 12
+descr: "use non generated existing type"
 fields:
   - name: existing
     type: entities/Existing[]

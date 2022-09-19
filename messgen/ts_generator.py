@@ -40,6 +40,7 @@ class TsGenerator:
         self.MODULE_SEP = module_sep
         self._modules_map = modules_map
         self._data_types_map = data_types_map
+        
 
     def generate(self, out_dir):
         imports = []
@@ -71,6 +72,9 @@ class TsGenerator:
         msg_name = msg["name"]
 
         out = []
+        if msg.get("descr") is not  None:
+            out.append("/**\n * %s" % msg["descr"])
+            out.append(" */")
         out.append('export interface %sMessage {' % to_camelcase(msg_name))
         out.append('    __type__?: "%s"' % msg_name)
         fields_p = []
@@ -78,7 +82,7 @@ class TsGenerator:
             f_name = f["name"]
             f_type = format_type(f)
             if f.get("descr") is not None:
-                fields_p.append('    // %s ' % str(f.get("descr")))
+                fields_p.append('    /** %s */' % str(f.get("descr")))
             fields_p.append('    %s: %s' % (f_name, f_type))
         out.append("\n".join(fields_p))
         out.append("}")

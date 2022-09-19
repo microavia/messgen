@@ -1,4 +1,5 @@
 id: 0
+descr: "this is a simple message"
 fields:
   - name: f0
     type: uint64
