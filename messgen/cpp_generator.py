@@ -752,11 +752,11 @@ class CppGenerator:
         return list(self._code)
 
     def append(self, v):
-        self._code.append(self._indent + v)
+        self._code.append(self._indent + v if v else "")
 
     def extend(self, v):
         for line in v:
-            self._code.append(self._indent + line)
+            self._code.append(self._indent + line if line else "")
 
     def reset(self):
         self._code = []
