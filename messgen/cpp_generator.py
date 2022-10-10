@@ -371,9 +371,6 @@ class CppGenerator:
         self.generate_data_fields(data_type["fields"])
         self.append("")
 
-        self.generate_get_message_name_method(message_obj)
-        self.append("")
-
         cpp_typename = message_obj["typename"].replace("/", "::")
         self.generate_compare_operator(cpp_typename, data_type)
         self.append("")
@@ -438,13 +435,6 @@ class CppGenerator:
         self.start_block("size_t get_size() const")
         self.extend([
             "return STATIC_SIZE + get_dynamic_size();"
-        ])
-        self.stop_block()
-
-    def generate_get_message_name_method(self, message_obj):
-        self.start_block("static const char* get_message_name()")
-        self.extend([
-            "return \"" + message_obj["name"] + "\";"
         ])
         self.stop_block()
 
