@@ -1,5 +1,5 @@
 import os
-
+from messgen.version_protocol import VersionProtocol
 
 def to_camelcase(str):
     return ''.join(x for x in str.title().replace('_', '') if not x.isspace())
@@ -45,6 +45,7 @@ class MdGenerator:
         self._modules_map = modules_map
         self._data_types_map = data_types_map
 
+
     def generate(self, out_dir):
         for module_name, module in self._modules_map.items():
 
@@ -57,34 +58,37 @@ class MdGenerator:
             dts.append("# %s" % (module_name))
             dts.append("## messages")
             dts.append("| %s | %s | %s |" % (
-                self.add_spase("id", id_max_len), 
-                self.add_spase("yaml", name_max_len), 
+                self.add_spase("id", id_max_len),
+                self.add_spase("yaml", name_max_len),
                 self.add_spase("Comment", dict_max_len)
                 ))
             dts.append("|-%s-|-%s-|-%s-|" % (
-                "-" * id_max_len, 
-                "-" * name_max_len, 
+                "-" * id_max_len,
+                "-" * name_max_len,
                 "-" * dict_max_len
                 ))
-                
+
 
             for msg in module["messages"]:
                 dts.append('| %s | %s | %s |' % (
-            self.add_spase(self.id_to_str(msg["id"]) , id_max_len), 
+            self.add_spase(self.id_to_str(msg["id"]) , id_max_len),
             self.add_spase( "[%s](#%s)" %( msg["name"], to_kebabcase(msg["name"])), name_max_len),
             self.add_spase(msg.get("descr") if  msg.get("descr") is not None else "" , dict_max_len)
             ))
             dts.append("")
             dts.append("")
-            
+
             for msg in module["messages"]:
                 dts.extend(self.generate_interface(msg))
                 dts.append("")
-
+            dts.append("## Version")
+            dts.append("```")
+            dts.append(VersionProtocol(self._modules_map).generate())
+            dts.append("```")
             self.__write_file( out_dir + os.path.sep + module_name + ".md",  dts)
 
 
-    def get_max_length_by_key  (self, key, data, min_len = 0):   
+    def get_max_length_by_key  (self, key, data, min_len = 0):
         max_len = min_len;
         for d in data:
             if  d.get(key) is not None and len(str(d[key])) > max_len:
@@ -99,7 +103,7 @@ class MdGenerator:
 
     def id_to_str(self, id):
         return str(id) if id != 0 else "0"
-    
+
     def convert_field(self, field):
         f_type = format_type(field)
         return {
@@ -122,24 +126,24 @@ class MdGenerator:
         dict_max_len = self.get_max_length_by_key("descr", fields,len("Comment"))
 
         out.append("| %s | %s | %s |" % (
-            self.add_spase("Field", field_max_len), 
-            self.add_spase("Type", type_max_len), 
+            self.add_spase("Field", field_max_len),
+            self.add_spase("Type", type_max_len),
             self.add_spase("Comment", dict_max_len)
             ))
 
         out.append("|-%s-|-%s-|-%s-|" % (
-            "-" * field_max_len, 
-            "-" * type_max_len, 
+            "-" * field_max_len,
+            "-" * type_max_len,
             "-" * dict_max_len
             ))
-        
+
         for f in fields:
             out.append("| %s | %s | %s |" % (
                 self.add_spase(f["name"], field_max_len),
                 self.add_spase(f["type"], type_max_len),
                 self.add_spase(f["descr"], dict_max_len)
                 ))
-                
+
         out.append("")
         return out
 

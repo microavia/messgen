@@ -1,4 +1,5 @@
 import os
+from messgen.version_protocol import VersionProtocol
 
 json_types_map = {
     "bytes": "uint8[]",
@@ -64,7 +65,16 @@ class JsonGenerator:
             code.append(",\n".join(code_msgs))
             code.append("}")
 
-            self.__write_file(module_out_dir + os.path.sep + "messages.json", code)
+            self.__write_file(module_out_dir + os.path.sep + "messages.json", code) 
+
+
+            code = []
+
+            code.append("{")
+            code.append("  \"version\": \"%s\"" % VersionProtocol(self._modules_map).generate())
+            code.append("}")
+
+            self.__write_file(module_out_dir + os.path.sep + "version.json", code)
 
     def generate_constant(self, msg):
         msg_name = msg["name"]
