@@ -1,6 +1,7 @@
 import os
 from .messgen_ex import MessgenException
 from .json_generator import JsonGenerator
+from messgen.version_protocol import VersionProtocol
 
 PROTO_ID_VAR_TYPE = "uint8_t"
 PROTO_MAX_MESSAGE_SIZE_TYPE = "uint32_t"
@@ -78,7 +79,7 @@ def open_namespace(module_namespace):
 def close_namespace(namespace):
     code = []
     namespaces = namespace.split("::")
-    for ns in namespaces:
+    for ns in reversed(namespaces):
         code.append("} // %s" % ns)
 
     code.append("")
@@ -176,13 +177,14 @@ def generate_constants_file(namespace, constants):
     return code
 
 
-def generate_proto_file(namespace, module):
+def generate_proto_file(namespace, module, modules_map):
     proto_id = module["proto_id"]
     max_msg_size = module["max_datatype_size"]
 
     struct = ["struct ProtoInfo {",
               "    static constexpr %s ID = %d;" % (PROTO_ID_VAR_TYPE, proto_id),
               "    static constexpr %s MAX_MESSAGE_SIZE = %d;" % (PROTO_MAX_MESSAGE_SIZE_TYPE, max_msg_size),
+              "    static constexpr const char* VERSION = \"%s\";" % (VersionProtocol(modules_map).generate()),
               "};"]
 
     code = [
@@ -194,6 +196,7 @@ def generate_proto_file(namespace, module):
         "",
         "static constexpr %s PROTO_ID = %d;" % (PROTO_ID_VAR_TYPE, proto_id),
         "static constexpr %s PROTO_MAX_MESSAGE_SIZE = %d;" % (PROTO_MAX_MESSAGE_SIZE_TYPE, max_msg_size),
+        "static constexpr const char* PROTO_VERSION = \"%s\";" % (VersionProtocol(modules_map).generate()),
         "",
         *close_namespace(namespace)
     ]
@@ -276,7 +279,7 @@ class CppGenerator:
 
             namespace = module["namespace"].replace(self.MODULE_SEP, "::")
 
-            proto_file = generate_proto_file(namespace, module)
+            proto_file = generate_proto_file(namespace, module, self._modules_map)
             proto_fpath = module_out_dir + os.path.sep + "proto.h"
             write_code_file(proto_fpath, proto_file)
 

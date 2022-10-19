@@ -9,4 +9,4 @@ class VersionProtocol:
     def generate(self):
         result = hashlib.md5(str(self._modules_map).encode())
 
-        return result.hexdigest()[0:10]
+        return result.hexdigest()[0:6]
