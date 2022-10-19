@@ -1,7 +1,7 @@
 import os
 from .messgen_ex import MessgenException
 from .json_generator import JsonGenerator
-from messgen.version_protocol import VersionProtocol
+from .version_protocol import VersionProtocol
 
 PROTO_ID_VAR_TYPE = "uint8_t"
 PROTO_MAX_MESSAGE_SIZE_TYPE = "uint32_t"
