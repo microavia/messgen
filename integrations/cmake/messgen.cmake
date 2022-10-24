@@ -62,7 +62,7 @@ FUNCTION(MESSGEN_GENERATE_MESSAGES BASEDIRS MODULES OUTDIR)
                         ${MESSAGES_OUTDIR}/proto.h
                         ${MESSAGES_OUTDIR}/messages.h
                         ${MESSAGES_OUTDIR}/constants.h
-                        ${MESSAGES_OUTDIR}/metadata.h
+                        ${MESSAGES_OUTDIR}/metadata.cpp
                         )
             ENDIF ()
         ENDFOREACH ()
