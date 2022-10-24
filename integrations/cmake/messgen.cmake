@@ -50,7 +50,6 @@ FUNCTION(MESSGEN_GENERATE_MESSAGES BASEDIRS MODULES OUTDIR)
                         LIST(APPEND MESSGEN_INPUT_FILES ${MESSAGES_PATH}/${MSG_YAML})
 
                         LIST(APPEND MESSGEN_OUT_FILES ${MESSAGES_OUTDIR}/${MSG_HEADER})
-                        LIST(APPEND MESSGEN_OUT_FILES ${MESSAGES_OUTDIR}/${MSG_CPP})
                     ENDFOREACH ()
                 ENDIF ()
 
@@ -63,6 +62,7 @@ FUNCTION(MESSGEN_GENERATE_MESSAGES BASEDIRS MODULES OUTDIR)
                         ${MESSAGES_OUTDIR}/proto.h
                         ${MESSAGES_OUTDIR}/messages.h
                         ${MESSAGES_OUTDIR}/constants.h
+                        ${MESSAGES_OUTDIR}/metadata.h
                         )
             ENDIF ()
         ENDFOREACH ()

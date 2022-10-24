@@ -282,17 +282,23 @@ class CppGenerator:
 
             all_includes = []
 
+            source_fpath = module_out_dir + os.path.sep + "metadata.cpp"
+            source_file_includes = [make_include("messgen/Metadata.h")]
+            source_file_data = []
+
             for message in module["messages"]:
                 header_file = self.__generate_message_header(namespace, message)
                 header_fpath = module_out_dir + os.path.sep + message["name"] + ".h"
                 write_code_file(header_fpath, header_file)
 
-                source_file = self.__generate_message_source(namespace, message)
-                source_fpath = module_out_dir + os.path.sep + message["name"] + ".cpp"
-                write_code_file(source_fpath, source_file)
+                source_file_includes += [make_include(message["name"] + ".h")]
+                source_file_data += [*self.generate_metadata(message)]
 
                 cpp_include_path = make_module_include(module, message["name"])
                 all_includes.append(cpp_include_path)
+
+            source = self.__generate_message_source(namespace, source_file_includes, source_file_data)
+            write_code_file(source_fpath, source)
 
             all_includes.append(make_include("proto.h"))
             all_includes.append(make_include("constants.h"))
@@ -332,15 +338,14 @@ class CppGenerator:
 
         return header
 
-    def __generate_message_source(self, namespace, message):
+    def __generate_message_source(self, namespace, includes, data):
         self.reset()
 
-        source = [
-            make_include(message["name"] + ".h"),
+        source = includes + [
             "",
             *open_namespace(namespace),
-            "",
-            *self.generate_metadata(message),
+            ""
+        ] + data + [
             "",
             *close_namespace(namespace)
         ]
@@ -400,8 +405,6 @@ class CppGenerator:
                     "#include <messgen/Metadata.h>",
                     "#include <messgen/Dynamic.h>",
                     "#include <messgen/MemoryAllocator.h>",
-                    "#include <messgen/Serializer.h>",
-                    "#include <messgen/Parser.h>",
                     "#include \"proto.h\"",
                     "#include \"constants.h\""
                     ]
