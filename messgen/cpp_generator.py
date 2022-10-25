@@ -43,6 +43,10 @@ def to_cpp_type(_type):
         return _type.replace("/", "::")
 
 
+def is_type_constant(_type):
+    return _type in PLAIN2CPP_TYPES_MAP
+
+
 def to_cpp_type_short(_type):
     if _type in PLAIN2CPP_TYPES_MAP:
         return PLAIN2CPP_TYPES_MAP[_type]
@@ -285,17 +289,26 @@ class CppGenerator:
 
             all_includes = []
 
+            source_fpath = module_out_dir + os.path.sep + "metadata.cpp"
+            source_includes = ["#include <messgen/Metadata.h>"]
+            source_file_data = []
+
             for message in module["messages"]:
                 header_file = self.__generate_message_header(namespace, message)
                 header_fpath = module_out_dir + os.path.sep + message["name"] + ".h"
                 write_code_file(header_fpath, header_file)
 
-                source_file = self.__generate_message_source(namespace, message)
-                source_fpath = module_out_dir + os.path.sep + message["name"] + ".cpp"
-                write_code_file(source_fpath, source_file)
+                source_includes += [make_include(message["name"] + ".h")]
+                source_file_data += self.generate_metadata(message)
+                source_file_data += [""]
 
                 cpp_include_path = make_module_include(module, message["name"])
                 all_includes.append(cpp_include_path)
+
+            source = self.__generate_message_source(namespace,
+                                                    source_includes,
+                                                    source_file_data)
+            write_code_file(source_fpath, source)
 
             all_includes.append(make_include("proto.h"))
             all_includes.append(make_include("constants.h"))
@@ -335,15 +348,14 @@ class CppGenerator:
 
         return header
 
-    def __generate_message_source(self, namespace, message):
+    def __generate_message_source(self, namespace, includes, data):
         self.reset()
 
-        source = [
-            make_include(message["name"] + ".h"),
+        source = includes + [
             "",
             *open_namespace(namespace),
-            "",
-            *self.generate_metadata(message),
+            ""
+        ] + data + [
             "",
             *close_namespace(namespace)
         ]
@@ -362,6 +374,9 @@ class CppGenerator:
 
         message_has_dynamics = "static constexpr bool HAS_DYNAMICS = %s;" % str(data_type["has_dynamics"]).lower()
 
+        if data_type["has_dynamics"]:
+            message_obj["deps"].append("messgen/Dynamic")
+
         self.start_block("struct " + message_obj["name"])
         self.extend([
             message_id_const,
@@ -371,7 +386,7 @@ class CppGenerator:
             ""
         ])
 
-        self.generate_data_fields(data_type["fields"])
+        has_const, has_str = self.generate_data_fields(data_type["fields"])
         self.append("")
 
         cpp_typename = message_obj["typename"].replace("/", "::")
@@ -397,17 +412,23 @@ class CppGenerator:
 
         includes = ["#include <cstdint>",
                     "#include <cstring>",
-                    "#if (__cplusplus >= 201703L)",
-                    "#    include <string_view>",
-                    "#endif",
-                    "#include <messgen/Metadata.h>",
-                    "#include <messgen/Dynamic.h>",
-                    "#include <messgen/MemoryAllocator.h>",
-                    "#include <messgen/Serializer.h>",
-                    "#include <messgen/Parser.h>",
-                    "#include \"proto.h\"",
-                    "#include \"constants.h\""
                     ]
+
+        if has_str:
+            includes.append("#if (__cplusplus >= 201703L)")
+            includes.append("#    include <string_view>")
+            includes.append("#endif")
+
+        includes += ["#include <messgen/SimpleDetector.h>",
+                     "#include <messgen/MemoryAllocator.h>",
+                     "#include <messgen/Metadata.h>",
+                     "#include <messgen/Parser.h>",
+                     "#include <messgen/Serializer.h>",
+                     "#include \"proto.h\"",
+                     ]
+
+        if has_const:
+            includes.append("#include \"constants.h\"")
 
         for dep in message_obj["deps"]:
             inc = "#include <" + dep + ".h>"
@@ -697,10 +718,14 @@ class CppGenerator:
         return var
 
     def generate_data_fields(self, fields):
+        has_constant = False
+        has_string = False
         for field in fields:
             if field["type"] == "string":
                 var = make_variable(field["name"], "std::string_view", 0)
+                has_string = True
             else:
+                has_constant |= is_type_constant(field["type"])
                 c_type = to_cpp_type(field["type"])
                 if field["is_dynamic"]:
                     var = make_variable(field["name"], "messgen::Dynamic<" + c_type + ">", field["num"])
@@ -711,6 +736,7 @@ class CppGenerator:
                 var += " // " + str(field["descr"])
 
             self.append(var)
+        return has_constant, has_string
 
     def generate_metadata_fields_legacy(self, message_obj):
         descr = ['"']
@@ -731,6 +757,7 @@ class CppGenerator:
         return '"[' + ",".join(self._json_generator.generate_fields(message_obj)).replace('"', '\\"') + ']"'
 
     def generate_metadata(self, message_obj):
+        self.reset()
         if self._metadata_json:
             fields_description = self.generate_metadata_fields_json(message_obj)
         else:
@@ -743,12 +770,12 @@ class CppGenerator:
                 nested_structs_metadata += "&" + to_cpp_type(field["type"]) + "::METADATA, "
         nested_structs_metadata += "nullptr}"
 
-        self.append("static const messgen::Metadata *nested_msgs[] = %s;" % nested_structs_metadata)
+        self.append("static const messgen::Metadata *nested_msgs_%s[] = %s;" % (message_obj["name"], nested_structs_metadata))
         self.start_block("const messgen::Metadata %s::METADATA = " % message_obj["name"])
         self.extend([
             "\"%s\"," % message_obj["name"],
             fields_description + ",",
-            "nested_msgs"
+            "nested_msgs_%s" % message_obj["name"]
         ])
         self.stop_block(term=";")
 
