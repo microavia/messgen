@@ -70,6 +70,8 @@ def load_modules(basedirs, modules):
                                     "Duplicate ID=%s for messages '%s' and '%s' in module %s"
                                     % (m["id"], m["name"], msg["name"], module_name))
                         module_messages.append(msg)
+            else:
+                raise MessgenException("Path not found: %s" % module_path)
 
         modules_map[module_name] = {
             "proto_id": proto_id,
