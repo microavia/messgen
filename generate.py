@@ -135,12 +135,13 @@ def main():
 
         g_type = generators.get(args.lang)
         if g_type is None:
-            raise Exception("Unsupported language " + args.lang)
+            raise MessgenException("Unsupported language \"%s\"" % args.lang)
 
         g = g_type(modules_map, data_types_map, MODULE_SEP, variables)
         g.generate(args.outdir)
+        print("Successfully generated to %s" % args.outdir)
     except MessgenException as e:
-        print(e)
+        print("ERROR: %s" % e)
         exit(-1)
 
 
