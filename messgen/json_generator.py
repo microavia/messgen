@@ -71,7 +71,7 @@ class JsonGenerator:
             code = []
 
             code.append("{")
-            code.append("  \"version\": \"%s\"" % VersionProtocol(self._modules_map).generate())
+            code.append("  \"version\": \"%s\"" % VersionProtocol(module).generate())
             code.append("}")
 
             self.__write_file(module_out_dir + os.path.sep + "version.json", code)

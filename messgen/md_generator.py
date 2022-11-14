@@ -83,7 +83,7 @@ class MdGenerator:
                 dts.append("")
             dts.append("## Version")
             dts.append("```")
-            dts.append(VersionProtocol(self._modules_map).generate())
+            dts.append(VersionProtocol(module).generate())
             dts.append("```")
             self.__write_file( out_dir + os.path.sep + module_name + ".md",  dts)
 
