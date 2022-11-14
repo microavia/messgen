@@ -188,7 +188,7 @@ def generate_proto_file(namespace, module, modules_map):
     struct = ["struct ProtoInfo {",
               "    static constexpr %s ID = %d;" % (PROTO_ID_VAR_TYPE, proto_id),
               "    static constexpr %s MAX_MESSAGE_SIZE = %d;" % (PROTO_MAX_MESSAGE_SIZE_TYPE, max_msg_size),
-              "    static constexpr const char* VERSION = \"%s\";" % (VersionProtocol(modules_map).generate()),
+              "    static constexpr const char* VERSION = \"%s\";" % (VersionProtocol(module).generate()),
               "};"]
 
     code = [
@@ -200,7 +200,7 @@ def generate_proto_file(namespace, module, modules_map):
         "",
         "static constexpr %s PROTO_ID = %d;" % (PROTO_ID_VAR_TYPE, proto_id),
         "static constexpr %s PROTO_MAX_MESSAGE_SIZE = %d;" % (PROTO_MAX_MESSAGE_SIZE_TYPE, max_msg_size),
-        "static constexpr const char* PROTO_VERSION = \"%s\";" % (VersionProtocol(modules_map).generate()),
+        "static constexpr const char* PROTO_VERSION = \"%s\";" % (VersionProtocol(module).generate()),
         "",
         *close_namespace(namespace)
     ]

@@ -2,11 +2,11 @@ import hashlib
 
 
 class VersionProtocol:
-    def __init__(self, modules_map):
-        self._modules_map = modules_map
+    def __init__(self, module):
+        self._module = module
 
 
     def generate(self):
-        result = hashlib.md5(str(self._modules_map).encode())
+        result = hashlib.md5(str(self._module).encode())
 
         return result.hexdigest()[0:6]
