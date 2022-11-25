@@ -126,9 +126,6 @@ def main():
                     raise Exception("Invalid argument in -D option, must be 'key=value'")
                 variables[p[0]] = p[1]
 
-        if not os.path.exists(args.outdir):
-            raise MessgenException("Output directory %s does not exist" % args.outdir)
-
         modules_map = load_modules(args.basedirs, args.modules)
 
         data_types_preprocessor = DataTypesPreprocessor(PLAIN_TYPES, SPECIAL_TYPES)
