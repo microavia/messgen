@@ -748,7 +748,6 @@ class CppGenerator:
         descr = ['"']
         for field in message_obj["fields"]:
             t = self.convert_constant_to_basetype(to_cpp_type_short(field["type"]), constants)
-            print(to_cpp_type_short(field["type"]), t)
             descr.append(t)
             if field["is_array"]:
                 if field["is_dynamic"]:
