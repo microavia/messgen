@@ -299,7 +299,7 @@ class CppGenerator:
                 write_code_file(header_fpath, header_file)
 
                 source_includes += [make_include(message["name"] + ".h")]
-                source_file_data += self.generate_metadata(message)
+                source_file_data += self.generate_metadata(module, message)
                 source_file_data += [""]
 
                 cpp_include_path = make_module_include(module, message["name"])
@@ -738,11 +738,18 @@ class CppGenerator:
             self.append(var)
         return has_constant, has_string
 
-    def generate_metadata_fields_legacy(self, message_obj):
+    def convert_constant_to_basetype(self, name, constants):
+        el = [x for x in constants if x['name'] == name]
+        if len(el) != 0:
+            return to_cpp_type_short(el[0]['basetype'])
+        return name
+    
+    def generate_metadata_fields_legacy(self, constants, message_obj):
         descr = ['"']
         for field in message_obj["fields"]:
-            descr.append(to_cpp_type_short(field["type"]))
-
+            t = self.convert_constant_to_basetype(to_cpp_type_short(field["type"]), constants)
+            print(to_cpp_type_short(field["type"]), t)
+            descr.append(t)
             if field["is_array"]:
                 if field["is_dynamic"]:
                     descr.append("[]")
@@ -756,12 +763,13 @@ class CppGenerator:
     def generate_metadata_fields_json(self, message_obj):
         return '"[' + ",".join(self._json_generator.generate_fields(message_obj)).replace('"', '\\"') + ']"'
 
-    def generate_metadata(self, message_obj):
+    def generate_metadata(self, module, message_obj):
         self.reset()
         if self._metadata_json:
             fields_description = self.generate_metadata_fields_json(message_obj)
         else:
-            fields_description = self.generate_metadata_fields_legacy(message_obj)
+            constants = module.get("constants")
+            fields_description = self.generate_metadata_fields_legacy(constants, message_obj)
 
         nested_structs_metadata = "{"
         for field in message_obj["fields"]:
