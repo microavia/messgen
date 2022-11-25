@@ -18,8 +18,10 @@ def load_modules(basedirs, modules):
         module_messages = []
         module_constants = []
         module_existing_types = []
+        paths_checked = []
         for basedir in basedirs:
             module_path = basedir + os.path.sep + module_name
+            paths_checked.append(module_path)
 
             if os.path.exists(module_path):
                 for item in os.listdir(module_path):
@@ -70,8 +72,9 @@ def load_modules(basedirs, modules):
                                     "Duplicate ID=%s for messages '%s' and '%s' in module %s"
                                     % (m["id"], m["name"], msg["name"], module_name))
                         module_messages.append(msg)
-            else:
-                raise MessgenException("Path not found: %s" % module_path)
+
+        if proto_id == None:
+            raise MessgenException("No messages found for module %s. Paths checked: %s" % (module_name, paths_checked))
 
         modules_map[module_name] = {
             "proto_id": proto_id,
