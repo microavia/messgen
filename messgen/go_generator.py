@@ -13,6 +13,8 @@ autogenPreamble = [
         "",
 ]
 
+defaultStringer = Template('fmt.Sprintf("%v", $varName)')
+
 def to_camelcase(str):
     if not any(c in "_" for c in str):
         return str[0].upper() + str[1:]
@@ -146,12 +148,12 @@ def prepend_name(prefix, name):
 def make_const_type(enumName, basetype, fields):
     enum = ["type %s%s %s" % (enumName, enumSuffix, basetype)]
 
-    stringer = Template('fmt.Sprintf("%v", $varName)')
+    stringer = defaultStringer
     if basetype in messgen_types_go and messgen_types_go[basetype].get("stringer") is not None:
         stringer = messgen_types_go[basetype].get("stringer")
 
     enum.append(
-        "func (v %s%s) String() string {	return %s }" % (
+        "func (v %s%s) String() string { return %s }" % (
             enumName,
             enumSuffix,
             stringer.substitute(varName="v", baseType=basetype),
