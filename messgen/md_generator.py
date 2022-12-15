@@ -35,7 +35,11 @@ def format_type(f):
         f_type = "[%s](#%s)" % (din_type, to_kebabcase(din_type))
 
     if f["is_array"]:
-        f_type += "[]"
+        if f['num']>1:
+            f_type +=  f"[{f['num']}]"
+        else:
+            f_type += "[]"
+
 
     return f_type
 
