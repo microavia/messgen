@@ -9,10 +9,10 @@ ts_types_map = {
     "uint16": "number",
     "int32": "number",
     "uint32": "number",
-    "int64": "number",
-    "uint64": "number",
+    "int64": "bigint",
+    "uint64": "bigint",
     "float32": "number",
-    "float64": "number",
+    "float64": "bigint",
     "string": "string",
 
 }
@@ -95,9 +95,9 @@ class TsGenerator:
     def generate_send(self, name):
         msg_name = to_camelcase(name)
         return  '''
-    send_%s(data: Partial<ClearSystemInfo<MessageData<"%s">>>) {
-        return this.send(this.messages.MSG_%s, data);
-    }''' % (msg_name,name,  name.upper())
+    send_%s(data: ClearSystemInfo<MessageData<"%s">>, callback?: (data: ClearSystemInfo<MessageData<"%s">>) => void): any {
+        return this.send(this.messages.MSG_%s, data, callback);
+    }''' % (msg_name,name, name, name.upper())
 
     def generate_on(self, name, id):
         msg_name = to_camelcase(name)
@@ -109,7 +109,7 @@ class TsGenerator:
     def generate_class(self, methods, name_file):
         out = []
         out.append('export default class %sHelper {' % (name_file))
-        out.append("    send(struct: Struct, data: Partial<ClearSystemInfo<MessageData>>) {}")
+        out.append("    send(struct: Struct, data: ClearSystemInfo<MessageData>, callback?: (...args: any) => any) {}")
         out.append("    protected onmessage: {(args?: any): void}[] = []")
         out.append("    protected messages!: Messages<MessageName>")
         out.append("\n".join(methods))
