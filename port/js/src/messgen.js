@@ -1,6 +1,6 @@
 'use strict';
 
-import { encodeUTF8, decodeUTF8 } from "./utf8.js";
+import {encodeUTF8, decodeUTF8} from "./utf8.js";
 
 const IS_LITTLE_ENDIAN = true;
 
@@ -122,7 +122,7 @@ function parseType(typeStr, includeMessages) {
         size = type.size;
         isComplex = true;
     } else {
-        // UNKNOWN TYPE
+        throw new Error(`Unknown type: ${ name }, if is complex type you must define before the struct. `);
     }
 
     let length = parseInt(a[1]);
