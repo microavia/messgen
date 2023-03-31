@@ -335,7 +335,7 @@ describe('Serialization deserialization tests', () => {
 
         let schema = {
             "MyYZ": {
-                id: 555,
+                id: 100,
                 fields: [
                     { "name": "y", "type": "Int8" },
                     { "name": "z", "type": "Int16" },
@@ -409,6 +409,7 @@ describe('Serialization deserialization tests', () => {
 
     it('Error if wrong order of complex type', () => {
 
+        // wrong order
         let schema = {
             "First": {
                 id: 1,
@@ -428,6 +429,7 @@ describe('Serialization deserialization tests', () => {
             initializeMessages(schema)
         }).toThrow('Unknown type');
 
+        // missed type
         let schema1 = {
             "First": {
                 id: 1,
@@ -438,9 +440,10 @@ describe('Serialization deserialization tests', () => {
         };
 
         expect(() => {
-            initializeMessages(schema)
+            initializeMessages(schema1)
         }).toThrow('Unknown type');
 
+        // correct location
         let schema2 = {
             "First": {
                 id: 1,
@@ -458,6 +461,26 @@ describe('Serialization deserialization tests', () => {
 
         expect(() => {
             initializeMessages(schema2)
+        }).not.toThrow('Unknown type');
+
+        // change order
+        let schema3 = {
+            "Second": {
+                "id": 2,
+                "fields": [
+                    { "name": "xxx", "type": "First" }
+                ]
+            },
+            "First": {
+                id: 1,
+                fields: [
+                    { "name": "x", "type": "Uint8" },
+                ]
+            },
+        };
+
+        expect(() => {
+            initializeMessages(schema3)
         }).not.toThrow('Unknown type');
 
     })

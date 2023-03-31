@@ -561,11 +561,11 @@ export function initializeMessages(messagesJson, headerSchema) {
         HEADER_STRUCT: headerSchema ? new Struct(headerSchema) : HEADER_STRUCT
     };
 
-    for (let m in messagesJson) {
+    for (let m in getKeysWithSortById(messagesJson)) {
 
         let name = m.trim(),
-            msg = "MSG_" + name.toUpperCase(),
-            id = messagesJson[m].id;
+          msg = "MSG_" + name.toUpperCase(),
+          id = messagesJson[m].id;
 
         if (!res.__id__[id]) {
             let msg_struct = new Struct(messagesJson[m], res);
@@ -576,9 +576,17 @@ export function initializeMessages(messagesJson, headerSchema) {
             res[name] = msg_struct;
 
         } else {
-            console.warn(`Warning: message ${id} ${msg} already exists.`);
+            console.warn(`Warning: message ${ id } ${ msg } already exists.`);
         }
     }
 
     return res;
+}
+
+const getKeysWithSortById = (obj) => {
+    let keys = Object.keys(obj);
+    keys.sort((a, b) => {
+        return obj[a].id - obj[b].id;
+    });
+    return keys;
 }
