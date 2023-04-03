@@ -1,6 +1,6 @@
 'use strict';
 
-import { Buffer, Struct, HEADER_STRUCT, initializeMessages } from '../../port/js/src/messgen.js';
+import {Buffer, Struct, HEADER_STRUCT, initializeMessages} from '../src/messgen.js';
 
 describe('Serialization deserialization tests', () => {
     it('Basic types', () => {
@@ -335,7 +335,7 @@ describe('Serialization deserialization tests', () => {
 
         let schema = {
             "MyYZ": {
-                id: 555,
+                id: 100,
                 fields: [
                     { "name": "y", "type": "Int8" },
                     { "name": "z", "type": "Int16" },
@@ -406,6 +406,84 @@ describe('Serialization deserialization tests', () => {
 
         expect(res).toEqual(srcData);
     });
+
+    it('Error if wrong order of complex type', () => {
+
+        // wrong order
+        let schema = {
+            "First": {
+                id: 1,
+                fields: [
+                    { "name": "x", "type": "Second" },
+                ]
+            },
+            "Second": {
+                "id": 2,
+                "fields": [
+                    { "name": "xxx", "type": "Uint8" }
+                ]
+            }
+        };
+
+        expect(() => {
+            initializeMessages(schema)
+        }).toThrow('Unknown type');
+
+        // missed type
+        let schema1 = {
+            "First": {
+                id: 1,
+                fields: [
+                    { "name": "x", "type": "Second" },
+                ]
+            }
+        };
+
+        expect(() => {
+            initializeMessages(schema1)
+        }).toThrow('Unknown type');
+
+        // correct location
+        let schema2 = {
+            "First": {
+                id: 1,
+                fields: [
+                    { "name": "x", "type": "Uint8" },
+                ]
+            },
+            "Second": {
+                "id": 2,
+                "fields": [
+                    { "name": "xxx", "type": "First" }
+                ]
+            }
+        };
+
+        expect(() => {
+            initializeMessages(schema2)
+        }).not.toThrow('Unknown type');
+
+        // change order
+        let schema3 = {
+            "Second": {
+                "id": 2,
+                "fields": [
+                    { "name": "xxx", "type": "First" }
+                ]
+            },
+            "First": {
+                id: 1,
+                fields: [
+                    { "name": "x", "type": "Uint8" },
+                ]
+            },
+        };
+
+        expect(() => {
+            initializeMessages(schema3)
+        }).not.toThrow('Unknown type');
+
+    })
 
     it('TODO: compose tests for not equal size arrays messages', () => {
         expect(true).toBe(true);
