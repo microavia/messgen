@@ -1,0 +1,27 @@
+name: JS CI
+
+on:
+  push:
+    branches: [ master , github_actions]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        working-directory: ./port/js
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run tests
+        working-directory: ./port/js
+        run: npm test
+
+      - name: Build
+        working-directory: ./port/js
+        run: npm run build

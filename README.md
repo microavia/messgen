@@ -1,3 +1,6 @@
+![JS CI](https://github.com/pavletto/messgen/actions/workflows/js.yml/badge.svg?branch=github_actions)
+![CPP CI](https://github.com/pavletto/messgen/actions/workflows/cpp.yml/badge.svg?branch=github_actions)
+
 # Messgen
 
 Lightweight and fast message serialization library.

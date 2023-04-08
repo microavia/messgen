@@ -4,8 +4,8 @@
   "description": "",
   "main": "src/messgen.js",
   "scripts": {
-    "build": "node_modules/.bin/rollup -c",
-    "test": "jest --coverage",
+    "build": "node_modules/.bin/rollup -c --bundleConfigAsCjs",
+    "test": "jest --coverage --coverageReporters json-summary",
     "gen-json": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l json -o ../../tests/js",
     "gen-ts": "npm run gen-json && python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l ts -o ../../tests/js",
     "gen-cpp": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l cpp -o ../../tests/js",
@@ -13,14 +13,16 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@babel/preset-env": "^7.21.4",
-    "babel-preset-env": "^1.7.0",
-    "jest": "^29.5.0",
-    "rollup": "^3.20.2",
-    "rollup-plugin-terser": "^7.0.2"
-  },
   "devDependencies": {
-    "@types/jest": "^29.5.0"
+    "@babel/preset-env": "^7.21.4",
+    "@rollup/plugin-terser": "^0.4.0",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "rollup": "^3.20.2"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.jsx?$": "babel-jest"
+    }
   }
 }
