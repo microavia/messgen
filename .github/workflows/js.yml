@@ -2,7 +2,7 @@ name: JS CI
 
 on:
   push:
-    branches: [ master , github_actions]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
