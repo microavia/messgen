@@ -36,12 +36,12 @@ public:
         return _value == rhs;
     }
 
-    T* operator->() noexcept {
-        return &_value;
+    T& operator->() noexcept {
+        return _value;
     }
 
-    const T* operator->() const noexcept {
-        return &_value;
+    const T& operator->() const noexcept {
+        return _value;
     }
 
     StorageBase& operator= (const T& rhs) noexcept {
