@@ -99,7 +99,7 @@ class JsonGenerator:
 
         for f in msg["fields"]:
             f_name = f["name"]
-            fields_p.append('{"name": "%s", "value": %s"}' % (f_name, str(f["value"])))
+            fields_p.append('{"name": "%s", "value": "%s"}' % (f_name, str(f["value"])))
 
         return fields_p
 
