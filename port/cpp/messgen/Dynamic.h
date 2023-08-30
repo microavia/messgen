@@ -134,4 +134,9 @@ struct Dynamic {
     }
 };
 
+template <class T, size_t N>
+inline Dynamic<T> make_dynamic(const T (&arr)[N]) {
+    return Dynamic<T>{.ptr = const_cast<T*>(arr), .size = N};
+}
+
 }
