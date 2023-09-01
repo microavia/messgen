@@ -19,7 +19,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setInt8(s, a ? a.toString().charCodeAt(0) : 0, IS_LITTLE_ENDIAN)
       return 1
-    }
+    },
+    typedArray: Array
   },
   {
     name: 'Int8',
@@ -28,7 +29,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setInt8(s, a, IS_LITTLE_ENDIAN)
       return 1
-    }
+    },
+    typedArray: Int8Array
   },
   {
     name: 'Uint8',
@@ -37,7 +39,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setUint8(s, a, IS_LITTLE_ENDIAN)
       return 1
-    }
+    },
+    typedArray: Uint8Array
   },
   {
     name: 'Int16',
@@ -46,7 +49,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setInt16(s, a, IS_LITTLE_ENDIAN)
       return 2
-    }
+    },
+    typedArray: Int16Array
   },
   {
     name: 'Uint16',
@@ -55,7 +59,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setUint16(s, a, IS_LITTLE_ENDIAN)
       return 2
-    }
+    },
+    typedArray: Uint16Array
   },
   {
     name: 'Int32',
@@ -64,7 +69,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setInt32(s, a, IS_LITTLE_ENDIAN)
       return 4
-    }
+    },
+    typedArray: Int32Array
   },
   {
     name: 'Uint32',
@@ -73,7 +79,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setUint32(s, a, IS_LITTLE_ENDIAN)
       return 4
-    }
+    },
+    typedArray: Uint32Array
   },
   {
     name: 'Int64',
@@ -82,7 +89,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setBigInt64(s, a, IS_LITTLE_ENDIAN)
       return 8
-    }
+    },
+    typedArray: BigInt64Array
   },
   {
     name: 'Uint64',
@@ -91,7 +99,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setBigUint64(s, a, IS_LITTLE_ENDIAN)
       return 8
-    }
+    },
+    typedArray: BigUint64Array
   },
   {
     name: 'Float',
@@ -109,7 +118,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setFloat32(s, a, IS_LITTLE_ENDIAN)
       return 4
-    }
+    },
+    typedArray: Float32Array
   },
   {
     name: 'Double',
@@ -118,7 +128,8 @@ const basicTypes = [
     write: (v, s, a) => {
       v.setFloat64(s, a, IS_LITTLE_ENDIAN)
       return 8
-    }
+    },
+    typedArray: Float64Array
   },
   {
     name: 'String',
@@ -131,7 +142,8 @@ const basicTypes = [
         v.setUint8(s2 + i, a[i], true)
       }
       return size + 4
-    }
+    },
+    typedArray: Array
   }
 ]
 
@@ -139,7 +151,8 @@ let typeIndex = [],
   typeSize = []
 
 let readFunc = [],
-  writeFunc = []
+  writeFunc = [],
+  typedArray = []
 
 for (let i = 0; i < basicTypes.length; i++) {
   let ti = basicTypes[i]
@@ -147,6 +160,7 @@ for (let i = 0; i < basicTypes.length; i++) {
   typeSize[i] = ti.size
   readFunc[i] = ti.read
   writeFunc[i] = ti.write
+  typedArray[i] = ti.typedArray
 }
 
 const DYN_TYPE = typeIndex[DYNAMIC_SIZE_TYPE]
@@ -273,9 +287,11 @@ export const HEADER_STRUCT = new Struct({
  * class Buffer
  */
 export class Buffer {
-  constructor(arrayBuffer) {
+  _useTypedArray = false
+  constructor(arrayBuffer, useTypedArray = false) {
     this._dataView = new DataView(arrayBuffer)
     this._dynamicOffset = 0
+    this._useTypedArray = useTypedArray
   }
 
   // TODO: перенести в модуль messages
@@ -497,6 +513,7 @@ export class Buffer {
         p = fi._prop
 
       currOffset = offset + fi._offset
+      const ArrayType = this._useTypedArray ? typedArray[p.typeIndex] ?? Array : Array
 
       if (p.isArray) {
         if (p.length === 0) {
@@ -506,7 +523,7 @@ export class Buffer {
 
           let length = DYN_READ(dv, currOffset + this._dynamicOffset)
 
-          res[fi.name] = new Array(length)
+          res[fi.name] = new ArrayType(length)
 
           let currOffset_dyn = DYN_TYPE_SIZE + currOffset
 
@@ -533,7 +550,7 @@ export class Buffer {
           //Static size array
           //
 
-          res[fi.name] = new Array(p.length)
+          res[fi.name] = new ArrayType(p.length)
 
           if (p.typeIndex === typeIndex.String) {
             for (let j = 0; j < p.length; j++) {
