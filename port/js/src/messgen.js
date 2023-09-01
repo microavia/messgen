@@ -184,7 +184,7 @@ function parseType(typeStr, includeMessages) {
     size = type.size
     isComplex = true
   } else {
-    throw new Error(`Unknown type: ${name}, if is complex type you must define before the struct. `)
+    throw new Error(`Unknown type: ${ name }, if is complex type you must define before the struct. `)
   }
 
   let length = parseInt(a[1])
@@ -197,6 +197,7 @@ function parseType(typeStr, includeMessages) {
     isComplex: isComplex
   }
 }
+
 /**
  * class Struct
  */
@@ -288,6 +289,7 @@ export const HEADER_STRUCT = new Struct({
  */
 export class Buffer {
   _useTypedArray = false
+
   constructor(arrayBuffer, useTypedArray = false) {
     this._dataView = new DataView(arrayBuffer)
     this._dynamicOffset = 0
@@ -529,17 +531,30 @@ export class Buffer {
 
           if (p.typeIndex === typeIndex.String) {
             for (let j = 0; j < length; j++) {
-              res[fi.name][j] = readFunc[p.typeIndex](dv, currOffset_dyn + this._dynamicOffset + j * p.typeSize)
-              this._dynamicOffset += dv.getUint32(currOffset_dyn + this._dynamicOffset + j * p.typeSize, true)
+              res[fi.name][j] = readFunc[p.typeIndex](
+                dv,
+                currOffset_dyn + this._dynamicOffset + j * p.typeSize
+              )
+              this._dynamicOffset += dv.getUint32(
+                currOffset_dyn + this._dynamicOffset + j * p.typeSize,
+                true
+              )
             }
           } else {
             if (p.isComplex) {
               for (let j = 0; j < length; j++) {
-                res[fi.name][j] = this.__deserialize__(p.typeIndex, currOffset_dyn + j * p.typeSize, sizeOffset)
+                res[fi.name][j] = this.__deserialize__(
+                  p.typeIndex,
+                  currOffset_dyn + j * p.typeSize,
+                  sizeOffset
+                )
               }
             } else {
               for (let j = 0; j < length; j++) {
-                res[fi.name][j] = readFunc[p.typeIndex](dv, currOffset_dyn + this._dynamicOffset + j * p.typeSize)
+                res[fi.name][j] = readFunc[p.typeIndex](
+                  dv,
+                  currOffset_dyn + this._dynamicOffset + j * p.typeSize
+                )
               }
             }
           }
@@ -554,17 +569,27 @@ export class Buffer {
 
           if (p.typeIndex === typeIndex.String) {
             for (let j = 0; j < p.length; j++) {
-              res[fi.name][j] = readFunc[p.typeIndex](dv, currOffset + this._dynamicOffset + j * p.typeSize)
+              res[fi.name][j] = readFunc[p.typeIndex](
+                dv,
+                currOffset + this._dynamicOffset + j * p.typeSize
+              )
               this._dynamicOffset += dv.getUint32(currOffset + this._dynamicOffset + j * p.typeSize, true)
             }
           } else {
             if (p.isComplex) {
               for (let j = 0; j < p.length; j++) {
-                res[fi.name][j] = this.__deserialize__(p.typeIndex, currOffset + j * p.typeSize, sizeOffset)
+                res[fi.name][j] = this.__deserialize__(
+                  p.typeIndex,
+                  currOffset + j * p.typeSize,
+                  sizeOffset
+                )
               }
             } else {
               for (let j = 0; j < p.length; j++) {
-                res[fi.name][j] = readFunc[p.typeIndex](dv, currOffset + this._dynamicOffset + j * p.typeSize)
+                res[fi.name][j] = readFunc[p.typeIndex](
+                  dv,
+                  currOffset + this._dynamicOffset + j * p.typeSize
+                )
               }
             }
           }
@@ -612,7 +637,7 @@ export function initializeMessages(messagesJson, headerSchema) {
       res[msg] = msg_struct
       res[name] = msg_struct
     } else {
-      console.warn(`Warning: message ${id} ${msg} already exists.`)
+      console.warn(`Warning: message ${ id } ${ msg } already exists.`)
     }
   }
 
