@@ -82,6 +82,13 @@ The types of these messages for TS can be generated as follows:
 python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l ts -o out/ts
 ```
 
+if it is necessary to generate typed arrays for TS, it is necessary to pass the flag `-D typed_arrays=true`:
+```
+python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l ts -o out/ts -D typed_arrays=true
+```
+
+
+
 #### MD
 
 Example for protocol documentation generation:
