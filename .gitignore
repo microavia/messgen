@@ -1,5 +1,6 @@
 # IntelliJ project files
 .idea
+.run
 
 # Build files
 *.pyc
