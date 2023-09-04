@@ -24,9 +24,5 @@ fields:
   - name: type_Uint64
     type: uint64[]
 
-  - name: type_String
-    type: string[]
-
-
   - name: type_Char
     type: char
