@@ -161,6 +161,121 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData)
     })
 
+    it('Basic types fixed typed array size', () => {
+        const ARRAY_SIZE = 100
+
+        let srcStruct = new Struct({
+            id: 2,
+            fields: [
+                { name: 'type_Int8', type: `Int8[${ARRAY_SIZE}]` },
+                { name: 'type_Uint8', type: `Uint8[${ARRAY_SIZE}]` },
+                { name: 'type_Int16', type: `Int16[${ARRAY_SIZE}]` },
+                { name: 'type_Uint16', type: `Uint16[${ARRAY_SIZE}]` },
+                { name: 'type_Int32', type: `Int32[${ARRAY_SIZE}]` },
+                { name: 'type_Uint32', type: `Uint32[${ARRAY_SIZE}]` },
+                { name: 'type_Int64', type: `Int64[${ARRAY_SIZE}]` },
+                { name: 'type_Uint64', type: `Uint64[${ARRAY_SIZE}]` },
+                { name: 'type_String', type: `String[${ARRAY_SIZE}]` },
+                { name: 'type_Double', type: `Double[${ARRAY_SIZE}]` },
+                { name: 'type_Char', type: `Char[${ARRAY_SIZE}]` }
+            ]
+        })
+
+        let srcData = {
+            type_Int8: new Int8Array(ARRAY_SIZE),
+            type_Uint8: new Uint8Array(ARRAY_SIZE),
+            type_Int16: new Int16Array(ARRAY_SIZE),
+            type_Uint16: new Uint16Array(ARRAY_SIZE),
+            type_Int32: new Int32Array(ARRAY_SIZE),
+            type_Uint32: new Uint32Array(ARRAY_SIZE),
+            type_Int64: new BigInt64Array(ARRAY_SIZE),
+            type_Uint64: new BigUint64Array(ARRAY_SIZE),
+            type_String: new Array(ARRAY_SIZE),
+            type_Double: new Float64Array(ARRAY_SIZE),
+            type_Char: new Array(ARRAY_SIZE)
+        }
+
+        for (let i = 0; i < ARRAY_SIZE; i++) {
+            srcData.type_Int8[i] = i
+            srcData.type_Uint8[i] = i
+            srcData.type_Int16[i] = i
+            srcData.type_Uint16[i] = i
+            srcData.type_Int32[i] = i
+            srcData.type_Uint32[i] = i
+            srcData.type_Int64[i] = BigInt(-ARRAY_SIZE + i)
+            srcData.type_Uint64[i] = BigInt(i)
+            srcData.type_String[i] = 'string-' + i
+            srcData.type_Double[i] = (-ARRAY_SIZE + i) / 3.0
+            srcData.type_Char[i] = 'a'
+        }
+
+        //Testing proper size of the message
+        srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData))
+
+        let b = Buffer.serializeObj(srcStruct.schema.fields, srcData)
+        let res = new Buffer(b, true).deserialize(srcStruct)
+
+        expect(res).toEqual(srcData)
+    })
+
+    it('Basic types dynamic typed array size', () => {
+        const ARRAY_SIZE = 100
+
+        let srcStruct = new Struct({
+            id: 2,
+            fields: [
+                { name: 'type_Int8', type: `Int8[]` },
+                { name: 'type_Uint8', type: `Uint8[]` },
+                { name: 'type_Int16', type: `Int16[]` },
+                { name: 'type_Uint16', type: `Uint16[]` },
+                { name: 'type_Int32', type: `Int32[]` },
+                { name: 'type_Uint32', type: `Uint32[]` },
+                { name: 'type_Int64', type: `Int64[]` },
+                { name: 'type_Uint64', type: `Uint64[]` },
+                { name: 'type_String', type: `String[]` },
+                { name: 'type_Double', type: `Double[]` },
+                { name: 'type_Char', type: `Char[]` }
+            ]
+        })
+
+        let srcData = {
+            type_Int8: new Int8Array(ARRAY_SIZE),
+            type_Uint8: new Uint8Array(ARRAY_SIZE),
+            type_Int16: new Int16Array(ARRAY_SIZE),
+            type_Uint16: new Uint16Array(ARRAY_SIZE),
+            type_Int32: new Int32Array(ARRAY_SIZE),
+            type_Uint32: new Uint32Array(ARRAY_SIZE),
+            type_Int64: new BigInt64Array(ARRAY_SIZE),
+            type_Uint64: new BigUint64Array(ARRAY_SIZE),
+            type_String: new Array(ARRAY_SIZE),
+            type_Double: new Float64Array(ARRAY_SIZE),
+            type_Char: new Array(ARRAY_SIZE)
+        }
+
+        for (let i = 0; i < ARRAY_SIZE; i++) {
+            srcData.type_Int8[i] = i
+            srcData.type_Uint8[i] = i
+            srcData.type_Int16[i] = i
+            srcData.type_Uint16[i] = i
+            srcData.type_Int32[i] = i
+            srcData.type_Uint32[i] = i
+            srcData.type_Int64[i] = BigInt(-ARRAY_SIZE + i)
+            srcData.type_Uint64[i] = BigInt(i)
+            srcData.type_String[i] = 'string-' + i
+            srcData.type_Double[i] = (-ARRAY_SIZE + i) / 3.0
+            srcData.type_Char[i] = 'A'
+        }
+
+        //Testing proper size of the message
+        srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData))
+
+        let b = Buffer.serializeObj(srcStruct.schema.fields, srcData)
+
+        let res = new Buffer(b, true).deserialize(srcStruct)
+
+        expect(res).toEqual(srcData)
+    })
+
     it('Basic message with header', () => {
         let srcStruct = new Struct({
             id: 2,
