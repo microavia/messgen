@@ -1,0 +1,13 @@
+type_class: struct
+comment: "Simple struct example"
+fields:
+  - { name: "f0", type: "uint64", comment: "Some integer field" }
+  - { name: "f1", type: "int64", comment: "Another integer field" }
+  - { name: "f2", type: "float64" }
+  - { name: "f3", type: "uint32" }
+  - { name: "f4", type: "int32" }
+  - { name: "f5", type: "float32" }
+  - { name: "f6", type: "uint16" }
+  - { name: "f7", type: "int16" }
+  - { name: "f8", type: "uint8" }
+  - { name: "f9", type: "int8" }

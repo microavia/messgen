@@ -1,0 +1,6 @@
+type_class: enum
+comment: "Example of simple enum"
+base_type: uint8
+values:
+  - { name: "one_value", value: 0, comment: "One example value" }
+  - { name: "another_value", value: 1, comment: "Another example value" }
