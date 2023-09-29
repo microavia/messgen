@@ -1,4 +1,5 @@
 from . import common
+from . protocols import Protocols
 from . import protocol_version
 import os
 
@@ -9,6 +10,7 @@ def inline_comment(comment):
         return ""
 
 class CppGenerator:
+    _PREAMBLE_HEADER = ["#pragma once", ""]
     _EXT_HEADER = ".h"
     _CPP_TYPES_MAP = {
         "uint8": "uint8_t",
@@ -23,12 +25,15 @@ class CppGenerator:
         "float64": "double",
     }
 
+    _protocols : Protocols
     _includes = set()
+    _ctx = {}
 
-    def __init__(self, proto_map):
-        self._proto_map = proto_map
+    def __init__(self, protos):
+        self._protocols = protos
 
     def generate(self, out_dir, proto_name, proto):
+        self._ctx["proto_name"] = proto_name
         proto_out_dir = out_dir + os.path.sep + proto_name.replace(common.SEPARATOR, os.path.sep)
 
         try:
@@ -67,7 +72,7 @@ class CppGenerator:
         code.append("")
         code.append("} // namespace %s" % namespace)
 
-        code = self._generate_includes() + code
+        code = self._PREAMBLE_HEADER + self._generate_includes() + code
 
         return code
 
@@ -96,6 +101,13 @@ class CppGenerator:
         code.append("struct %s {" % type_name)
         for item in type["fields"]:
             code.append("    %s %s;%s" % (self._cpp_type(item["type"]), item["name"], inline_comment(item.get("comment"))))
+
+        code.append("")
+        code.append("    size_t serialize(uint8_t *buf) const {")
+        size = self._protocols.get_type(self._ctx["proto_name"], type_name).get("size")
+        if size != None:
+            code.append("    memcpy(..., %d)" % size)
+        code.append("    }")
         code.append("}")
 
         return code
@@ -112,8 +124,12 @@ class CppGenerator:
         return code
 
     def _cpp_type(self, t):
+        types = self._protocols.proto_map[self._ctx["proto_name"]]["types"]
         if t in self._CPP_TYPES_MAP:
             self._add_include("stdint")
             return self._CPP_TYPES_MAP[t]
+        elif t in types:
+            self._add_include(t + self._EXT_HEADER)
+            return t
         else:
             raise RuntimeError("Can't get c++ type for %s" % t)

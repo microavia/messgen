@@ -1,19 +1,20 @@
 import argparse
-from messgen import proto_loader
+from messgen.protocols import Protocols
 from messgen import generator
 
 def generate(args):
     if not args.protocol:
         raise RuntimeError("No protocols to generate (--protocol)")
 
-    proto_map = proto_loader.load_protocols(args.basedir, args.protocol)
+    protos = Protocols()
+    protos.load(args.basedir, args.protocol)
 
     g_type = generator.get_generator(args.lang)
     if g_type is None:
         raise RuntimeError("Unsupported language \"%s\"" % args.lang)
 
-    g = g_type(proto_map)
-    for proto_name, proto in proto_map.items():
+    g = g_type(protos)
+    for proto_name, proto in protos.proto_map.items():
         g.generate(args.outdir, proto_name, proto)
 
     print("Successfully generated to %s" % args.outdir)
