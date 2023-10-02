@@ -10,7 +10,7 @@ Features:
 
 - Embedded-friendly
 - Fixed size arrays
-- Dynamic size arrays
+- Vectors (dynamic size arrays)
 - Nested messages
 - Messages metadata
 - Supported languages: C++, Go, JavaScript
@@ -127,7 +127,7 @@ The lowest level of hierarchy is **type**. It can be:
 - Scalar: e.g. `int32`, `float32`, `uint8`, `bool`
 - Enum: wrapper around scalar, e.g. `command`
 - Array: fixed size, e.g. `int32[4]`, `my_struct[3]`
-- Dynamic: dynamic size array, e.g. `int32[]`, `my_struct[]`
+- Vector: dynamic size array, e.g. `int32[]`, `my_struct[]`
 - Struct: described in yaml file and consists of other types, including other structs
 - External: user-defined types, user must provide serialization/deserialization methods for each port that is used
 - Alias: reference to another existing type (e.g. from another protocol)

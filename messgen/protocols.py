@@ -17,10 +17,12 @@ import yaml
 #
 # Type definition structure:
 # {
-#   type_class: <class>,   // scalar, enum, array, dynamic, struct, external, alias
-#   size: <size>,          // optional, only for fixed-size types, serialized size in bytes
+#   type_class: <class>,   // enum, struct, external, alias
+#   size: <size>,          // optional, only for fixed-size types, total serialized size in bytes
 #   comment: <comment>,    // optional
+#
 #   // type-dependent fields:
+#
 #   // - enum
 #   base_type: <base_type>,   // scalar integer type, e.g. uint8, uint32
 #   values: {
@@ -29,12 +31,34 @@ import yaml
 #       comment: <comment_0>,   // optional
 #     },
 #     <item_1>: {
-#       value: <value_1>,
-#       comment: <comment_1>,   // optional
+#       ...
 #     },
 #     ...
 #   }
+#
+#   // - struct
+#   fields: [
+#     {
+#       name: <name_0>,
+#       type: <type_0>,
+#       comment: <comment_0>,   // optional
+#     },
+#     {
+#       ...
+#     },
+#     ...
+#   ]
 # }
+#
+# Field type structure:
+# - scalar:
+#   e.g. "uint8"
+# - enum:
+#   e.g. "my_enum"
+# - array:
+#   e.g. "uint8[4]"
+# - vector:
+#   e.g. "uint8[]"
 
 CONFIG_EXT = ".yaml"
 PROTOCOL_ITEM = "_protocol"
@@ -53,8 +77,9 @@ _SCALAR_TYPES_INFO = {
     "float64": {"size": 8},
 }
 
+
 class Protocols:
-    proto_map : dict[str, dict] = {}
+    proto_map: dict[str, dict] = {}
 
     def load(self, base_dirs: list[str], proto_list: list[str]):
         for proto_name in proto_list:
@@ -78,12 +103,48 @@ class Protocols:
                 "size": t["size"]
             }
 
+        if len(type_name) > 2:
+            # Vector
+            if type_name.endswith("[]"):
+                return {
+                    "type_class": "vector",
+                    "base_type": type_name[:-2]
+                }
+
+            # Array
+            if type_name.endswith("]"):
+                p = type_name[:-1].split("[")
+                base_type = p[0]
+                array_size = int(p[1])
+                res = {
+                    "type_class": "array",
+                    "base_type": base_type,
+                    "array_size": array_size,
+                }
+                bt = self.get_type(curr_proto_name, base_type)
+                sz = bt.get("size")
+                if sz is not None:
+                    res["size"] = sz * array_size
+                return res
+
         # Type from current protocol
         t = self.proto_map[curr_proto_name]["types"].get(type_name)
         if t:
             if t["type_class"] == "enum":
-                t["size"] = self.get_type(curr_proto_name, type_name)["size"]
-            # TODO
+                t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
+            elif t["type_class"] == "struct":
+                sz = 0
+                fixed_size = True
+                for i in t["fields"]:
+                    it = self.get_type(curr_proto_name, i["type"])
+                    isz = it.get("size")
+                    if isz is not None:
+                        sz += isz
+                    else:
+                        fixed_size = False
+                        break
+                if fixed_size:
+                    t["size"] = sz
             return t
 
         raise RuntimeError("Type not found: %s, current protocol: %s" % (type_name, curr_proto_name))
