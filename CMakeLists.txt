@@ -6,5 +6,7 @@ add_executable(test_cpp tests/cpp/main.cpp)
 
 set_property(TARGET test_cpp PROPERTY CXX_STANDARD 20)
 target_include_directories(test_cpp PUBLIC
+        "port/cpp"
         "out/cpp"
 )
+target_link_libraries(test_cpp gtest)

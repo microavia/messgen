@@ -114,8 +114,8 @@ class Protocols:
             # Array
             if type_name.endswith("]"):
                 p = type_name[:-1].split("[")
-                base_type = p[0]
-                array_size = int(p[1])
+                base_type = "[".join(p[:-1])
+                array_size = int(p[-1])
                 res = {
                     "type_class": "array",
                     "base_type": base_type,

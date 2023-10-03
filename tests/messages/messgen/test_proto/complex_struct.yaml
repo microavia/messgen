@@ -5,6 +5,10 @@ fields:
   - { name: "f1_arr", type: "int64[4]", comment: "Another integer field" }
   - { name: "s_arr", type: "simple_struct[2]" }
   - { name: "f_end", type: "uint8" }
+  - { name: "v_arr", type: "var_size_struct[2]" }
   - { name: "f2_vec", type: "float64[]" }
   - { name: "e_vec", type: "simple_enum[]" }
   - { name: "s_vec", type: "simple_struct[]" }
+  - { name: "v_vec0", type: "var_size_struct[][]" }
+  - { name: "v_vec1", type: "var_size_struct[][4]" }
+  - { name: "v_vec2", type: "int16[][4][]" }
