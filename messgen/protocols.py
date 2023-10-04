@@ -127,6 +127,11 @@ class Protocols:
                     res["size"] = sz * array_size
                 return res
 
+        if type_name == "string":
+            return {
+                "type_class": "string",
+            }
+
         # Type from current protocol
         t = self.proto_map[curr_proto_name]["types"].get(type_name)
         if t:

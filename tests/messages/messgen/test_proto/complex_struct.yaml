@@ -13,3 +13,5 @@ fields:
   - { name: "v_vec0", type: "var_size_struct[][]" }
   - { name: "v_vec1", type: "var_size_struct[][4]" }
   - { name: "v_vec2", type: "int16[][4][]" }
+  - { name: "str", type: "string" }
+  - { name: "str_vec", type: "string[]" }

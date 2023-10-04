@@ -312,6 +312,9 @@ class CppGenerator:
             base_type_name = t["base_type"]
             bf = self._cpp_field_def(base_type_name, field_name)  # To add required includes
             return "std::vector<%s>" % bf[0], bf[1]
+        elif t["type_class"] == "string":
+            self._add_include("string")
+            return "std::string", field_name
         elif t["type_class"] in ["enum", "struct"]:
             self._add_include("%s.h" % type_name, "local")
             return type_name, field_name
@@ -337,6 +340,12 @@ class CppGenerator:
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(indent(self._serialize_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
+        elif field_type["type_class"] == "string":
+            c.append("*reinterpret_cast<size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(size_type);")
+            c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
+            c.append("_size += %s.size();" % field_name)
+            # c.extend(self._memcpy_to_buf("%s[0]" % field_name, "%s.size()" % field_name))
         else:
             raise RuntimeError("Unsupported type_class in _serialize_field: %s" % field_type["type_class"])
         return c
@@ -352,14 +361,19 @@ class CppGenerator:
             base_type = self._protocols.get_type(self._ctx["proto_name"], field_type["base_type"])
             bsz = base_type.get("size")
             if bsz is not None:
-                # Vector of fixed size elements, optimize with single memcpy
+                # Vector or array of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (bsz, field_name))
                 c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
             else:
-                # Vector of variable size elements
+                # Vector or array of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(indent(self._deserialize_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
+        elif field_type["type_class"] == "string":
+            c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
+            c.append("_size += sizeof(size_type);")
+            c.append("%s.assign(reinterpret_cast<const char *>(&_buf[_size]), _field_size);" % field_name)
+            c.append("_size += _field_size;")
         else:
             raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % field_type["type_class"])
         return c
@@ -374,13 +388,16 @@ class CppGenerator:
             base_type = self._protocols.get_type(self._ctx["proto_name"], field_type["base_type"])
             bsz = base_type.get("size")
             if bsz is not None:
-                # Vector of fixed size elements, optimize with single memcpy
+                # Vector or array of fixed size elements, optimize with single memcpy
                 c.append("_size += %d * %s.size();" % (bsz, field_name))
             else:
-                # Vector of variable size elements
+                # Vector or array of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(indent(self._serialized_size_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
+        elif field_type["type_class"] == "string":
+            c.append("_size += sizeof(size_type);")
+            c.append("_size += %s.size();" % field_name)
         else:
             raise RuntimeError("Unsupported type_class in _serialized_size_field: %s" % field_type["type_class"])
         return c

@@ -128,6 +128,7 @@ The lowest level of hierarchy is **type**. It can be:
 - Enum: wrapper around scalar, e.g. `command`
 - Array: fixed size, e.g. `int32[4]`, `my_struct[3]`
 - Vector: dynamic size array, e.g. `int32[]`, `my_struct[]`
+- String: vector of `uint8`, representing string
 - Struct: described in yaml file and consists of other types, including other structs
 - External: user-defined types, user must provide serialization/deserialization methods for each port that is used
 - Alias: reference to another existing type (e.g. from another protocol)

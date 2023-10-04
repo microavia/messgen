@@ -26,11 +26,15 @@ protected:
     template<class T>
     void test_serialization(const T &msg) {
         size_t sz_check = msg.serialized_size();
+
         _buf.reserve(sz_check);
-        size_t sz = msg.serialize(&_buf[0]);
-        EXPECT_EQ(sz, sz_check);
+        size_t ser_size = msg.serialize(&_buf[0]);
+        EXPECT_EQ(ser_size, sz_check);
+
         T msg1{};
-        msg1.deserialize(&_buf[0]);
+        size_t deser_size = msg1.deserialize(&_buf[0]);
+        EXPECT_EQ(deser_size, sz_check);
+
         EXPECT_TRUE(msg == msg1);
     }
 };
@@ -83,6 +87,10 @@ TEST_F(TestMessgen, ComplexStruct) {
     msg.v_vec2.resize(2);
     msg.v_vec2[1][0].resize(3);
     msg.v_vec2[1][0][2] = 5;
+    msg.str = "Hello messgen!";
+    msg.str_vec.push_back("spam");
+    msg.str_vec.push_back("eggs");
+    msg.str_vec.push_back("sticks");
 
     test_serialization(msg);
 }
