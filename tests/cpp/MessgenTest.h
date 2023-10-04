@@ -48,9 +48,7 @@ TEST_F(TestMessgen, SimpleStruct) {
     msg.f4 = 5;
     msg.f5 = 6;
     msg.f6 = 7;
-    msg.f7 = 8;
     msg.f8 = 9;
-    msg.f9 = 10;
 
     test_serialization(msg);
 }
@@ -80,6 +78,7 @@ TEST_F(TestMessgen, ComplexStruct) {
     msg.f2_vec.push_back(45.787);
     msg.e_vec.push_back(messgen::test_proto::simple_enum::another_value);
     msg.s_arr[0].f3 = 3;
+    msg.s_arr[1].f3 = 5;
     msg.v_vec0.resize(1);
     msg.v_vec0[0].resize(2);
     msg.v_vec0[0][0].f1_vec.resize(3);

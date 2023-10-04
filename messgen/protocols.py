@@ -99,6 +99,7 @@ class Protocols:
         t = _SCALAR_TYPES_INFO.get(type_name)
         if t:
             return {
+                "type": type_name,
                 "type_class": "scalar",
                 "size": t["size"]
             }
@@ -107,6 +108,7 @@ class Protocols:
             # Vector
             if type_name.endswith("[]"):
                 return {
+                    "type": type_name,
                     "type_class": "vector",
                     "base_type": type_name[:-2]
                 }
@@ -117,6 +119,7 @@ class Protocols:
                 base_type = "[".join(p[:-1])
                 array_size = int(p[-1])
                 res = {
+                    "type": type_name,
                     "type_class": "array",
                     "base_type": base_type,
                     "array_size": array_size,
@@ -129,12 +132,14 @@ class Protocols:
 
         if type_name == "string":
             return {
+                "type": type_name,
                 "type_class": "string",
             }
 
         # Type from current protocol
         t = self.proto_map[curr_proto_name]["types"].get(type_name)
         if t:
+            t["type"] = type_name
             if t["type_class"] == "enum":
                 t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
             elif t["type_class"] == "struct":
