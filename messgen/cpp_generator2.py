@@ -11,10 +11,16 @@ def inline_comment(comment):
 
 
 def indent(c):
-    r = []
-    for i in c:
-        r.append("    " + i)
-    return r
+    spaces = "    "
+    if type(c) is str:
+        return spaces + c
+    elif type(c) is list:
+        r = []
+        for i in c:
+            r.append(spaces + i)
+        return r
+    else:
+        raise RuntimeError("Unsupported type for indent: %s" % type(c))
 
 
 class CppGenerator:
@@ -104,9 +110,26 @@ class CppGenerator:
 
     def _generate_type_struct(self, type_name, type_def):
         curr_proto_name = self._ctx["proto_name"]
+        type_def = self._protocols.get_type(curr_proto_name, type_name)
+
+        # Calculate size of the fixed size part
+        fixed_size = 0
+        fields = list(type_def["fields"])
+        fields_cpy = list(fields)
+        while len(fields_cpy) > 0:
+            field = fields_cpy[0]
+            field_type = self._protocols.get_type(curr_proto_name, field["type"])
+            field_size = field_type.get("size")
+            if field_size is not None:
+                fixed_size += field_size
+                fields_cpy = fields_cpy[1:]
+            else:
+                break
+        var_fields = fields_cpy
+
+        self._add_include("cstddef")
 
         code = []
-
         code.extend(self._generate_comment_type(type_def))
         code.append("struct %s {" % type_name)
         for item in type_def["fields"]:
@@ -114,157 +137,130 @@ class CppGenerator:
             code.append("    %s %s;%s" % (field_def[0], field_def[1], inline_comment(item.get("comment"))))
 
         # Serialize function body
-        self._add_include("cstddef")
-        type_def = self._protocols.get_type(curr_proto_name, type_name)
-
         code_ser = []
 
-        # Calculate size of the fixed size part
-        sz = 0
-        fields = list(type_def["fields"])
-        while len(fields) > 0:
-            field = fields[0]
-            field_type = self._protocols.get_type(curr_proto_name, field["type"])
-            field_size = field_type.get("size")
-            if field_size is not None:
-                sz += field_size
-                fields = fields[1:]
-            else:
-                break
-
         # Copy fixed size part
-        if sz != 0:
+        if fixed_size != 0:
             self._add_include("cstring")
             code_ser.extend([
                 "// Fixed size part",
-                "::memcpy(__buf, reinterpret_cast<const uint8_t *>(&v), %d);" % (sz),
+                "::memcpy(_buf, reinterpret_cast<const uint8_t *>(this), %d);" % fixed_size,
             ])
 
         code_ser.extend([
-            "size_t __size = %d;" % sz,
-            "size_t __field_size;",
+            "size_t _size = %d;" % fixed_size,
+            "size_t _field_size;",
             "",
         ])
 
         # Struct is not fixed size, copy remaining variable size fields
-        if len(fields) > 0:
+        if len(var_fields) > 0:
             code_ser.append("// Variable size part")
+            for field in var_fields:
+                field_name = field["name"]
+                field_type = self._protocols.get_type(curr_proto_name, field["type"])
 
-        while len(fields) > 0:
-            field = fields[0]
-            field_name = field["name"]
-            field_type = self._protocols.get_type(curr_proto_name, field["type"])
+                if field_type.get("size") is not None:
+                    raise RuntimeError("Fixed size field after var size field: %s.%s" % (type_name, field["name"]))
 
-            if field_type.get("size") is not None:
-                raise RuntimeError("Fixed size field after var size field: %s.%s" % (type_name, field["name"]))
+                code_ser.extend(self._serialize_field(field_name, field_type))
+                code_ser.append("")
 
-            code_ser.extend(self._serialize_field("v.%s" % field_name, field_type))
-            code_ser.append("")
-            fields = fields[1:]
-
-        code_ser.append("return __size;")
+        code_ser.append("return _size;")
 
         code_ser = ["",
-                    "size_t serialize(uint8_t *__buf) {",
+                    "size_t serialize(uint8_t *_buf) const {",
                     ] + indent(code_ser) + [
                        "}"]
         code.extend(indent(code_ser))
 
         # Deserialize function
-        code.append("")
-        self._add_include("cstddef")
-        code.append("    size_t deserialize(%s::%s &v, const uint8_t *buf) {" % (
-            self._cpp_namespace(curr_proto_name), type_name))
-
-        type_def = self._protocols.get_type(curr_proto_name, type_name)
-
-        # Calculate size of the fixed size part
-        sz = 0
-        fields = list(type_def["fields"])
-        while len(fields) > 0:
-            field = fields[0]
-            field_type = self._protocols.get_type(curr_proto_name, field["type"])
-            field_size = field_type.get("size")
-            if field_size is not None:
-                sz += field_size
-                fields = fields[1:]
-            else:
-                break
+        code_deser = []
 
         # Copy fixed size part
-        if sz != 0:
+        if fixed_size != 0:
             self._add_include("cstring")
-            code.append("    // Fixed size part")
-            code.append("    ::memcpy(reinterpret_cast<uint8_t *>(&v), buf, %d);" % (sz))
+            code_deser.extend([
+                "// Fixed size part",
+                "::memcpy(reinterpret_cast<uint8_t *>(this), _buf, %d);" % fixed_size,
+            ])
 
-        code.append("    size_t size = %d;" % sz)
-        code.append("    size_t field_size;")
-        code.append("")
+        code_deser.extend([
+            "size_t _size = %d;" % fixed_size,
+            "size_t _field_size;",
+            "",
+        ])
 
         # Struct is not fixed size, copy remaining variable size fields
-        if len(fields) > 0:
-            code.append("    // Variable size part")
+        if len(var_fields) > 0:
+            code_ser.append("// Variable size part")
+            for field in var_fields:
+                field_name = field["name"]
+                field_type = self._protocols.get_type(curr_proto_name, field["type"])
 
-        while len(fields) > 0:
-            field = fields[0]
-            field_name = field["name"]
-            field_type = self._protocols.get_type(curr_proto_name, field["type"])
+                if field_type.get("size") is not None:
+                    raise RuntimeError(
+                        "Fixed size field after variable size field not allowed: %s.%s" % (type_name, field["name"]))
 
-            if field_type.get("size") is not None:
-                raise RuntimeError(
-                    "Fixed size field after variable size field not allowed: %s.%s" % (type_name, field["name"]))
+                code_deser.extend(self._deserialize_field(field_name, field_type))
+                code_deser.append("")
 
-            code.extend(self._deserialize_field("v.%s" % field_name, field_type))
-            code.append("")
-            fields = fields[1:]
+        code_deser.append("return _size;")
 
-        code.append("    return size;")
-        code.append("}")
+        code_deser = ["",
+                      "size_t deserialize(const uint8_t *_buf) {",
+                      ] + indent(code_deser) + [
+                         "}"]
+        code.extend(indent(code_deser))
 
         # Size function
-        code.append("")
-        code.append("    size_t serialized_size(const %s::%s &v) {" % (self._cpp_namespace(curr_proto_name), type_name))
-
-        type_def = self._protocols.get_type(curr_proto_name, type_name)
-
-        # Calculate size of the fixed size part
-        sz = 0
-        fields = list(type_def["fields"])
-        while len(fields) > 0:
-            field = fields[0]
-            field_type = self._protocols.get_type(curr_proto_name, field["type"])
-            field_size = field_type.get("size")
-            if field_size is not None:
-                sz += field_size
-                fields = fields[1:]
-            else:
-                break
+        code_ss = []
 
         # Fixed size part size
-        code.append("        // Fixed size part")
-        code.append("        size_t size = %d;" % sz)
-        code.append("")
+        code_ss.extend([
+            "// Fixed size part",
+            "size_t _size = %d;" % fixed_size,
+            "",
+        ])
 
-        # Struct is not fixed size, copy remaining variable size fields
-        if len(fields) > 0:
-            code.append("        // Variable size part")
+        # Struct is not fixed size, calculate remaining variable size fields
+        if len(var_fields) > 0:
+            code_ss.append("// Variable size part")
+            for field in var_fields:
+                field_name = field["name"]
+                field_type = self._protocols.get_type(curr_proto_name, field["type"])
 
-        while len(fields) > 0:
-            field = fields[0]
+                if field_type.get("size") is not None:
+                    raise RuntimeError("Fixed size field after var size field: %s.%s" % (type_name, field["name"]))
+
+                code_ss.extend(self._serialized_size_field(field_name, field_type))
+                code_ss.append("")
+
+        code_ss.append("return _size;")
+
+        code_ss = ["",
+                   "size_t serialized_size() const {",
+                   ] + indent(code_ss) + [
+                      "}"]
+        code.extend(indent(code_ss))
+
+        code.append("};")
+
+        # Operator ==
+        code_eq = []
+        field_name = fields[0]["name"]
+        code_eq.append("return l.%s == r.%s" % (field_name, field_name))
+        for field in fields[1:]:
             field_name = field["name"]
-            field_type = self._protocols.get_type(curr_proto_name, field["type"])
+            code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
+        code_eq[-1] += ";"
 
-            if field_type.get("size") is not None:
-                raise RuntimeError("Fixed size field after var size field: %s.%s" % (type_name, field["name"]))
-
-            code.extend(self._serialized_size_field("v.%s" % field_name, field_type))
-            code.append("")
-            fields = fields[1:]
-
-        code.append("        return size;")
-        code.append("    }")
-        code.append("")
-        code.append("}")
+        code.extend([
+                        "",
+                        "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
+                    ] + indent(code_eq) + [
+                        "}"
+                    ])
 
         return code
 
@@ -309,64 +305,64 @@ class CppGenerator:
     def _serialize_field(self, field_name, field_type, level_n=0):
         c = []
         if field_type["type_class"] == "struct":
-            c.append("__size += %s.serialize(__buf);" % field_name)
+            c.append("_size += %s.serialize(&_buf[_size]);" % field_name)
         elif field_type["type_class"] in ["array", "vector"]:
             if field_type["type_class"] == "vector":
-                c.append("*reinterpret_cast<size_type *>(&__buf[__size]) = %s.size();" % field_name)
-                c.append("__size += sizeof(size_type);")
+                c.append("*reinterpret_cast<size_type *>(&_buf[_size]) = %s.size();" % field_name)
+                c.append("_size += sizeof(size_type);")
             base_type = self._protocols.get_type(self._ctx["proto_name"], field_type["base_type"])
             bsz = base_type.get("size")
             if bsz is not None:
                 # Vector of fixed size elements, optimize with single memcpy
-                c.append("__field_size = %d * %s.size();" % (bsz, field_name))
+                c.append("_field_size = %d * %s.size();" % (bsz, field_name))
                 c.append(
-                    "::memcpy(&__buf[__size], reinterpret_cast<const uint8_t *>(%s.begin().base()), __field_size);" % field_name)
-                c.append("__size += __field_size;")
+                    "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(%s.begin().base()), _field_size);" % field_name)
+                c.append("_size += _field_size;")
             else:
                 # Vector of variable size elements
-                c.append("for (auto &__i%d: %s) {" % (level_n, field_name))
-                c.extend(indent(self._serialize_field("__i%d" % level_n, base_type, level_n + 1)))
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(indent(self._serialize_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
         return c
 
     def _deserialize_field(self, field_name, field_type, level_n=0):
         c = []
         if field_type["type_class"] == "struct":
-            c.append("size += deserialize(%s, buf);" % field_name)
+            c.append("_size += %s.deserialize(&_buf[_size]);" % field_name)
         elif field_type["type_class"] in ["array", "vector"]:
             if field_type["type_class"] == "vector":
-                c.append("%s.resize(*reinterpret_cast<const size_type *>(&buf[size]));" % field_name)
-                c.append("size += sizeof(size_type);")
+                c.append("%s.resize(*reinterpret_cast<const size_type *>(&_buf[_size]));" % field_name)
+                c.append("_size += sizeof(size_type);")
             base_type = self._protocols.get_type(self._ctx["proto_name"], field_type["base_type"])
             bsz = base_type.get("size")
             if bsz is not None:
                 # Vector of fixed size elements, optimize with single memcpy
-                c.append("field_size = %d * %s.size();" % (bsz, field_name))
+                c.append("_field_size = %d * %s.size();" % (bsz, field_name))
                 c.append(
-                    "::memcpy(reinterpret_cast<uint8_t *>(%s.begin().base()), &buf[size], field_size);" % field_name)
-                c.append("size += field_size;")
+                    "::memcpy(reinterpret_cast<uint8_t *>(%s.begin().base()), &_buf[_size], _field_size);" % field_name)
+                c.append("_size += _field_size;")
             else:
                 # Vector of variable size elements
-                c.append("for (auto &i%d: %s) {" % (level_n, field_name))
-                c.extend(indent(self._deserialize_field("i%d" % level_n, base_type, level_n + 1)))
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(indent(self._deserialize_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
         return c
 
     def _serialized_size_field(self, field_name, field_type, level_n=0):
         c = []
         if field_type["type_class"] == "struct":
-            c.append("size += serialized_size(%s);" % field_name)
+            c.append("_size += %s.serialized_size();" % field_name)
         elif field_type["type_class"] in ["array", "vector"]:
             if field_type["type_class"] == "vector":
-                c.append("size += sizeof(size_type);")
+                c.append("_size += sizeof(size_type);")
             base_type = self._protocols.get_type(self._ctx["proto_name"], field_type["base_type"])
             bsz = base_type.get("size")
             if bsz is not None:
                 # Vector of fixed size elements, optimize with single memcpy
-                c.append("size += %d * %s.size();" % (bsz, field_name))
+                c.append("_size += %d * %s.size();" % (bsz, field_name))
             else:
                 # Vector of variable size elements
-                c.append("for (auto &i%d: %s) {" % (level_n, field_name))
-                c.extend(indent(self._serialized_size_field("i%d" % level_n, base_type, level_n + 1)))
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(indent(self._serialized_size_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
         return c
