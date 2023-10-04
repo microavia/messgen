@@ -94,7 +94,7 @@ class Protocols:
             if not loaded:
                 print("Protocol %s not found in base directories (%s)" % (proto_name, base_dirs))
 
-    def get_type(self, curr_proto_name, type_name):
+    def get_type(self, curr_proto_name, type_name) -> dict:
         # Scalar
         t = _SCALAR_TYPES_INFO.get(type_name)
         if t:

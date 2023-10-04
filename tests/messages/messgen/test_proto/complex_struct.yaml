@@ -2,9 +2,10 @@ type_class: struct
 comment: "Simple struct example"
 fields:
   - { name: "f0", type: "uint64", comment: "Some integer field" }
+  - { name: "f1", type: "uint32", comment: "Some integer field" }
+  - { name: "f2", type: "uint64", comment: "Some integer field" }
   - { name: "f1_arr", type: "int64[4]", comment: "Another integer field" }
   - { name: "s_arr", type: "simple_struct[2]" }
-  - { name: "f_end", type: "uint8" }
   - { name: "v_arr", type: "var_size_struct[2]" }
   - { name: "f2_vec", type: "float64[]" }
   - { name: "e_vec", type: "simple_enum[]" }

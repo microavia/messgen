@@ -108,26 +108,39 @@ class CppGenerator:
 
         return code
 
+    def _check_padding(self, field_type, offs):
+        if field_type["type_class"] == "scalar":
+            field_size = field_type.get("size")
+            if offs % field_size != 0:
+                return False
+        return True
+
     def _generate_type_struct(self, type_name, type_def):
         curr_proto_name = self._ctx["proto_name"]
         type_def = self._protocols.get_type(curr_proto_name, type_name)
 
-        # Calculate size of the fixed size part
-        fixed_size = 0
-        fields = list(type_def["fields"])
+        # Calculate size of the fixed size part, check alignment
+        fixed_fields = [[0, []]]  # (size, [field, ...])
+        fields = type_def["fields"]
         fields_cpy = list(fields)
         while len(fields_cpy) > 0:
             field = fields_cpy[0]
             field_type = self._protocols.get_type(curr_proto_name, field["type"])
             field_size = field_type.get("size")
             if field_size is not None:
-                fixed_size += field_size
+                if not self._check_padding(field_type, fixed_fields[-1][0]):
+                    fixed_fields.append([0, []])
+                fixed_fields[-1][0] += field_size
+                fixed_fields[-1][1].append(field)
                 fields_cpy = fields_cpy[1:]
             else:
                 break
         var_fields = fields_cpy
 
+        print(fixed_fields)
+
         self._add_include("cstddef")
+        self._add_include("cstring")
 
         code = []
         code.extend(self._generate_comment_type(type_def))
@@ -140,18 +153,17 @@ class CppGenerator:
         code_ser = []
 
         # Copy fixed size part
-        if fixed_size != 0:
-            self._add_include("cstring")
-            code_ser.extend([
-                "// Fixed size part",
-                "::memcpy(_buf, reinterpret_cast<const uint8_t *>(this), %d);" % fixed_size,
-            ])
-
         code_ser.extend([
-            "size_t _size = %d;" % fixed_size,
+            "size_t _size = 0;",
             "size_t _field_size;",
             "",
         ])
+        if fixed_fields[0][0] != 0:
+            code_ser.append("// Fixed size part")
+            for fs, ff in fixed_fields:
+                if fs != 0:
+                    code_ser.extend(self._memcpy_to_buf(ff[0]["name"], fs))
+                    code_ser.append("")
 
         # Struct is not fixed size, copy remaining variable size fields
         if len(var_fields) > 0:
@@ -178,22 +190,21 @@ class CppGenerator:
         code_deser = []
 
         # Copy fixed size part
-        if fixed_size != 0:
-            self._add_include("cstring")
-            code_deser.extend([
-                "// Fixed size part",
-                "::memcpy(reinterpret_cast<uint8_t *>(this), _buf, %d);" % fixed_size,
-            ])
-
         code_deser.extend([
-            "size_t _size = %d;" % fixed_size,
+            "size_t _size = 0;",
             "size_t _field_size;",
             "",
         ])
+        if fixed_fields[0][0] != 0:
+            code_deser.append("// Fixed size part")
+            for fs, ff in fixed_fields:
+                if fs != 0:
+                    code_deser.extend(self._memcpy_from_buf(ff[0]["name"], fs))
+                    code_deser.append("")
 
         # Struct is not fixed size, copy remaining variable size fields
         if len(var_fields) > 0:
-            code_ser.append("// Variable size part")
+            code_deser.append("// Variable size part")
             for field in var_fields:
                 field_name = field["name"]
                 field_type = self._protocols.get_type(curr_proto_name, field["type"])
@@ -217,6 +228,11 @@ class CppGenerator:
         code_ss = []
 
         # Fixed size part size
+        fixed_size = 0
+        if fixed_fields[0][0] != 0:
+            for fs, _ in fixed_fields:
+                fixed_size += fs
+
         code_ss.extend([
             "// Fixed size part",
             "size_t _size = %d;" % fixed_size,
@@ -315,14 +331,14 @@ class CppGenerator:
             if bsz is not None:
                 # Vector of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (bsz, field_name))
-                c.append(
-                    "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(%s.begin().base()), _field_size);" % field_name)
-                c.append("_size += _field_size;")
+                c.extend(self._memcpy_to_buf("%s[0]" % field_name, "_field_size"))
             else:
                 # Vector of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(indent(self._serialize_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
+        else:
+            raise RuntimeError("Unsupported type_class in _serialize_field: %s" % field_type["type_class"])
         return c
 
     def _deserialize_field(self, field_name, field_type, level_n=0):
@@ -338,14 +354,14 @@ class CppGenerator:
             if bsz is not None:
                 # Vector of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (bsz, field_name))
-                c.append(
-                    "::memcpy(reinterpret_cast<uint8_t *>(%s.begin().base()), &_buf[_size], _field_size);" % field_name)
-                c.append("_size += _field_size;")
+                c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
             else:
                 # Vector of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(indent(self._deserialize_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
+        else:
+            raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % field_type["type_class"])
         return c
 
     def _serialized_size_field(self, field_name, field_type, level_n=0):
@@ -365,4 +381,18 @@ class CppGenerator:
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(indent(self._serialized_size_field("_i%d" % level_n, base_type, level_n + 1)))
                 c.append("}")
+        else:
+            raise RuntimeError("Unsupported type_class in _serialized_size_field: %s" % field_type["type_class"])
         return c
+
+    def _memcpy_to_buf(self, src: str, size) -> list[str]:
+        return [
+            "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(&%s), %s);" % (src, size),
+            "_size += %s;" % size
+        ]
+
+    def _memcpy_from_buf(self, dst: str, size) -> list[str]:
+        return [
+            "::memcpy(reinterpret_cast<uint8_t *>(&%s), &_buf[_size], %s);" % (dst, size),
+            "_size += %s;" % size
+        ]
