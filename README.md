@@ -11,9 +11,10 @@ Features:
 - Embedded-friendly
 - Fixed size arrays
 - Vectors (dynamic size arrays)
+- Maps
 - Nested messages
 - Messages metadata
-- Supported languages: C++, Go, JavaScript
+- Supported languages: C++, Go, JavaScript, TypeScript, Markdown (documentation)
 
 ## Dependencies
 
