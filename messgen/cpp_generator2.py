@@ -72,7 +72,7 @@ class CppGenerator:
         self._includes.clear()
 
     def _generate_type_file(self, namespace, type_name, type_def) -> list[str]:
-        print("Generate type %s:\n%s" % (type_name, type_def))
+        print("Generate type: %s" % type_name)
 
         self._reset_file()
         code = []
@@ -172,8 +172,7 @@ class CppGenerator:
             field_name = field["name"]
             field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
             code_ser.extend(self._serialize_field(field_name, field_type_def))
-        code_ser.extend(self._serialize_flish_aligned())
-
+        code_ser.extend(self._serialize_flush_aligned())
         code_ser.append("return _size;")
 
         code_ser = ["",
@@ -194,10 +193,8 @@ class CppGenerator:
         for field in fields:
             field_name = field["name"]
             field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
-
             code_deser.extend(self._deserialize_field(field_name, field_type_def))
-            code_deser.append("")
-
+        code_deser.extend(self._deserialize_flush_aligned())
         code_deser.append("return _size;")
 
         code_deser = ["",
@@ -291,16 +288,6 @@ class CppGenerator:
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
-    def _serialize_flish_aligned(self):
-        c = []
-        if self._aligned_size != 0:
-            c.append("// %s" % ", ".join(self._aligned_fields))
-            c.extend(self._memcpy_to_buf(self._aligned_fields[0], self._aligned_size))
-            c.append("")
-            self._aligned_fields.clear()
-            self._aligned_size = 0
-        return c
-
     def _serialize_field(self, field_name, field_type_def, level_n=0):
         c = []
 
@@ -317,7 +304,7 @@ class CppGenerator:
             return c
 
         # Write together aligned fields
-        c.extend(self._serialize_flish_aligned())
+        c.extend(self._serialize_flush_aligned())
 
         c.append("// %s" % field_name)
         if type_class in ["scalar", "enum"]:
@@ -332,17 +319,17 @@ class CppGenerator:
             if type_class == "vector":
                 c.append("*reinterpret_cast<size_type *>(&_buf[_size]) = %s.size();" % field_name)
                 c.append("_size += sizeof(size_type);")
-            base_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["base_type"])
-            b_size = base_type_def.get("size")
-            b_align = self._get_alignment(base_type_def)
-            if b_size is not None and b_size % b_align == 0:
+            el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["base_type"])
+            el_size = el_type_def.get("size")
+            el_align = self._get_alignment(el_type_def)
+            if el_size is not None and el_size % el_align == 0:
                 # Vector of fixed size elements, optimize with single memcpy
-                c.append("_field_size = %d * %s.size();" % (b_size, field_name))
+                c.append("_field_size = %d * %s.size();" % (el_size, field_name))
                 c.extend(self._memcpy_to_buf("%s[0]" % field_name, "_field_size"))
             else:
                 # Vector of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
-                c.extend(indent(self._serialize_field("_i%d" % level_n, base_type_def, level_n + 1)))
+                c.extend(indent(self._serialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
 
         elif type_class == "string":
@@ -358,37 +345,77 @@ class CppGenerator:
 
         return c
 
-    def _deserialize_field(self, field_name, field_type, level_n=0):
+    def _serialize_flush_aligned(self):
         c = []
-        if field_type["type_class"] in ["scalar", "enum"]:
-            sz = field_type.get("size")
-            c_type = self._cpp_field_def(field_type["type"], "")[0]
+        if self._aligned_size != 0:
+            c.append("// %s" % ", ".join(self._aligned_fields))
+            c.extend(self._memcpy_to_buf(self._aligned_fields[0], self._aligned_size))
+            c.append("")
+            self._aligned_fields.clear()
+            self._aligned_size = 0
+        return c
+
+    def _deserialize_field(self, field_name, field_type_def, level_n=0):
+        c = []
+
+        # The field is aligned, can be joined with next fields in one memcpy
+        type_class = field_type_def["type_class"]
+        align = self._get_alignment(field_type_def)
+        sz = field_type_def.get("size")
+        if (
+                (sz is not None)
+                and (self._aligned_size % align == 0)
+                and (sz % align == 0)):
+            self._aligned_fields.append(field_name)
+            self._aligned_size += sz
+            return c
+
+        # Write together aligned fields
+        c.extend(self._deserialize_flush_aligned())
+
+        c.append("// %s" % field_name)
+        if type_class in ["scalar", "enum"]:
+            sz = field_type_def.get("size")
+            c_type = self._cpp_field_def(field_type_def["type"], "")[0]
             c.append("%s = *reinterpret_cast<const %s *>(&_buf[_size]);" % (field_name, c_type))
             c.append("_size += %s;" % sz)
-        elif field_type["type_class"] == "struct":
+
+        elif type_class == "struct":
             c.append("_size += %s.deserialize(&_buf[_size]);" % field_name)
-        elif field_type["type_class"] in ["array", "vector"]:
-            if field_type["type_class"] == "vector":
+
+        elif type_class in ["array", "vector"]:
+            if field_type_def["type_class"] == "vector":
                 c.append("%s.resize(*reinterpret_cast<const size_type *>(&_buf[_size]));" % field_name)
                 c.append("_size += sizeof(size_type);")
-            base_type = self._protocols.get_type(self._ctx["proto_name"], field_type["base_type"])
-            bsz = base_type.get("size")
-            if bsz is not None:
+            el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["base_type"])
+            el_size = el_type_def.get("size")
+            el_align = self._get_alignment(el_type_def)
+            if el_size is not None and el_size % el_align == 0:
                 # Vector or array of fixed size elements, optimize with single memcpy
-                c.append("_field_size = %d * %s.size();" % (bsz, field_name))
+                c.append("_field_size = %d * %s.size();" % (el_size, field_name))
                 c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
             else:
                 # Vector or array of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
-                c.extend(indent(self._deserialize_field("_i%d" % level_n, base_type, level_n + 1)))
+                c.extend(indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
-        elif field_type["type_class"] == "string":
+        elif type_class == "string":
             c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(size_type);")
             c.append("%s.assign(reinterpret_cast<const char *>(&_buf[_size]), _field_size);" % field_name)
             c.append("_size += _field_size;")
         else:
-            raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % field_type["type_class"])
+            raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % field_type_def["type_class"])
+        return c
+
+    def _deserialize_flush_aligned(self):
+        c = []
+        if self._aligned_size != 0:
+            c.append("// %s" % ", ".join(self._aligned_fields))
+            c.extend(self._memcpy_from_buf(self._aligned_fields[0], self._aligned_size))
+            c.append("")
+            self._aligned_fields.clear()
+            self._aligned_size = 0
         return c
 
     def _serialized_size_field(self, field_name, field_type, level_n=0):
