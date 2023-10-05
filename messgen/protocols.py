@@ -110,25 +110,37 @@ class Protocols:
                 return {
                     "type": type_name,
                     "type_class": "vector",
-                    "base_type": type_name[:-2]
+                    "element_type": type_name[:-2]
                 }
 
             # Array
             if type_name.endswith("]"):
                 p = type_name[:-1].split("[")
-                base_type = "[".join(p[:-1])
+                el_type = "[".join(p[:-1])
                 array_size = int(p[-1])
                 res = {
                     "type": type_name,
                     "type_class": "array",
-                    "base_type": base_type,
+                    "element_type": el_type,
                     "array_size": array_size,
                 }
-                bt = self.get_type(curr_proto_name, base_type)
-                sz = bt.get("size")
+                el_type_def = self.get_type(curr_proto_name, el_type)
+                sz = el_type_def.get("size")
                 if sz is not None:
                     res["size"] = sz * array_size
                 return res
+
+            # Map
+            if type_name.endswith("}"):
+                p = type_name[:-1].split("{")
+                value_type = "{".join(p[:-1])
+                key_type = p[-1]
+                return {
+                    "type": type_name,
+                    "type_class": "map",
+                    "key_type": key_type,
+                    "value_type": value_type,
+                }
 
         if type_name == "string":
             return {

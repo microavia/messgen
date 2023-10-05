@@ -15,3 +15,5 @@ fields:
   - { name: "v_vec2", type: "int16[][4][]" }
   - { name: "str", type: "string" }
   - { name: "str_vec", type: "string[]" }
+  - { name: "map_str_by_int", type: "string{int32}" }
+  - { name: "map_vec_by_str", type: "int32[]{string}" }

@@ -90,6 +90,13 @@ TEST_F(TestMessgen, ComplexStruct) {
     msg.str_vec.push_back("spam");
     msg.str_vec.push_back("eggs");
     msg.str_vec.push_back("sticks");
+    msg.map_str_by_int[23] = "ping";
+    msg.map_str_by_int[777] = "pong";
+    msg.map_vec_by_str["cat"].push_back(1);
+    msg.map_vec_by_str["cat"].push_back(2);
+    msg.map_vec_by_str["cat"].push_back(3);
+    msg.map_vec_by_str["dog"].push_back(30);
+    msg.map_vec_by_str["dog"].push_back(40);
 
     test_serialization(msg);
 }
