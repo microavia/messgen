@@ -225,11 +225,21 @@ class CppGenerator:
             "",
         ])
 
-        for field in fields:
-            field_name = field["name"]
-            field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
-            code_deser.extend(self._deserialize_field(field_name, field_type_def))
-        code_deser.extend(self._deserialize_flush_aligned())
+        groups = self._field_groups(fields)
+        for group in groups:
+            if len(group.fields) > 1:
+                # There is padding before current field
+                # Write together previous aligned fields, if any
+                code_deser.append("// %s" % ", ".join(group.field_names))
+                code_deser.extend(self._memcpy_from_buf(group.fields[0]["name"], group.size))
+            elif len(group.fields) == 1:
+                field = group.fields[0]
+                field_name = field["name"]
+                field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
+                code_deser.extend(self._deserialize_field(field_name, field_type_def))
+            else:
+                raise RuntimeError("Empty group in struct %s" % type_name)
+            code_deser.append("")
         code_deser.append("return _size;")
 
         code_deser = ["",
