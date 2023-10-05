@@ -1,0 +1,2 @@
+SEPARATOR = "/"
+SIZE_TYPE = "uint32"
