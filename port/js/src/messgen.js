@@ -9,80 +9,80 @@ const DYNAMIC_SIZE_TYPE = "Uint32";
 /**
  *
  * Read function returns value from byte array.
- * Write function returns type byte size.
+ * Write function returns type byte _size.
  */
 const basicTypes = [
     {
         name: "Char",
-        size: 1,
+        _size: 1,
         read: (v, s) => String.fromCharCode(v.getInt8(s, IS_LITTLE_ENDIAN)),
         write: (v, s, a) => { v.setInt8(s, a ? a.toString().charCodeAt(0) : 0, IS_LITTLE_ENDIAN); return 1; }
     }, {
         name: "Int8",
-        size: 1,
+        _size: 1,
         read: (v, s) => v.getInt8(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setInt8(s, a, IS_LITTLE_ENDIAN); return 1; }
     }, {
         name: "Uint8",
-        size: 1,
+        _size: 1,
         read: (v, s) => v.getUint8(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setUint8(s, a, IS_LITTLE_ENDIAN); return 1; }
     }, {
         name: "Int16",
-        size: 2,
+        _size: 2,
         read: (v, s) => v.getInt16(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setInt16(s, a, IS_LITTLE_ENDIAN); return 2; }
     }, {
         name: "Uint16",
-        size: 2,
+        _size: 2,
         read: (v, s) => v.getUint16(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setUint16(s, a, IS_LITTLE_ENDIAN); return 2; }
     }, {
         name: "Int32",
-        size: 4,
+        _size: 4,
         read: (v, s) => v.getInt32(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setInt32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Uint32",
-        size: 4,
+        _size: 4,
         read: (v, s) => v.getUint32(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setUint32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Int64",
-        size: 8,
+        _size: 8,
         read: (v, s) => v.getBigInt64(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setBigInt64(s, a, IS_LITTLE_ENDIAN); return 8; }
     }, {
         name: "Uint64",
-        size: 8,
+        _size: 8,
         read: (v, s) => v.getBigUint64(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setBigUint64(s, a, IS_LITTLE_ENDIAN); return 8; }
     }, {
         name: "Float",
-        size: 4,
+        _size: 4,
         read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setFloat32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Float32",
-        size: 4,
+        _size: 4,
         read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setFloat32(s, a, IS_LITTLE_ENDIAN); return 4; }
     }, {
         name: "Double",
-        size: 8,
+        _size: 8,
         read: (v, s) => v.getFloat64(s, IS_LITTLE_ENDIAN),
         write: (v, s, a) => { v.setFloat64(s, a, IS_LITTLE_ENDIAN); return 8; }
     }, {
         name: "String",
-        size: 4,
+        _size: 4,
         read: (v, s) => decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN))),
         write: (v, s, a) => {
-            let size = a.length;
-            v.setUint32(s, size, true);
-            for (let i = 0, s2 = s + 4; i < size; i++) {
+            let _size = a.length;
+            v.setUint32(s, _size, true);
+            for (let i = 0, s2 = s + 4; i < _size; i++) {
                 v.setUint8(s2 + i, a[i], true);
             }
-            return size + 4;
+            return _size + 4;
         }
     }
 ];
@@ -96,7 +96,7 @@ let readFunc = [],
 for (let i = 0; i < basicTypes.length; i++) {
     let ti = basicTypes[i];
     typeIndex[ti.name] = i;
-    typeSize[i] = ti.size;
+    typeSize[i] = ti._size;
     readFunc[i] = ti.read;
     writeFunc[i] = ti.write;
 }
@@ -111,15 +111,15 @@ function parseType(typeStr, includeMessages) {
     let a = typeStr.split('['),
         name = a[0].trim();
 
-    let size, isComplex = false;
+    let _size, isComplex = false;
 
     let type = typeIndex[name];
 
     if (type != undefined) {
-        size = typeSize[type];
+        _size = typeSize[type];
     } else if (includeMessages && includeMessages[name]) {
         type = includeMessages[name];
-        size = type.size;
+        _size = type._size;
         isComplex = true;
     } else {
         throw new Error(`Unknown type: ${ name }, if is complex type you must define before the struct. `);
@@ -129,7 +129,7 @@ function parseType(typeStr, includeMessages) {
 
     return {
         typeIndex: type,
-        typeSize: size,
+        typeSize: _size,
         length: isNaN(length) ? 0 : length,
         isArray: a.length === 2,
         isComplex: isComplex
@@ -159,7 +159,7 @@ export class Struct {
         return this._id;
     }
 
-    get size() {
+    get _size() {
         return this._size;
     }
 
@@ -211,7 +211,7 @@ export class Struct {
 }
 
 // uint32 seq;             //!< Sequence number
-// uint16 size;              //!< Message payload size
+// uint16 _size;              //!< Message payload _size
 // uint8 cls;           //!< Message class
 // uint8 msg_id;           //!< Message type ID
 
@@ -220,7 +220,7 @@ export const HEADER_STRUCT = new Struct({
         { 'name': "seq", 'type': "Uint32" },
         { 'name': "cls", 'type': "Uint8" },
         { 'name': "msg_id", 'type': "Uint8" },
-        { 'name': "size", 'type': "Uint32" }
+        { 'name': "_size", 'type': "Uint32" }
     ]
 });
 
@@ -239,7 +239,7 @@ export class Buffer {
         let res = [];
         let buf = new Buffer(data);
         let cur = 0;
-        while (cur < buf.size) {
+        while (cur < buf._size) {
             let h = buf.deserialize(headerStruct, cur),
                 m = buf.deserialize(messages.__id__[h.msg_id], cur + h.__SIZE__);
             m.__MSG_ID__ = h.msg_id;
@@ -268,7 +268,7 @@ export class Buffer {
 
     static calcSize(fields, includeMessages) {
 
-        let size = 0;
+        let _size = 0;
 
         for (let i = 0, len = fields.length; i < len; i++) {
 
@@ -279,24 +279,24 @@ export class Buffer {
 
                 if (tp.isComplex) {
                     if (tp.length === 0) {
-                        size += DYN_TYPE_SIZE;
+                        _size += DYN_TYPE_SIZE;
                     }
                     for (let i = 0; i < fi.value.length; i++) {
                         let arr = Buffer.createValueArray(fi._prop.typeIndex.fields, fi.value[i], includeMessages);
-                        size += Buffer.calcSize(arr, includeMessages);
+                        _size += Buffer.calcSize(arr, includeMessages);
                     }
                 } else {
 
                     let arrayLength = 0;
 
-                    // Dynamic size array
+                    // Dynamic _size array
                     if (tp.length === 0) {
                         arrayLength = fi.value.length;
-                        size += tp.typeSize * arrayLength + DYN_TYPE_SIZE; // for dynamic array length descriptor
+                        _size += tp.typeSize * arrayLength + DYN_TYPE_SIZE; // for dynamic array length descriptor
                     } else {
-                        // static size array
+                        // static _size array
                         arrayLength = tp.length;
-                        size += tp.typeSize * arrayLength;
+                        _size += tp.typeSize * arrayLength;
                     }
 
                     if (tp.typeIndex === typeIndex.String) {
@@ -304,25 +304,25 @@ export class Buffer {
                         for (let i = 0; i < arrayLength; i++) {
                             let b = encodeUTF8(fi.value[i] || "");
                             fi._bytes.push(b);
-                            size += b.length;
+                            _size += b.length;
                         }
                     }
                 }
 
             } else if (tp.typeIndex === typeIndex.String) {
                 fi._bytes = encodeUTF8(fi.value || "");
-                size += tp.typeSize + fi._bytes.length;
+                _size += tp.typeSize + fi._bytes.length;
             } else {
 
                 if (tp.isComplex) {
-                    size += Buffer.calcSize(fi.value, includeMessages);
+                    _size += Buffer.calcSize(fi.value, includeMessages);
                 } else {
-                    size += tp.typeSize;
+                    _size += tp.typeSize;
                 }
             }
         }
 
-        return size;
+        return _size;
     }
 
     static createValueArray(schemaFields, obj, includeMessages) {
@@ -357,7 +357,7 @@ export class Buffer {
 
         let headerBuf = Buffer.serializeObj(headerStruct.fields, {
             seq: obj.seq,
-            size: messageSize,
+            _size: messageSize,
             cls: obj.cls,
             msg_id: struct.id
         },
@@ -384,7 +384,7 @@ export class Buffer {
 
                 let arrayLength = p.length;
 
-                // Setting array size value for dynamic array size
+                // Setting array _size value for dynamic array _size
                 if (arrayLength === 0) {
                     arrayLength = fi.value.length;
                     offset += DYN_WRITE(dataView, offset, fi.value.length);
@@ -395,9 +395,9 @@ export class Buffer {
                     let val = fi._bytes && fi._bytes[j] || fi.value[j];
                     if (p.isComplex) {
                         let valArr = Buffer.createValueArray(p.typeIndex.fields, fi.value[j], includeMessages);
-                        let size = Buffer.calcSize(valArr, includeMessages);
+                        let _size = Buffer.calcSize(valArr, includeMessages);
                         Buffer.writeDataView(valArr, dataView, includeMessages, offset);
-                        offset += size;
+                        offset += _size;
                     } else {
                         offset += writeFunc[p.typeIndex](dataView, offset, val);
                     }
@@ -406,9 +406,9 @@ export class Buffer {
             } else {
 
                 if (p.isComplex) {
-                    let size = Buffer.calcSize(fi.value, includeMessages);
+                    let _size = Buffer.calcSize(fi.value, includeMessages);
                     Buffer.writeDataView(fi.value, dataView, includeMessages, offset);
-                    offset += size;
+                    offset += _size;
                 } else {
                     let val = fi._bytes || fi.value;
                     offset += writeFunc[p.typeIndex](dataView, offset, val);
@@ -431,7 +431,7 @@ export class Buffer {
         return arrayBuffer;
     }
 
-    get size() {
+    get _size() {
         return this._dataView.buffer.byteLength;
     }
 
@@ -447,7 +447,7 @@ export class Buffer {
     deserialize(struct, offset = 0, sizeOffset = 0) {
         this._dynamicOffset = 0;
         let res = this.__deserialize__(struct, offset, sizeOffset);
-        res.__SIZE__ = struct.size + this._dynamicOffset + sizeOffset;
+        res.__SIZE__ = struct._size + this._dynamicOffset + sizeOffset;
         return res;
     }
 
@@ -473,7 +473,7 @@ export class Buffer {
                 if (p.length === 0) {
 
                     //
-                    // Dynamic size array
+                    // Dynamic _size array
                     //
 
                     let length = DYN_READ(dv, currOffset + this._dynamicOffset);
@@ -504,7 +504,7 @@ export class Buffer {
                 } else {
 
                     //
-                    //Static size array
+                    //Static _size array
                     //
 
                     res[fi.name] = new Array(p.length);

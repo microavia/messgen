@@ -9,11 +9,10 @@ def generate(args):
     protos = Protocols()
     protos.load(args.basedir, args.protocol)
 
-    g_type = generator.get_generator(args.lang)
-    if g_type is None:
+    g = generator.get_generator(args.lang, protos)
+    if g is None:
         raise RuntimeError("Unsupported language \"%s\"" % args.lang)
 
-    g = g_type(protos)
     for proto_name, proto in protos.proto_map.items():
         g.generate(args.outdir, proto_name, proto)
 

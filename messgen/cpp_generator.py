@@ -57,13 +57,15 @@ class CppGenerator:
     }
 
     _protocols: Protocols
-    _includes = set()
-    _ctx = {}
-    _aligned_fields = []
-    _aligned_size = 0
+    _mode: str
+    _includes: set[str]
+    _ctx: dict
 
-    def __init__(self, protos):
+    def __init__(self, protos, mode="stl"):
         self._protocols = protos
+        self._mode = mode
+        self._includes = set()
+        self._ctx = {}
 
     def generate(self, out_dir, proto_name, proto):
         self._ctx["proto_name"] = proto_name
@@ -173,6 +175,7 @@ class CppGenerator:
 
         self._add_include("cstddef")
         self._add_include("cstring")
+        self._add_include("messgen/messgen.h")
 
         code = []
         code.extend(self._generate_comment_type(type_def))
@@ -242,8 +245,11 @@ class CppGenerator:
             code_deser.append("")
         code_deser.append("return _size;")
 
+        alloc = ""
+        if self._mode == "nostl":
+            alloc = ", messgen::Allocator &_alloc"
         code_deser = ["",
-                      "size_t deserialize(const uint8_t *_buf) {",
+                      "size_t deserialize(const uint8_t *_buf%s) {" % alloc,
                       ] + _indent(code_deser) + [
                          "}"]
         code.extend(_indent(code_deser))
@@ -324,18 +330,35 @@ class CppGenerator:
             el_c_type = self._cpp_field_def(el_type_name)
             return "std::array<%s, %d>" % (el_c_type, t["array_size"])
         elif t["type_class"] == "vector":
-            self._add_include("vector")
             el_type_name = t["element_type"]
             el_c_type = self._cpp_field_def(el_type_name)
-            return "std::vector<%s>" % el_c_type
+            if self._mode == "stl":
+                self._add_include("vector")
+                return "std::vector<%s>" % el_c_type
+            elif self._mode == "nostl":
+                return "messgen::vector<%s>" % el_c_type
+            else:
+                raise RuntimeError("Unsupported mode for vector: %s" % self._mode)
         elif t["type_class"] == "map":
-            self._add_include("map")
             key_c_type = self._cpp_field_def(t["key_type"])
             value_c_type = self._cpp_field_def(t["value_type"])
-            return "std::map<%s, %s>" % (key_c_type, value_c_type)
+            if self._mode == "stl":
+                self._add_include("map")
+                return "std::map<%s, %s>" % (key_c_type, value_c_type)
+            elif self._mode == "nostl":
+                self._add_include("span")
+                return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
+            else:
+                raise RuntimeError("Unsupported mode for map: %s" % self._mode)
         elif t["type_class"] == "string":
-            self._add_include("string")
-            return "std::string"
+            if self._mode == "stl":
+                self._add_include("string")
+                return "std::string"
+            elif self._mode == "nostl":
+                self._add_include("string_view")
+                return "std::string_view"
+            else:
+                raise RuntimeError("Unsupported mode for string: %s" % self._mode)
         elif t["type_class"] in ["enum", "struct"]:
             self._add_include("%s.h" % type_name, "local")
             return type_name
@@ -422,16 +445,6 @@ class CppGenerator:
 
         return c
 
-    def _serialize_flush_aligned(self):
-        c = []
-        if self._aligned_size != 0:
-            c.append("// %s" % ", ".join(self._aligned_fields))
-            c.extend(self._memcpy_to_buf(self._aligned_fields[0], self._aligned_size))
-            c.append("")
-            self._aligned_fields.clear()
-            self._aligned_size = 0
-        return c
-
     def _deserialize_field(self, field_name, field_type_def, level_n=0):
         c = []
 
@@ -445,12 +458,12 @@ class CppGenerator:
             c.append("_size += %s;" % size)
 
         elif type_class == "struct":
-            c.append("_size += %s.deserialize(&_buf[_size]);" % field_name)
+            alloc = ""
+            if self._mode == "nostl":
+                alloc = ", _alloc"
+            c.append("_size += %s.deserialize(&_buf[_size]%s);" % (field_name, alloc))
 
-        elif type_class in ["array", "vector"]:
-            if field_type_def["type_class"] == "vector":
-                c.append("%s.resize(*reinterpret_cast<const size_type *>(&_buf[_size]));" % field_name)
-                c.append("_size += sizeof(size_type);")
+        elif type_class == "array":
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
@@ -463,6 +476,41 @@ class CppGenerator:
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                 c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
+
+        elif type_class == "vector":
+            if self._mode == "stl":
+                el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+                el_size = el_type_def.get("size")
+                el_align = self._get_alignment(el_type_def)
+                c.append("%s.resize(*reinterpret_cast<const size_type *>(&_buf[_size]));" % field_name)
+                c.append("_size += sizeof(size_type);")
+                if el_size is not None and el_size % el_align == 0:
+                    # Vector or array of fixed size elements, optimize with single memcpy
+                    c.append("_field_size = %d * %s.size();" % (el_size, field_name))
+                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                else:
+                    # Vector or array of variable size elements
+                    c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                    c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
+                    c.append("}")
+            elif self._mode == "nostl":
+                el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+                el_c_type = self._cpp_field_def(field_type_def["element_type"])
+                el_size = el_type_def.get("size")
+                el_align = self._get_alignment(el_type_def)
+                c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
+                c.append("%s = {_alloc.alloc<%s>(_field_size), _field_size};" % (field_name, el_c_type))
+                c.append("_size += sizeof(size_type);")
+                if el_size is not None and el_size % el_align == 0:
+                    # Vector or array of fixed size elements, optimize with single memcpy
+                    if el_size != 1:
+                        c.append("_field_size *= %d;" % el_size)
+                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                else:
+                    # Vector or array of variable size elements
+                    c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                    c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
+                    c.append("}")
 
         elif type_class == "map":
             c.append("{")
@@ -490,23 +538,13 @@ class CppGenerator:
         elif type_class == "string":
             c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(size_type);")
-            c.append("%s.assign(reinterpret_cast<const char *>(&_buf[_size]), _field_size);" % field_name)
+            c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
         else:
             raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % type_class)
 
         c.append("")
 
-        return c
-
-    def _deserialize_flush_aligned(self):
-        c = []
-        if self._aligned_size != 0:
-            c.append("// %s" % ", ".join(self._aligned_fields))
-            c.extend(self._memcpy_from_buf(self._aligned_fields[0], self._aligned_size))
-            c.append("")
-            self._aligned_fields.clear()
-            self._aligned_size = 0
         return c
 
     def _serialized_size_field(self, field_name, field_type_def, level_n=0):

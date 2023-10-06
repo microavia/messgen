@@ -16,7 +16,7 @@ export class Struct {
   
   get id(): number
   
-  get size(): number
+  get _size(): number
   
   get fields(): Field[]
   
@@ -57,7 +57,7 @@ export class Buffer {
   
   static serialize(fields: Field[], includeMessages?: Messages<string>)
   
-  get size(): number
+  get _size(): number
   
   get dataView(): DataView
   

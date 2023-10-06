@@ -36,7 +36,7 @@ describe('Serialization deserialization tests', () => {
             type_Char: 'A'
         };
 
-        //Testing proper size of the message
+        //Testing proper _size of the message
         srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
 
         let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
@@ -46,7 +46,7 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-    it('Basic types fixed array size', () => {
+    it('Basic types fixed array _size', () => {
 
         const ARRAY_SIZE = 100;
 
@@ -95,7 +95,7 @@ describe('Serialization deserialization tests', () => {
             srcData.type_Char[i] = 'a';
         }
 
-        //Testing proper size of the message
+        //Testing proper _size of the message
         srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
 
         let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
@@ -105,7 +105,7 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-    it('Basic types dynamic array size', () => {
+    it('Basic types dynamic array _size', () => {
 
         const ARRAY_SIZE = 100;
 
@@ -154,7 +154,7 @@ describe('Serialization deserialization tests', () => {
             srcData.type_Char[i] = 'A';
         }
 
-        //Testing proper size of the message
+        //Testing proper _size of the message
         srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
 
         let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
@@ -197,7 +197,7 @@ describe('Serialization deserialization tests', () => {
             type_Char: 'A'
         };
 
-        //Testing proper size of the message
+        //Testing proper _size of the message
         srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
 
         let b = Buffer.serializeMessage(srcStruct, srcData);
@@ -209,7 +209,7 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-    it('Basic types fixed array size with header', () => {
+    it('Basic types fixed array _size with header', () => {
 
         const ARRAY_SIZE = 100;
 
@@ -258,7 +258,7 @@ describe('Serialization deserialization tests', () => {
             srcData.type_Char[i] = 'A';
         }
 
-        //Testing proper size of the message
+        //Testing proper _size of the message
         srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
 
         let b = Buffer.serializeMessage(srcStruct, srcData);
@@ -270,7 +270,7 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-    it('Basic types dynamic array size with header', () => {
+    it('Basic types dynamic array _size with header', () => {
 
         const ARRAY_SIZE = 100;
 
@@ -319,7 +319,7 @@ describe('Serialization deserialization tests', () => {
             srcData.type_Char[i] = 'A';
         }
 
-        //Testing proper size of the message
+        //Testing proper _size of the message
         srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
 
         let b = Buffer.serializeMessage(srcStruct, srcData);
@@ -331,7 +331,7 @@ describe('Serialization deserialization tests', () => {
         expect(res).toEqual(srcData);
     });
 
-    it('Complex type with dynamic array size', () => {
+    it('Complex type with dynamic array _size', () => {
 
         let schema = {
             "MyYZ": {
@@ -485,7 +485,7 @@ describe('Serialization deserialization tests', () => {
 
     })
 
-    it('TODO: compose tests for not equal size arrays messages', () => {
+    it('TODO: compose tests for not equal _size arrays messages', () => {
         expect(true).toBe(true);
     });
 });

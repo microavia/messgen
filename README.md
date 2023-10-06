@@ -9,8 +9,8 @@ Generates message classes/structs from yml scheme.
 Features:
 
 - Embedded-friendly
-- Fixed size arrays
-- Vectors (dynamic size arrays)
+- Fixed _size arrays
+- Vectors (dynamic _size arrays)
 - Maps
 - Nested messages
 - Messages metadata
@@ -102,7 +102,7 @@ Before selecting messgen keep in mind:
 - Optimized for embedded systems: systems where non-aligned access to float/int is forbidden, systems without heap
 - Optimized for cross-platform compatibility (gives the same result on CPUs with different paddings, from 8bit microcontrollers to AMD64)
 - Optimized for serialization/deserialization speed on C++ port, close to zero-copy in most of the cases
-- Serialization level only, i.e. information about the type and size of the message must be added in separate header (examples provided)
+- Serialization level only, i.e. information about the type and _size of the message must be added in separate header (examples provided)
 - No optional fields in structs and messages
 
 Protocol description stored in set `.yaml` files in following structure:
@@ -127,8 +127,8 @@ The lowest level of hierarchy is **type**. It can be:
 
 - Scalar: e.g. `int32`, `float32`, `uint8`, `bool`
 - Enum: wrapper around scalar, e.g. `command`
-- Array: fixed size, e.g. `int32[4]`, `my_struct[3]`
-- Vector: dynamic size array, e.g. `int32[]`, `my_struct[]`
+- Array: fixed _size, e.g. `int32[4]`, `my_struct[3]`
+- Vector: dynamic _size array, e.g. `int32[]`, `my_struct[]`
 - Map: ordered map, e.g. `string{int32}`, `my_struct{int32}{string}`
 - String: vector of `uint8`, representing string, `string`
 - Struct: described in yaml file and consists of other types, including other structs

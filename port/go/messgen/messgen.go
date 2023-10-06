@@ -39,7 +39,7 @@ func Serialize(msg Message) ([]byte, error) {
 func SerializeToBuffer(msg Message, buf []byte) (int, error) {
 	totalSize := HeaderSize + msg.MsgSize()
 	if len(buf) < totalSize {
-		return 0, errors.New("wrong buffer size")
+		return 0, errors.New("wrong buffer _size")
 	}
 
 	buf[0] = byte(msg.MsgId())
@@ -51,8 +51,8 @@ func SerializeToBuffer(msg Message, buf []byte) (int, error) {
 	return totalSize, nil
 }
 
-// Parse header of the first message in buffer, return message info, total size (including header).
-// Returns nil, 0 if buffer size or header is invalid.
+// Parse header of the first message in buffer, return message info, total _size (including header).
+// Returns nil, 0 if buffer _size or header is invalid.
 func Parse(buf []byte) (*MessageInfo, int) {
 	if len(buf) < HeaderSize {
 		return nil, 0
