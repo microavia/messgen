@@ -65,7 +65,7 @@ CONFIG_EXT = ".yaml"
 PROTOCOL_ITEM = "_protocol"
 
 _SCALAR_TYPES_INFO = {
-    "char": {"size": 1},
+    "bool": {"size": 1},
     "int8": {"size": 1},
     "uint8": {"size": 1},
     "int16": {"size": 2},

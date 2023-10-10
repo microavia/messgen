@@ -9,8 +9,8 @@ Generates message classes/structs from yml scheme.
 Features:
 
 - Embedded-friendly
-- Fixed _size arrays
-- Vectors (dynamic _size arrays)
+- Fixed size arrays
+- Vectors (dynamic size arrays)
 - Maps
 - Nested messages
 - Messages metadata
@@ -34,26 +34,25 @@ On Windows 10:
 
 ## Generate messages
 
-Each protocol should be placed in directory `base_dir/vendor/protocol`.
+Each protocol should be placed in directory `base_dir/protocol`.
 `base_dir` is base directory for message definitions (is allowed to specify multiple base directories).
-`vendor` is protocol vendor, it is used as namespace in generated messages allowing to avoid conflict between protocols from different vendors if used in one application.
-`protocol` is protocol name, each protocol has protocol ID, that allows to use multiple protocols on single connection, e.g. bootloader and application protocols.
+`protocol` can be single directory or multiple subdirectories, outer directories are used as namespace for generated messages, e.g. "my_company/core" or "my_company/the_product/protocol".
 
 Message generator usage:
 ```
-python3 generate.py -b <base_dir> -m <vendor>/<protocol> -l <lang> -o <out_dir> [-D variable=value]
+python3 messgen.py --basedir <base_dir> --protocol <protocol> --lang <lang> --outdir <out_dir> [-D variable=value]
 ```
 
 For some languages it's necessary to specify some variables using `-D` option.
 
 Generated messages placed in `out_dir` directory.
 
-#### Go
+#### Go (TODO)
 
 Example for Go messages generation:
 
 ```
-python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l go -o out/go -D messgen_go_module=example.com/path/to/messgen
+python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang go --outdir out/go -D messgen_go_module=example.com/path/to/messgen
 ```
 
 Variable `messgen_go_module` must point to messgen Go module (`port/go/messgen`), to add necessary imports in generated messages.
@@ -63,32 +62,32 @@ Variable `messgen_go_module` must point to messgen Go module (`port/go/messgen`)
 Example for C++ messages generation:
 
 ```
-python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l cpp -o out/cpp
+python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang cpp --outdir out/cpp
 ```
 
 Variable `metadata_json=true` can be passed to generate metadata in JSON format, rather than legacy.
 
-#### JS/TS
+#### JS/TS (TODO)
 
 Example for JS messages generation:
 
 ```
-python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l json -o out/json
+python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang json --outdir out/json
 ```
 This command will generate json messages. 
 
 The types of these messages for TS can be generated as follows:
 
 ```
-python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l ts -o out/ts
+python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang ts --outdir out/ts
 ```
 
-#### MD
+#### MD (TODO)
 
 Example for protocol documentation generation:
 
 ```
-python3 generate.py -b ./base_dir -m my_vendor/my_protocol -l md -o out/md
+python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang md --outdir out/md
 ```
 
 ### Basic Concepts
@@ -101,9 +100,10 @@ Before selecting messgen keep in mind:
 - Statically typed: the is no "variant" type, but it's possible to work around this limitation with some tricks
 - Optimized for embedded systems: systems where non-aligned access to float/int is forbidden, systems without heap
 - Optimized for cross-platform compatibility (gives the same result on CPUs with different paddings, from 8bit microcontrollers to AMD64)
-- Optimized for serialization/deserialization speed on C++ port, close to zero-copy in most of the cases
-- Serialization level only, i.e. information about the type and _size of the message must be added in separate header (examples provided)
+- Optimized for serialization/deserialization speed on C++ port, allows zero-copy in some cases
+- Serialization level only, i.e. information about the type and size of the message must be added in separate header (examples provided)
 - No optional fields in structs and messages
+- No messages versioning
 
 Protocol description stored in set `.yaml` files in following structure:
 
@@ -111,7 +111,6 @@ Protocol description stored in set `.yaml` files in following structure:
 protocols/
 ├── one_protocol
 │   ├── _protocol.yaml
-│   ├── _enums.yaml
 │   ├── one_struct.yaml
 │   └── another_struct.yaml
 └── another_protocol
@@ -126,60 +125,65 @@ In generated files identifiers will be converted to style that is specific for e
 The lowest level of hierarchy is **type**. It can be:
 
 - Scalar: e.g. `int32`, `float32`, `uint8`, `bool`
-- Enum: wrapper around scalar, e.g. `command`
-- Array: fixed _size, e.g. `int32[4]`, `my_struct[3]`
-- Vector: dynamic _size array, e.g. `int32[]`, `my_struct[]`
-- Map: ordered map, e.g. `string{int32}`, `my_struct{int32}{string}`
+- Enum: wrapper around int, described in yaml file
+- Array: fixed size `element_type[<size>]`, e.g. `int32[4]`, `my_struct[3]`
+- Vector: dynamic size array `element_type[]`, e.g. `int32[]`, `my_struct[]`
+- Map: ordered map `value_type{key_type}`, e.g. `string{int32}`, `my_struct{int32}{string}`
 - String: vector of `uint8`, representing string, `string`
-- Struct: described in yaml file and consists of other types, including other structs
-- External: user-defined types, user must provide serialization/deserialization methods for each port that is used
-- Alias: reference to another existing type (e.g. from another protocol)
+- Struct: list of fields, described in yaml file
+- External: user-defined types, user must provide serialization/deserialization methods for each port that is used (TODO)
+- Alias: reference to another existing type (e.g. from another protocol) (TODO)
 
 #### Enum
 
-All **enums** must be listed in file `_enums.yaml`.
-
 Enum may contain constants enumeration or bitfield.
+Each enum defined in separate file.
+
 For the bitfield the format should be: `(1 << n)`, where `n` is the position of the bit.
 
-Example `_enum.yaml` file:
+Example enum definition file (`command.yaml`):
 ```yaml
-- name: command
-  basetype: uint8
-  descr: "Node command"
-  values:
-    - { name: "start", value: 0, descr: "Start node operation" }
-    - { name: "stop", value: 1, descr: "Stop node operation" }
-    - { name: "reset", value: 2, descr: "Reset node state" }
+type_class: enum
+comment: "Example of command enum"
+base_type: uint8
+values:
+  - { name: "start", value: 0, comment: "Start node operation" }
+  - { name: "stop", value: 1, comment: "Stop node operation" }
+  - { name: "reset", value: 2, comment: "Reset node state" }
+```
 
-- name: status_flags
-  basetype: uint8
-  descr: "Node status flags bitfield"
-  values:
-    - { name: "online", value: "(1 << 0)", descr: "Node is online" }
-    - { name: "sensor_error", value: "(1 << 1)", descr: "Internal node error" }
+Example `flags.yaml` file with bitfield:
+```yaml
+type_class: enum
+comment: "Example of flags bitfield"
+base_type: uint8
+values:
+  - { name: "online", value: "(1 << 0)", comment: "Node is online" }
+  - { name: "sensor_error", value: "(1 << 1)", comment: "Internal node error" }
 ```
 
 #### Struct
 
 **Structs** are the most important part of the serialization.
-Struct itself don't have any type identifier that is serialized in the message, parser must know the type in advance.
-
 Each struct defined in separate file.
 
 Example struct definition file (`baro_report.yaml`):
 ```yaml
-descr: "Barometer report"
+type_class: struct
+comment: "Barometer report"
 fields:
-  - { name: "timestamp", type: "uint64", descr: "[ns] Timestamp of the measurement" }
-  - { name: "temp", type: "float32", descr: "[deg C] Temperature" }
-  - { name: "pres", type: "float32", descr: "[Pa] Pressure" }
+  - { name: "timestamp", type: "uint64", comment: "[ns] Timestamp of the measurement" }
+  - { name: "temp", type: "float32", comment: "[deg C] Temperature" }
+  - { name: "pres", type: "float32", comment: "[Pa] Pressure" }
 ```
+
+Struct itself don't have any type identifier that is serialized in the message.
+Type ids can be assigned to structs in `_protocol.yaml` file (see below).
 
 #### Protocol and Message
 
 **Protocol** defines the protocol ID and the set of the messages with their identifiers.
-Multiple protocols may be used in one system, e.g. `bootloader` and `application`.
+Multiple protocols may be used in one system, e.g. `my_namespace/bootloader` and `my_namespace/application`.
 Parser can check the protocol by protocol ID, that can be serialized in message header.
 
 **Message** is a struct with associated type id (integer number), that is used to identify the message on deserialization.
@@ -187,7 +191,7 @@ Parser can check the protocol by protocol ID, that can be serialized in message 
 Example protocol definition (`weather_station/_protocol.yaml`):
 
 ```yaml
-descr: "Weather station application protocol"
+comment: "Weather station application protocol"
 messages:
   - heartbeat: { id: 0 }  # By default, `type` field is equal to message name from current protocol
   - system_status: { id: 1 }

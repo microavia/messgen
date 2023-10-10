@@ -48,6 +48,7 @@ class CppGenerator:
     _PREAMBLE_HEADER = ["#pragma once", ""]
     _EXT_HEADER = ".h"
     _CPP_TYPES_MAP = {
+        "bool": "bool",
         "uint8": "uint8_t",
         "int8": "int8_t",
         "uint16": "uint16_t",
@@ -133,11 +134,18 @@ class CppGenerator:
         code.append("namespace %s {" % namespace)
         code.append("")
 
-        messages = self._protocols.proto_map[proto_name].get("messages", [])
+        proto = self._protocols.proto_map[proto_name]
+
+        proto_id = proto["proto_id"]
+        if proto_id is not None:
+            code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+            code.append("")
+
+        messages = proto.get("messages", [])
         for msg in messages:
             type_name = msg["type"]
             self._add_include(proto_name + common.SEPARATOR + type_name + self._EXT_HEADER)
-            code.append("msg_id get_msg_id(%s &) { return %s; }" % (type_name, msg["id"]))
+            code.append("int get_msg_id(%s &) { return %s; }" % (type_name, msg["id"]))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
