@@ -1,5 +1,6 @@
 import os
 import yaml
+from . common import SEPARATOR
 
 # Protocols map structure:
 # {
@@ -148,8 +149,15 @@ class Protocols:
                 "type_class": "string",
             }
 
-        # Type from current protocol
-        t = self.proto_map[curr_proto_name]["types"].get(type_name)
+        if "/" in type_name:
+            # Type from another protocol
+            p = type_name.split(SEPARATOR)
+            proto_name = SEPARATOR.join(p[:-1])
+            t = self.proto_map[proto_name]["types"].get(p[-1])
+        else:
+            # Type from current protocol
+            t = self.proto_map[curr_proto_name]["types"].get(type_name)
+
         if t:
             t["type"] = type_name
             if t["type_class"] == "enum":
@@ -189,8 +197,7 @@ class Protocols:
             with open(file_path, "r") as f:
                 item = yaml.safe_load(f)
                 if item_name == PROTOCOL_ITEM:
-                    if "proto_id" in item:
-                        proto["proto_id"] = item["proto_id"]
+                    proto.update(item)
                 else:
                     proto["types"][item_name] = item
         return proto

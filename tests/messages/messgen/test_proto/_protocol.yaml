@@ -1,4 +1,4 @@
 proto_id: 1
 messages:
-  - { id: 0, name: "simple_message" }
-  - { id: 1, name: "simple_message_a", type: "simple_message" }
+  - { id: 0, type: "simple_struct" }
+  - { id: 1, type: "complex_struct" }

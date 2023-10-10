@@ -23,6 +23,10 @@ def _indent(c):
         raise RuntimeError("Unsupported type for indent: %s" % type(c))
 
 
+def _cpp_namespace(proto_name: str) -> str:
+    return proto_name.replace(common.SEPARATOR, "::")
+
+
 class FieldsGroup:
     fields: list[dict]
     field_names: list[str]
@@ -76,11 +80,12 @@ class CppGenerator:
         except:
             pass
 
-        namespace = proto_name.replace(common.SEPARATOR, "::")
-
         for type_name, type_def in proto["types"].items():
             fn = os.path.join(proto_out_dir, type_name) + self._EXT_HEADER
-            self._write_code_file(fn, self._generate_type_file(namespace, type_name, type_def))
+            self._write_code_file(fn, self._generate_type_file(type_name, type_def))
+
+        proto_fn = proto_out_dir + self._EXT_HEADER
+        self._write_code_file(proto_fn, self._generate_proto_file(proto_name))
 
     def _write_code_file(self, fn, code):
         with open(fn, "w+") as f:
@@ -90,8 +95,11 @@ class CppGenerator:
     def _reset_file(self):
         self._includes.clear()
 
-    def _generate_type_file(self, namespace, type_name, type_def) -> list[str]:
-        print("Generate type: %s" % type_name)
+    def _generate_type_file(self, type_name, type_def) -> list[str]:
+        proto_name = self._ctx["proto_name"]
+        print("Generate type: %s/%s" % (proto_name, type_name))
+
+        namespace = _cpp_namespace(proto_name)
 
         self._reset_file()
         code = []
@@ -111,6 +119,33 @@ class CppGenerator:
 
         return code
 
+    def _generate_proto_file(self, proto_name):
+        print("Generate protocol file: %s" % proto_name)
+
+        namespace = _cpp_namespace(proto_name)
+
+        self._reset_file()
+        code = []
+
+        self._add_include("cstdint")
+        self._add_include("messgen/messgen.h")
+
+        code.append("namespace %s {" % namespace)
+        code.append("")
+
+        messages = self._protocols.proto_map[proto_name].get("messages", [])
+        for msg in messages:
+            type_name = msg["type"]
+            self._add_include(proto_name + common.SEPARATOR + type_name + self._EXT_HEADER)
+            code.append("msg_id get_msg_id(%s &) { return %s; }" % (type_name, msg["id"]))
+
+        code.append("")
+        code.append("} // namespace %s" % namespace)
+
+        code = self._PREAMBLE_HEADER + self._generate_includes() + code
+
+        return code
+
     def _generate_comment_type(self, type_def):
         code = []
         code.append("/**")
@@ -122,7 +157,7 @@ class CppGenerator:
         code = []
 
         code.extend(self._generate_comment_type(type_def))
-        code.append("enum class %s : %s {" % (type_name, self._cpp_field_def(type_def["base_type"])))
+        code.append("enum class %s : %s {" % (type_name, self._cpp_type(type_def["base_type"])))
         for item in type_def["values"]:
             code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
         code.append("};")
@@ -181,7 +216,7 @@ class CppGenerator:
         code.extend(self._generate_comment_type(type_def))
         code.append("struct %s {" % type_name)
         for field in type_def["fields"]:
-            field_c_type = self._cpp_field_def(field["type"])
+            field_c_type = self._cpp_type(field["type"])
             field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
             code.append("    %s %s;%s" % (
                 field_c_type, field["name"], _inline_comment(field.get("comment", ""))))
@@ -324,22 +359,19 @@ class CppGenerator:
             code.append("")
         return code
 
-    def _cpp_namespace(self, proto_name: str) -> str:
-        return proto_name.replace(common.SEPARATOR, "::")
-
-    def _cpp_field_def(self, type_name: str) -> str:
+    def _cpp_type(self, type_name: str) -> str:
         t = self._protocols.get_type(self._ctx["proto_name"], type_name)
         if t["type_class"] == "scalar":
             self._add_include("cstdint")
             return self._CPP_TYPES_MAP[type_name]
         elif t["type_class"] == "array":
             self._add_include("array")
-            el_type_name = t["element_type"]
-            el_c_type = self._cpp_field_def(el_type_name)
+            el_type_name = _cpp_namespace(t["element_type"])
+            el_c_type = self._cpp_type(el_type_name)
             return "std::array<%s, %d>" % (el_c_type, t["array_size"])
         elif t["type_class"] == "vector":
             el_type_name = t["element_type"]
-            el_c_type = self._cpp_field_def(el_type_name)
+            el_c_type = self._cpp_type(el_type_name)
             if self._mode == "stl":
                 self._add_include("vector")
                 return "std::vector<%s>" % el_c_type
@@ -348,8 +380,8 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for vector: %s" % self._mode)
         elif t["type_class"] == "map":
-            key_c_type = self._cpp_field_def(t["key_type"])
-            value_c_type = self._cpp_field_def(t["value_type"])
+            key_c_type = self._cpp_type(t["key_type"])
+            value_c_type = self._cpp_type(t["value_type"])
             if self._mode == "stl":
                 self._add_include("map")
                 return "std::map<%s, %s>" % (key_c_type, value_c_type)
@@ -368,8 +400,12 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for string: %s" % self._mode)
         elif t["type_class"] in ["enum", "struct"]:
-            self._add_include("%s.h" % type_name, "local")
-            return type_name
+            if common.SEPARATOR in type_name:
+                scope = "global"
+            else:
+                scope = "local"
+            self._add_include("%s.h" % type_name, scope)
+            return _cpp_namespace(type_name)
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
@@ -405,7 +441,7 @@ class CppGenerator:
 
         c.append("// %s" % field_name)
         if type_class in ["scalar", "enum"]:
-            c_type = self._cpp_field_def(field_type_def["type"])
+            c_type = self._cpp_type(field_type_def["type"])
             size = field_type_def.get("size")
             c.append("*reinterpret_cast<%s *>(&_buf[_size]) = %s;" % (c_type, field_name))
             c.append("_size += %s;" % size)
@@ -460,7 +496,7 @@ class CppGenerator:
 
         c.append("// %s" % field_name)
         if type_class in ["scalar", "enum"]:
-            c_type = self._cpp_field_def(field_type_def["type"])
+            c_type = self._cpp_type(field_type_def["type"])
             size = field_type_def.get("size")
             c.append("%s = *reinterpret_cast<const %s *>(&_buf[_size]);" % (field_name, c_type))
             c.append("_size += %s;" % size)
@@ -503,7 +539,7 @@ class CppGenerator:
                     c.append("}")
             elif self._mode == "nostl":
                 el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
-                el_c_type = self._cpp_field_def(field_type_def["element_type"])
+                el_c_type = self._cpp_type(field_type_def["element_type"])
                 el_size = el_type_def.get("size")
                 el_align = self._get_alignment(el_type_def)
                 c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
@@ -524,9 +560,9 @@ class CppGenerator:
             c.append("{")
             c.append(_indent("size_t _map_size%d = *reinterpret_cast<const size_type *>(&_buf[_size]);" % level_n))
             c.append(_indent("_size += sizeof(size_type);"))
-            key_c_type = self._cpp_field_def(field_type_def["key_type"])
+            key_c_type = self._cpp_type(field_type_def["key_type"])
             key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
-            value_c_type = self._cpp_field_def(field_type_def["value_type"])
+            value_c_type = self._cpp_type(field_type_def["value_type"])
             value_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
             c.append(
                 _indent(

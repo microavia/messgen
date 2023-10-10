@@ -1,0 +1,3 @@
+proto_id: 2
+messages:
+  - { id: 0, type: "cross_proto" }
