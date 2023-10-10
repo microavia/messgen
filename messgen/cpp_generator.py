@@ -183,11 +183,20 @@ class CppGenerator:
         for field in type_def["fields"]:
             field_c_type = self._cpp_field_def(field["type"])
             field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
-            align = self._get_alignment(field_type_def)
             code.append("    %s %s;%s" % (
-                field_c_type, field["name"], _inline_comment("align=%d " % align + field.get("comment", ""))))
+                field_c_type, field["name"], _inline_comment(field.get("comment", ""))))
+        code.append("")
 
-        # Serialize function body
+        groups = self._field_groups(fields)
+
+        # IS_FLAT flag
+        is_flat_str = "false"
+        if (len(groups) == 1 and groups[0].size is not None):
+            code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % groups[0].size))
+            is_flat_str = "true"
+        code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
+
+        # Serialize function
         code_ser = []
 
         code_ser.extend([
@@ -196,7 +205,6 @@ class CppGenerator:
             "",
         ])
 
-        groups = self._field_groups(fields)
         for group in groups:
             if len(group.fields) > 1:
                 # There is padding before current field
