@@ -1,6 +1,6 @@
 import os
 import yaml
-from . common import SEPARATOR
+from .common import SEPARATOR
 
 # Protocols map structure:
 # {
@@ -80,9 +80,12 @@ _SCALAR_TYPES_INFO = {
 
 
 class Protocols:
-    proto_map: dict[str, dict] = {}
+    proto_map: dict
 
-    def load(self, base_dirs: list[str], proto_list: list[str]):
+    def __init__(self):
+        self.proto_map = {}
+
+    def load(self, base_dirs: list, proto_list: list):
         for proto_name in proto_list:
             loaded = False
             for base_dir in base_dirs:

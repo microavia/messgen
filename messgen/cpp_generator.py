@@ -28,8 +28,8 @@ def _cpp_namespace(proto_name: str) -> str:
 
 
 class FieldsGroup:
-    fields: list[dict]
-    field_names: list[str]
+    fields: list
+    field_names: list
     size: int
 
     def __init__(self):
@@ -63,7 +63,7 @@ class CppGenerator:
 
     _protocols: Protocols
     _mode: str
-    _includes: set[str]
+    _includes: set
     _ctx: dict
 
     def __init__(self, protos, mode="stl"):
@@ -96,7 +96,7 @@ class CppGenerator:
     def _reset_file(self):
         self._includes.clear()
 
-    def _generate_type_file(self, type_name, type_def) -> list[str]:
+    def _generate_type_file(self, type_name, type_def) -> list:
         proto_name = self._ctx["proto_name"]
         print("Generate type: %s/%s" % (proto_name, type_name))
 
@@ -651,13 +651,13 @@ class CppGenerator:
 
         return c
 
-    def _memcpy_to_buf(self, src: str, size) -> list[str]:
+    def _memcpy_to_buf(self, src: str, size) -> list:
         return [
             "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(&%s), %s);" % (src, size),
             "_size += %s;" % size
         ]
 
-    def _memcpy_from_buf(self, dst: str, size) -> list[str]:
+    def _memcpy_from_buf(self, dst: str, size) -> list:
         return [
             "::memcpy(reinterpret_cast<uint8_t *>(&%s), &_buf[_size], %s);" % (dst, size),
             "_size += %s;" % size
