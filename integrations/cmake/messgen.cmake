@@ -39,8 +39,6 @@ FUNCTION(MESSGEN_GENERATE_MESSAGES BASEDIRS MODULES OUTDIR)
 
                 FILE(GLOB MODULE_MESSAGES RELATIVE ${MESSAGES_PATH} ${MESSAGES_PATH}/*.yaml)
                 LIST(REMOVE_ITEM MODULE_MESSAGES "_protocol.yaml")
-                LIST(REMOVE_ITEM MODULE_MESSAGES "_constants.yaml")
-                LIST(REMOVE_ITEM MODULE_MESSAGES "_types.yaml")
 
                 IF (MODULE_MESSAGES)
                     FOREACH (MSG_YAML ${MODULE_MESSAGES})
@@ -55,7 +53,6 @@ FUNCTION(MESSGEN_GENERATE_MESSAGES BASEDIRS MODULES OUTDIR)
 
                 LIST(APPEND MESSGEN_INPUT_FILES
                         ${MESSAGES_PATH}/_protocol.yaml
-                        ${MESSAGES_PATH}/_constants.yaml
                         )
 
                 LIST(APPEND MESSGEN_OUT_FILES
