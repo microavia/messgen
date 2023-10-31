@@ -690,7 +690,7 @@ class CppGenerator:
                     ""
                 ])
                 self.continue_block("else")
-                self.append(set_var(field["name"], "{}"))
+                self.append(set_var(field["name"], "\"\""))
                 self.stop_block()
             else:
                 parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
