@@ -28,15 +28,15 @@ protected:
     void test_serialization(const T &msg) {
         size_t sz_check = msg.serialized_size();
 
-        _buf.reserve(sz_check);
-        size_t ser_size = msg.serialize(&_buf[0]);
+        _buf.resize(sz_check);
+        size_t ser_size = msg.serialize(_buf.data());
         EXPECT_EQ(ser_size, sz_check);
 
         T msg1{};
-        size_t deser_size = msg1.deserialize(&_buf[0]);
+        size_t deser_size = msg1.deserialize(_buf.data());
         EXPECT_EQ(deser_size, sz_check);
 
-        EXPECT_TRUE(msg == msg1);
+        EXPECT_EQ(msg, msg1);
     }
 
     template<class T>
@@ -45,17 +45,17 @@ protected:
 
         EXPECT_EQ(T::FLAT_SIZE, sz_check);
 
-        _buf.reserve(sz_check);
-        size_t ser_size = msg.serialize(&_buf[0]);
+        _buf.resize(sz_check);
+        size_t ser_size = msg.serialize(_buf.data());
         EXPECT_EQ(ser_size, sz_check);
 
-        EXPECT_EQ(memcmp(&msg, &_buf[0], sz_check), 0);
+        EXPECT_EQ(memcmp(&msg, _buf.data(), sz_check), 0);
 
         T msg1{};
-        size_t deser_size = msg1.deserialize(&_buf[0]);
+        size_t deser_size = msg1.deserialize(_buf.data());
         EXPECT_EQ(deser_size, sz_check);
 
-        EXPECT_TRUE(msg == msg1);
+        EXPECT_EQ(msg, msg1);
     }
 };
 
@@ -154,4 +154,44 @@ TEST_F(CppTest, FlatStructZeroCopy) {
     msg.f8 = 9;
 
     test_zerocopy(msg);
+}
+
+TEST_F(CppTest, TwoMsg) {
+    messgen::test_proto::simple_struct msg1{};
+    msg1.f0 = 1;
+    msg1.f1 = 2;
+    msg1.f2 = 3;
+    msg1.f3 = 4;
+    msg1.f4 = 5;
+    msg1.f5 = 6;
+    msg1.f6 = 7;
+    msg1.f8 = 9;
+
+    messgen::test_proto::flat_struct msg2{};
+    msg2.f0 = 1;
+    msg2.f1 = 2;
+    msg2.f2 = 3;
+    msg2.f3 = 4;
+    msg2.f4 = 5;
+    msg2.f5 = 6;
+    msg2.f6 = 7;
+    msg2.f7 = 7;
+    msg2.f8 = 9;
+
+    size_t sz_check = msg1.serialized_size() + msg2.serialized_size();
+
+    _buf.resize(sz_check);
+    size_t ser_size = msg1.serialize(_buf.data());
+    ser_size += msg2.serialize(_buf.data() + ser_size);
+
+    EXPECT_EQ(ser_size, sz_check);
+
+    messgen::test_proto::simple_struct msg1c{};
+    messgen::test_proto::flat_struct msg2c{};
+    size_t deser_size = msg1c.deserialize(_buf.data());
+    deser_size += msg2c.deserialize(_buf.data()+deser_size);
+    EXPECT_EQ(deser_size, sz_check);
+
+    EXPECT_EQ(msg1, msg1c);
+    EXPECT_EQ(msg2, msg2c);
 }

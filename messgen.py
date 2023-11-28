@@ -9,7 +9,15 @@ def generate(args):
     protos = Protocols()
     protos.load(args.basedir, args.protocol)
 
-    g = generator.get_generator(args.lang, protos)
+    print("Options:")
+    opts = {}
+    for a in args.options.split(","):
+        p = a.split("=")
+        if len(p) == 2:
+            print("  %s = %s" % (p[0], p[1]))
+            opts[p[0]] = p[1]
+
+    g = generator.get_generator(args.lang, protos, opts)
     if g is None:
         raise RuntimeError("Unsupported language \"%s\"" % args.lang)
 
@@ -24,5 +32,6 @@ if __name__ == "__main__":
     parser.add_argument("--protocol", action='append', help="Protocol to load")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
+    parser.add_argument("--options", help="Generator options")
     args = parser.parse_args()
     generate(args)

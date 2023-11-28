@@ -62,13 +62,13 @@ class CppGenerator:
     }
 
     _protocols: Protocols
-    _mode: str
+    _options: dict
     _includes: set
     _ctx: dict
 
-    def __init__(self, protos, mode="stl"):
+    def __init__(self, protos, options):
         self._protocols = protos
-        self._mode = mode
+        self._options = options
         self._includes = set()
         self._ctx = {}
 
@@ -87,6 +87,12 @@ class CppGenerator:
 
         proto_fn = proto_out_dir + self._EXT_HEADER
         self._write_code_file(proto_fn, self._generate_proto_file(proto_name))
+
+    def _get_mode(self):
+        return self._options.get("mode", "stl")
+
+    def _get_cpp_standard(self):
+        return int(self._options.get("cpp_standard", "11"))
 
     def _write_code_file(self, fn, code):
         with open(fn, "w+") as f:
@@ -111,7 +117,7 @@ class CppGenerator:
         if type_def["type_class"] == "enum":
             code.extend(self._generate_type_enum(type_name, type_def))
         elif type_def["type_class"] == "struct":
-            code.extend(self._generate_type_struct(type_name, type_def))
+            code.extend(self._generate_type_struct(type_name))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
@@ -210,7 +216,7 @@ class CppGenerator:
         align = self._get_alignment(type_def)
         return offs % align == 0
 
-    def _generate_type_struct(self, type_name, type_def):
+    def _generate_type_struct(self, type_name):
         curr_proto_name = self._ctx["proto_name"]
         type_def = self._protocols.get_type(curr_proto_name, type_name)
 
@@ -223,12 +229,11 @@ class CppGenerator:
         code = []
         code.extend(self._generate_comment_type(type_def))
         code.append("struct %s {" % type_name)
-        for field in type_def["fields"]:
-            field_c_type = self._cpp_type(field["type"])
-            field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
-            code.append("    %s %s;%s" % (
-                field_c_type, field["name"], _inline_comment(field.get("comment", ""))))
-        code.append("")
+
+        # Type ID
+        type_id = type_def.get("id")
+        if type_id is not None:
+            code.append("    static constexpr int TYPE_ID = %s;" % type_id)
 
         groups = self._field_groups(fields)
 
@@ -238,6 +243,12 @@ class CppGenerator:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % groups[0].size))
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
+        code.append("")
+
+        for field in type_def["fields"]:
+            field_c_type = self._cpp_type(field["type"])
+            code.append("    %s %s;%s" % (
+                field_c_type, field["name"], _inline_comment(field.get("comment", ""))))
 
         # Serialize function
         code_ser = []
@@ -297,7 +308,7 @@ class CppGenerator:
         code_deser.append("return _size;")
 
         alloc = ""
-        if self._mode == "nostl":
+        if self._get_mode() == "nostl":
             alloc = ", messgen::Allocator &_alloc"
         code_deser = ["",
                       "size_t deserialize(const uint8_t *_buf%s) {" % alloc,
@@ -333,23 +344,29 @@ class CppGenerator:
                       "}"]
         code.extend(_indent(code_ss))
 
+        if self._get_cpp_standard() >= 20:
+            # Operator <=>
+            code.append("")
+            code.append(_indent("auto operator<=>(const %s&) const = default;" % type_name))
+
         code.append("};")
 
-        # Operator ==
-        code_eq = []
-        field_name = fields[0]["name"]
-        code_eq.append("return l.%s == r.%s" % (field_name, field_name))
-        for field in fields[1:]:
-            field_name = field["name"]
-            code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
-        code_eq[-1] += ";"
+        if self._get_cpp_standard() < 20:
+            # Operator ==
+            code_eq = []
+            field_name = fields[0]["name"]
+            code_eq.append("return l.%s == r.%s" % (field_name, field_name))
+            for field in fields[1:]:
+                field_name = field["name"]
+                code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
+            code_eq[-1] += ";"
 
-        code.extend([
-                        "",
-                        "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
-                    ] + _indent(code_eq) + [
-                        "}"
-                    ])
+            code.extend([
+                            "",
+                            "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
+                            ] + _indent(code_eq) + [
+                            "}"
+                        ])
 
         return code
 
@@ -369,6 +386,7 @@ class CppGenerator:
 
     def _cpp_type(self, type_name: str) -> str:
         t = self._protocols.get_type(self._ctx["proto_name"], type_name)
+        mode = self._get_mode()
         if t["type_class"] == "scalar":
             self._add_include("cstdint")
             return self._CPP_TYPES_MAP[type_name]
@@ -380,33 +398,33 @@ class CppGenerator:
         elif t["type_class"] == "vector":
             el_type_name = t["element_type"]
             el_c_type = self._cpp_type(el_type_name)
-            if self._mode == "stl":
+            if mode == "stl":
                 self._add_include("vector")
                 return "std::vector<%s>" % el_c_type
-            elif self._mode == "nostl":
+            elif mode == "nostl":
                 return "messgen::vector<%s>" % el_c_type
             else:
-                raise RuntimeError("Unsupported mode for vector: %s" % self._mode)
+                raise RuntimeError("Unsupported mode for vector: %s" % mode)
         elif t["type_class"] == "map":
             key_c_type = self._cpp_type(t["key_type"])
             value_c_type = self._cpp_type(t["value_type"])
-            if self._mode == "stl":
+            if mode == "stl":
                 self._add_include("map")
                 return "std::map<%s, %s>" % (key_c_type, value_c_type)
-            elif self._mode == "nostl":
+            elif mode == "nostl":
                 self._add_include("span")
                 return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
             else:
-                raise RuntimeError("Unsupported mode for map: %s" % self._mode)
+                raise RuntimeError("Unsupported mode for map: %s" % mode)
         elif t["type_class"] == "string":
-            if self._mode == "stl":
+            if mode == "stl":
                 self._add_include("string")
                 return "std::string"
-            elif self._mode == "nostl":
+            elif mode == "nostl":
                 self._add_include("string_view")
                 return "std::string_view"
             else:
-                raise RuntimeError("Unsupported mode for string: %s" % self._mode)
+                raise RuntimeError("Unsupported mode for string: %s" % mode)
         elif t["type_class"] in ["enum", "struct"]:
             if common.SEPARATOR in type_name:
                 scope = "global"
@@ -501,6 +519,7 @@ class CppGenerator:
         c = []
 
         type_class = field_type_def["type_class"]
+        mode = self._get_mode()
 
         c.append("// %s" % field_name)
         if type_class in ["scalar", "enum"]:
@@ -511,7 +530,7 @@ class CppGenerator:
 
         elif type_class == "struct":
             alloc = ""
-            if self._mode == "nostl":
+            if mode == "nostl":
                 alloc = ", _alloc"
             c.append("_size += %s.deserialize(&_buf[_size]%s);" % (field_name, alloc))
 
@@ -530,7 +549,7 @@ class CppGenerator:
                 c.append("}")
 
         elif type_class == "vector":
-            if self._mode == "stl":
+            if mode == "stl":
                 el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
                 el_size = el_type_def.get("size")
                 el_align = self._get_alignment(el_type_def)
@@ -545,7 +564,7 @@ class CppGenerator:
                     c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
                     c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                     c.append("}")
-            elif self._mode == "nostl":
+            elif mode == "nostl":
                 el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
                 el_c_type = self._cpp_type(field_type_def["element_type"])
                 el_size = el_type_def.get("size")

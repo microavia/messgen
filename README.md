@@ -14,7 +14,8 @@ Features:
 - Maps
 - Nested messages
 - Messages metadata
-- Supported languages: C++, Go, JavaScript, TypeScript, Markdown (documentation)
+- Supported output formats: C++, JSON
+- Supported output formats TODO: Go, TypeScript, Markdown (documentation)
 
 ## Dependencies
 
@@ -40,55 +41,27 @@ Each protocol should be placed in directory `base_dir/protocol`.
 
 Message generator usage:
 ```
-python3 messgen.py --basedir <base_dir> --protocol <protocol> --lang <lang> --outdir <out_dir> [-D variable=value]
+python3 messgen.py --basedir <base_dir> --protocol <protocol> --lang <lang> --outdir <out_dir> [--options key1=value1,key2=value2,...]
 ```
-
-For some languages it's necessary to specify some variables using `-D` option.
 
 Generated messages placed in `out_dir` directory.
-
-#### Go (TODO)
-
-Example for Go messages generation:
-
-```
-python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang go --outdir out/go -D messgen_go_module=example.com/path/to/messgen
-```
-
-Variable `messgen_go_module` must point to messgen Go module (`port/go/messgen`), to add necessary imports in generated messages.
 
 #### C++
 
 Example for C++ messages generation:
 
 ```
-python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang cpp --outdir out/cpp
+python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang cpp --outdir out/cpp --options cpp_standard=20
 ```
 
-Variable `metadata_json=true` can be passed to generate metadata in JSON format, rather than legacy.
-
-#### JS/TS (TODO)
+#### JSON
 
 Example for JS messages generation:
 
 ```
 python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang json --outdir out/json
 ```
-This command will generate json messages. 
-
-The types of these messages for TS can be generated as follows:
-
-```
-python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang ts --outdir out/ts
-```
-
-#### MD (TODO)
-
-Example for protocol documentation generation:
-
-```
-python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang md --outdir out/md
-```
+This command will generate json schema containing full protocol description. 
 
 ### Basic Concepts
 
@@ -180,26 +153,20 @@ fields:
 Struct itself don't have any type identifier that is serialized in the message.
 Type ids can be assigned to structs in `_protocol.yaml` file (see below).
 
-#### Protocol and Message
+#### Protocol
 
-**Protocol** defines the protocol ID and the set of the messages with their identifiers.
+**Protocol** defines the protocol ID and type IDs for structs that will be used as messages.
+Type ID used during serialization/deserialization to identify the message type.
 Multiple protocols may be used in one system, e.g. `my_namespace/bootloader` and `my_namespace/application`.
 Parser can check the protocol by protocol ID, that can be serialized in message header.
-
-**Message** is a struct with associated type id (integer number), that is used to identify the message on deserialization.
 
 Example protocol definition (`weather_station/_protocol.yaml`):
 
 ```yaml
 comment: "Weather station application protocol"
-messages:
-  - heartbeat: { id: 0 }  # By default, `type` field is equal to message name from current protocol
-  - system_status: { id: 1 }
-  - system_command: { id: 2, type: "" }
-  - baro_report_internal: { id: 3, type: "baro_report" }
-  - baro_report_external: { id: 4, type: "baro_report" }
+type_ids:
+  0: "heartbeat"
+  1: "system_status"
+  2: "system_command"
+  3: "baro_report"
 ```
-
-As shown in the example, it's possible to define multiple messages with the same underlying struct, this may be useful to serialize multiple channels of information, e.g.:
-
-In pub/sub model message corresponds to the topic.

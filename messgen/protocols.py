@@ -156,10 +156,12 @@ class Protocols:
             # Type from another protocol
             p = type_name.split(SEPARATOR)
             proto_name = SEPARATOR.join(p[:-1])
-            t = self.proto_map[proto_name]["types"].get(p[-1])
+            proto = self.proto_map[proto_name]
+            t = proto["types"].get(p[-1])
         else:
             # Type from current protocol
-            t = self.proto_map[curr_proto_name]["types"].get(type_name)
+            proto = self.proto_map[curr_proto_name]
+            t = proto["types"].get(type_name)
 
         if t:
             t["type"] = type_name
@@ -178,6 +180,12 @@ class Protocols:
                         break
                 if fixed_size:
                     t["size"] = sz
+
+                # Type ID
+                for t_id, t_name in proto.get("types_map", {}).items():
+                    if t_name == type_name:
+                        t["id"] = t_id
+                        break
             return t
 
         raise RuntimeError("Type not found: %s, current protocol: %s" % (type_name, curr_proto_name))

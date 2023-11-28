@@ -1,4 +1,4 @@
 proto_id: 1
-messages:
-  - { id: 0, type: "simple_struct" }
-  - { id: 1, type: "complex_struct" }
+types_map:
+  0: "simple_struct"
+  1: "complex_struct"

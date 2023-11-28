@@ -1,12 +1,17 @@
 from . import common
 from . import protocol_version
+from .protocols import Protocols
 import json
 import os
 
 
 class JsonGenerator:
-    def __init__(self, proto_map):
-        self._proto_map = proto_map
+    _protocols: Protocols
+    _options: dict
+
+    def __init__(self, protos, options):
+        self._protocols = protos
+        self._options = options
 
     def generate(self, out_dir, proto_name, proto):
         proto_out_dir = out_dir + os.path.sep + proto_name.replace(common.SEPARATOR, os.path.sep)
