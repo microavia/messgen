@@ -32,6 +32,6 @@ if __name__ == "__main__":
     parser.add_argument("--protocol", action='append', help="Protocol to load")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
-    parser.add_argument("--options", help="Generator options")
+    parser.add_argument("--options", default="", help="Generator options")
     args = parser.parse_args()
     generate(args)
