@@ -146,10 +146,11 @@ class CppGenerator:
         if proto_id is not None:
             code.append("static constexpr int PROTO_ID = %s;" % proto_id)
 
-        messages = proto.get("messages", [])
-        for msg in messages:
-            type_name = msg["type"]
-            self._add_include(proto_name + common.SEPARATOR + type_name + self._EXT_HEADER)
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                self._add_include(proto_name + common.SEPARATOR + type_name + self._EXT_HEADER)
 
         code.append("")
         code.append("} // namespace %s" % namespace)
