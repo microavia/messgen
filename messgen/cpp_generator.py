@@ -145,13 +145,11 @@ class CppGenerator:
         proto_id = proto["proto_id"]
         if proto_id is not None:
             code.append("static constexpr int PROTO_ID = %s;" % proto_id)
-            code.append("")
 
         messages = proto.get("messages", [])
         for msg in messages:
             type_name = msg["type"]
             self._add_include(proto_name + common.SEPARATOR + type_name + self._EXT_HEADER)
-            code.append("int get_msg_id(%s &) { return %s; }" % (type_name, msg["id"]))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
