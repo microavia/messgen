@@ -164,7 +164,7 @@ Example protocol definition (`weather_station/_protocol.yaml`):
 
 ```yaml
 comment: "Weather station application protocol"
-type_ids:
+types_map:
   0: "heartbeat"
   1: "system_status"
   2: "system_command"
