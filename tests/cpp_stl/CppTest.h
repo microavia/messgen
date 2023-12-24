@@ -5,6 +5,7 @@
 #include <messgen/test_proto/struct_with_enum.h>
 #include <messgen/test_proto/var_size_struct.h>
 #include <messgen/test_proto/flat_struct.h>
+#include <another_proto.h>
 
 #include <gtest/gtest.h>
 
