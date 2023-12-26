@@ -1,5 +1,4 @@
 import struct
-
 from messgen.protocols import Protocols
 
 STRUCT_TYPES_MAP = {
@@ -23,6 +22,7 @@ class Type:
         self.type_name = type_name
         self.type_def = protos.get_type(curr_proto_name, type_name)
         self.type_class = self.type_def["type_class"]
+        self.id = self.type_def.get("id", None)
 
 
 class ScalarType(Type):
@@ -34,12 +34,20 @@ class ScalarType(Type):
             raise RuntimeError("Unsupported scalar type \"%s\"" % self.type_name)
         self.struct_fmt = "<" + self.struct_fmt
         self.size = struct.calcsize(self.struct_fmt)
+        self.def_value = 0
+        if self.type_name == "bool":
+            self.def_value = False
+        elif self.type_name == "float32" or self.type_name == "float64":
+            self.def_value = 0.0
 
     def serialize(self, data):
         return struct.pack(self.struct_fmt, data)
 
     def deserialize(self, data):
         return struct.unpack(self.struct_fmt, data[:self.size])[0], self.size
+
+    def default_value(self):
+        return self.def_value
 
 
 class EnumType(Type):
@@ -52,12 +60,21 @@ class EnumType(Type):
             raise RuntimeError("Unsupported base type \"%s\" in %s" % (self.base_type, self.type_name))
         self.struct_fmt = "<" + self.struct_fmt
         self.size = struct.calcsize(self.struct_fmt)
+        self.mapping = {}
+        for item in self.type_def["values"]:
+            self.mapping[item["value"]] = item["name"]
+        self.rev_mapping = {v: k for k, v in self.mapping.items()}
 
     def serialize(self, data):
-        return struct.pack(self.struct_fmt, data)
+        v = self.rev_mapping[data]
+        return struct.pack(self.struct_fmt, v)
 
     def deserialize(self, data):
-        return struct.unpack(self.struct_fmt, data)[0], self.size
+        v, = struct.unpack(self.struct_fmt, data[:self.size])
+        return self.mapping[v], self.size
+
+    def default_value(self):
+        return self.type_def["values"][0]["name"]
 
 
 class StructType(Type):
@@ -72,7 +89,10 @@ class StructType(Type):
     def serialize(self, data):
         out = []
         for field_name, field_type in self.fields:
-            out.append(field_type.serialize(data[field_name]))
+            v = data.get(field_name, None)
+            if v is None:
+                v = field_type.default_value()
+            out.append(field_type.serialize(v))
         return b"".join(out)
 
     def deserialize(self, data):
@@ -83,6 +103,12 @@ class StructType(Type):
             out[field_name] = value
             offset += size
         return out, offset
+
+    def default_value(self):
+        out = {}
+        for field_name, field_type in self.fields:
+            out[field_name] = field_type.def_value()
+        return out
 
 
 class ArrayType(Type):
@@ -107,6 +133,12 @@ class ArrayType(Type):
             out.append(value)
             offset += size
         return out, offset
+
+    def default_value(self):
+        out = []
+        for i in range(self.array_size):
+            out.append(self.element_type.def_value())
+        return out
 
 
 class VectorType(Type):
@@ -133,6 +165,9 @@ class VectorType(Type):
             out.append(value)
             offset += n
         return out, offset
+
+    def default_value(self):
+        return []
 
 
 class MapType(Type):
@@ -164,18 +199,21 @@ class MapType(Type):
             out[key] = value
         return out, offset
 
+    def default_value(self):
+        return {}
+
 
 class StringType(Type):
     def __init__(self, protos, curr_proto_name, type_name):
         super().__init__(protos, curr_proto_name, type_name)
         assert self.type_class == "string"
         self.size_type = get_type(protos, curr_proto_name, "uint32")
-        self.struct_fmt = "<%%is"
+        self.struct_fmt = "<%is"
 
     def serialize(self, data):
         out = []
         out.append(self.size_type.serialize(len(data)))
-        out.append(struct.pack(self.struct_fmt % len(data), data))
+        out.append(struct.pack(self.struct_fmt % len(data), data.encode("utf-8")))
         return b"".join(out)
 
     def deserialize(self, data):
@@ -183,7 +221,10 @@ class StringType(Type):
         offset = n_size
         value = struct.unpack(self.struct_fmt % n, data[offset:offset + n])[0]
         offset += n
-        return value, offset
+        return value.decode("utf-8"), offset
+
+    def default_value(self):
+        return ""
 
 
 def get_type(protocols, curr_proto_name, type_name):
@@ -221,29 +262,3 @@ class Codec:
 
     def get_type(self, proto_name, type_name):
         return self.types_map[proto_name][type_name]
-
-
-if __name__ == "__main__":
-    codec = Codec()
-    codec.load(["tests/messages"], ["messgen/test_proto"])
-
-    t = codec.get_type("messgen/test_proto", "simple_struct")
-    msg1 = {
-        "f0": 0x1234567890abcdef,
-        "f1": -0x1234567890abcdef,
-        "f1_pad": 5,
-        "f2": 1.2345678901234567890,
-        "f3": 0x12345678,
-        "f4": -0x12345678,
-        "f5": 1.2345678901234567890,
-        "f6": 0x1234,
-        "f7": 0x12,
-        "f8": -0x12,
-        "f9": True,
-    }
-    b = t.serialize(msg1)
-    print(b)
-    msg2, sz = t.deserialize(b)
-    print("Size:", len(b), sz)
-    print(msg1)
-    print(msg2)
