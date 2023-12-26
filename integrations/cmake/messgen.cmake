@@ -77,7 +77,7 @@ function(messgen_generate_messages BASE_DIRS PROTOCOLS OUTDIR OUTFILES_VAR OPTIO
             OUTPUT ${OUTFILES}
             COMMAND "python3"
             ARGS
-            ${MESSGEN_DIR}/messgen.py
+            ${MESSGEN_DIR}/messgen-generate.py
             ${MESSGEN_ARGS}
             "--outdir" ${OUTDIR}
             "--lang" "cpp"
