@@ -1,8 +1,7 @@
 #
-# Function adds target for message generation for given modules
-# Searches for PROTOCOLS in BASE_DIRS and generate files in OUTDIR
-#
-# Provide MESSGEN_OUT_FILES variable which contains all C++ files for target to depend on
+# Function adds custom command for message generation for given modules
+# Searches for PROTOCOLS in BASE_DIRS and generate files in OUTDIR.
+# List of generated files provided in OUTFILES_VAR variable.
 #
 function(messgen_generate_messages BASE_DIRS PROTOCOLS OUTDIR OUTFILES_VAR OPTIONS)
     get_filename_component(MESSGEN_DIR ${CMAKE_CURRENT_LIST_DIR} PATH)
