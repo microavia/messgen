@@ -28,8 +28,8 @@ def generate(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--basedir", action='append', help="Base directory for searching for protocol definitions")
-    parser.add_argument("--protocol", action='append', help="Protocol to load")
+    parser.add_argument("--basedir", action='append', help="Base directory for searching for protocol definitions, may repeat")
+    parser.add_argument("--protocol", action='append', help="Protocol to load, may repeat")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--options", default="", help="Generator options")
