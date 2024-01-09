@@ -4,7 +4,8 @@
 # List of generated files provided in OUTFILES_VAR variable.
 #
 function(messgen_generate_messages BASE_DIRS PROTOCOLS OUTDIR OUTFILES_VAR OPTIONS)
-    get_filename_component(MESSGEN_DIR ${CMAKE_CURRENT_LIST_DIR} PATH)
+    cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH MESSGEN_DIR)
+    cmake_path(GET MESSGEN_DIR PARENT_PATH MESSGEN_DIR)
     set(MESSGEN_INPUT_FILES "")
     set(OUTFILES "")
 
@@ -91,7 +92,8 @@ endfunction()
 function(messgen_add_library LIBRARY_NAME BASE_DIRS PROTOCOLS MODE)
     string(JOIN "," OPTIONS "mode=${MODE}" ${ARGN})
     set(MESSAGES_OUT_DIR "${CMAKE_BINARY_DIR}/${LIBRARY_NAME}/generated_src")
-    get_filename_component(MESSGEN_DIR ${CMAKE_CURRENT_LIST_DIR} PATH)
+    cmake_path(GET CMAKE_CURRENT_FUNCTION_LIST_DIR PARENT_PATH MESSGEN_DIR)
+    cmake_path(GET MESSGEN_DIR PARENT_PATH MESSGEN_DIR)
     add_library(${LIBRARY_NAME} INTERFACE)
     messgen_generate_messages("${BASE_DIRS}" "${PROTOCOLS}" "${MESSAGES_OUT_DIR}" MESSGEN_OUT_FILES "${OPTIONS}")
     target_sources(${LIBRARY_NAME} INTERFACE ${MESSGEN_OUT_FILES})
