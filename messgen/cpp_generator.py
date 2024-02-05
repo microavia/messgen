@@ -229,10 +229,12 @@ class CppGenerator:
         code.extend(self._generate_comment_type(type_def))
         code.append("struct %s {" % type_name)
 
-        # Type ID
+        # Type ID, Proto ID
         type_id = type_def.get("id")
         if type_id is not None:
+            proto_id = self._protocols.proto_map[curr_proto_name]["proto_id"]
             code.append("    static constexpr int TYPE_ID = %s;" % type_id)
+            code.append("    static constexpr int PROTO_ID = %s;" % proto_id)
 
         groups = self._field_groups(fields)
 
