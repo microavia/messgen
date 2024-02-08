@@ -262,3 +262,6 @@ class Codec:
 
     def get_type(self, proto_name, type_name):
         return self.types_map[proto_name][type_name]
+
+def get_message_info(data: bytes):
+    return struct.unpack("<HHI", data[:8])
