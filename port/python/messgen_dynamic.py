@@ -281,31 +281,3 @@ class Codec:
         t = p[msg_id]
         msg, sz = t.deserialize(data)
         return proto_name, t.type_name, msg, sz
-
-
-def get_message_info(data: bytes):
-    v = struct.unpack("<HHI", data[:MessageInfo.HEADER_SIZE])
-    return MessageInfo(v[0], v[1], data[MessageInfo.HEADER_SIZE:])
-
-
-class MessageInfo:
-    HEADER_SIZE: int = 8
-
-    def __init__(self, proto_id: int, msg_id: int, payload: bytes):
-        self.proto_id = proto_id
-        self.msg_id = msg_id
-        self.payload = payload
-
-    def __str__(self):
-        return "<MessageInfo proto_id=%s msg_id=%s payload_size=%s>" % (self.proto_id, self.msg_id, len(self.payload))
-
-    def __repr__(self):
-        return self.__str__()
-
-    def deserialize(self, codec):
-        return codec.deserialize(self.proto_id, self.msg_id, self.payload)
-
-    @staticmethod
-    def serialize(codec, proto_name: str, msg_name: str, msg: dict):
-        proto_id, msg_id, payload = codec.serialize(proto_name, msg_name, msg)
-        return struct.pack("<HHI", proto_id, msg_id, len(payload)) + payload
