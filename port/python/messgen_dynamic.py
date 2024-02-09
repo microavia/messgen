@@ -14,7 +14,6 @@ STRUCT_TYPES_MAP = {
     "float64": "d",
     "bool": "?",
 }
-MESSAGE_INFO_SIZE = 8
 
 
 class Type:
@@ -258,24 +257,55 @@ class Codec:
         self.types_by_name = {}
         self.types_by_id = {}
         for proto_name, proto_def in protos.proto_map.items():
-            by_name = {}
-            by_id = {}
+            by_name = (proto_def["proto_id"], {})
+            by_id = (proto_name, {})
             for type_name in proto_def["types"].keys():
                 t = get_type(protos, proto_name, type_name)
-                by_name[t.type_name] = t
+                by_name[1][t.type_name] = t
                 if t.id is not None:
-                    by_id[t.id] = t
+                    by_id[1][t.id] = t
             self.types_by_name[proto_name] = by_name
             self.types_by_id[proto_def["proto_id"]] = by_id
 
-    def get_type(self, proto_name, type_name):
-        return self.types_by_name[proto_name][type_name]
+    # def get_type_by_name(self, proto_name, type_name):
+    #     return self.types_by_name[proto_name][1][type_name]
 
-    def parse(self, proto_id, msg_id, data):
-        t = self.types_by_id[proto_id][msg_id]
+    def serialize(self, proto_name: str, msg_name: str, msg: dict) -> bytes:
+        proto_id, p = self.types_by_name[proto_name]
+        t = p[msg_name]
+        payload = t.serialize(msg)
+        return proto_id, t.id, payload
+
+    def deserialize(self, proto_id: int, msg_id: int, data: bytes):
+        proto_name, p = self.types_by_id[proto_id]
+        t = p[msg_id]
         msg, sz = t.deserialize(data)
-        return (t, msg, sz)
+        return proto_name, t.type_name, msg, sz
 
 
 def get_message_info(data: bytes):
-    return struct.unpack("<HHI", data[:MESSAGE_INFO_SIZE])
+    v = struct.unpack("<HHI", data[:MessageInfo.HEADER_SIZE])
+    return MessageInfo(v[0], v[1], data[MessageInfo.HEADER_SIZE:])
+
+
+class MessageInfo:
+    HEADER_SIZE: int = 8
+
+    def __init__(self, proto_id: int, msg_id: int, payload: bytes):
+        self.proto_id = proto_id
+        self.msg_id = msg_id
+        self.payload = payload
+
+    def __str__(self):
+        return "<MessageInfo proto_id=%s msg_id=%s payload_size=%s>" % (self.proto_id, self.msg_id, len(self.payload))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def deserialize(self, codec):
+        return codec.deserialize(self.proto_id, self.msg_id, self.payload)
+
+    @staticmethod
+    def serialize(codec, proto_name: str, msg_name: str, msg: dict):
+        proto_id, msg_id, payload = codec.serialize(proto_name, msg_name, msg)
+        return struct.pack("<HHI", proto_id, msg_id, len(payload)) + payload

@@ -80,8 +80,6 @@ _SCALAR_TYPES_INFO = {
 
 
 class Protocols:
-    proto_map: dict
-
     def __init__(self):
         self.proto_map = {}
 
