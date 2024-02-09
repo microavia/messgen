@@ -365,7 +365,7 @@ class CppGenerator:
             code.extend([
                             "",
                             "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
-                            ] + _indent(code_eq) + [
+                        ] + _indent(code_eq) + [
                             "}"
                         ])
 
@@ -444,11 +444,11 @@ class CppGenerator:
             align = self._get_alignment(type_def)
             size = type_def.get("size")
             # Check if there is padding before this field
-            if (not (
-                    (size is not None)
-                    and (groups[-1].size is not None)
-                    and (groups[-1].size % align == 0)
-                    and (size % align == 0))):  # TODO check?
+            if len(groups[-1].fields) > 0 and (
+                    (size is None) or
+                    (groups[-1].size is None) or
+                    (groups[-1].size % align != 0) or
+                    (size % align != 0)):
                 # Start next group
                 groups.append(FieldsGroup())
 
@@ -478,8 +478,8 @@ class CppGenerator:
 
         elif type_class in ["array", "vector"]:
             if type_class == "vector":
-                c.append("*reinterpret_cast<size_type *>(&_buf[_size]) = %s.size();" % field_name)
-                c.append("_size += sizeof(size_type);")
+                c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+                c.append("_size += sizeof(messgen::size_type);")
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
@@ -494,8 +494,8 @@ class CppGenerator:
                 c.append("}")
 
         elif type_class == "map":
-            c.append("*reinterpret_cast<size_type *>(&_buf[_size]) = %s.size();" % field_name)
-            c.append("_size += sizeof(size_type);")
+            c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(messgen::size_type);")
             key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
             value_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
             c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -506,8 +506,8 @@ class CppGenerator:
             c.append("}")
 
         elif type_class == "string":
-            c.append("*reinterpret_cast<size_type *>(&_buf[_size]) = %s.size();" % field_name)
-            c.append("_size += sizeof(size_type);")
+            c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
             c.append("_size += %s.size();" % field_name)
 
@@ -554,8 +554,8 @@ class CppGenerator:
                 el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
                 el_size = el_type_def.get("size")
                 el_align = self._get_alignment(el_type_def)
-                c.append("%s.resize(*reinterpret_cast<const size_type *>(&_buf[_size]));" % field_name)
-                c.append("_size += sizeof(size_type);")
+                c.append("%s.resize(*reinterpret_cast<const messgen::size_type *>(&_buf[_size]));" % field_name)
+                c.append("_size += sizeof(messgen::size_type);")
                 if el_size is not None and el_size % el_align == 0:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     c.append("_field_size = %d * %s.size();" % (el_size, field_name))
@@ -570,9 +570,9 @@ class CppGenerator:
                 el_c_type = self._cpp_type(field_type_def["element_type"])
                 el_size = el_type_def.get("size")
                 el_align = self._get_alignment(el_type_def)
-                c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
+                c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
                 c.append("%s = {_alloc.alloc<%s>(_field_size), _field_size};" % (field_name, el_c_type))
-                c.append("_size += sizeof(size_type);")
+                c.append("_size += sizeof(messgen::size_type);")
                 if el_size is not None and el_size % el_align == 0:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     if el_size != 1:
@@ -586,8 +586,8 @@ class CppGenerator:
 
         elif type_class == "map":
             c.append("{")
-            c.append(_indent("size_t _map_size%d = *reinterpret_cast<const size_type *>(&_buf[_size]);" % level_n))
-            c.append(_indent("_size += sizeof(size_type);"))
+            c.append(_indent("size_t _map_size%d = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);" % level_n))
+            c.append(_indent("_size += sizeof(messgen::size_type);"))
             key_c_type = self._cpp_type(field_type_def["key_type"])
             key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
             value_c_type = self._cpp_type(field_type_def["value_type"])
@@ -608,8 +608,8 @@ class CppGenerator:
             c.append("}")
 
         elif type_class == "string":
-            c.append("_field_size = *reinterpret_cast<const size_type *>(&_buf[_size]);")
-            c.append("_size += sizeof(size_type);")
+            c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
+            c.append("_size += sizeof(messgen::size_type);")
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
         else:
@@ -634,7 +634,7 @@ class CppGenerator:
 
         elif type_class in ["array", "vector"]:
             if field_type_def["type_class"] == "vector":
-                c.append("_size += sizeof(size_type);")
+                c.append("_size += sizeof(messgen::size_type);")
             el_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type.get("size")
             if el_size is not None:
@@ -647,7 +647,7 @@ class CppGenerator:
                 c.append("}")
 
         elif type_class == "map":
-            c.append("_size += sizeof(size_type);")
+            c.append("_size += sizeof(messgen::size_type);")
             key_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
             value_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
             key_size = key_type.get("size")
@@ -663,7 +663,7 @@ class CppGenerator:
                 c.append("}")
 
         elif type_class == "string":
-            c.append("_size += sizeof(size_type);")
+            c.append("_size += sizeof(messgen::size_type);")
             c.append("_size += %s.size();" % field_name)
 
         else:

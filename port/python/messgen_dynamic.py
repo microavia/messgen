@@ -14,6 +14,7 @@ STRUCT_TYPES_MAP = {
     "float64": "d",
     "bool": "?",
 }
+MESSAGE_INFO_SIZE = 8
 
 
 class Type:
@@ -254,14 +255,27 @@ class Codec:
         protos = Protocols()
         protos.load(basedirs, protocols)
 
-        self.types_map = {}
+        self.types_by_name = {}
+        self.types_by_id = {}
         for proto_name, proto_def in protos.proto_map.items():
-            self.types_map[proto_name] = {}
+            by_name = {}
+            by_id = {}
             for type_name in proto_def["types"].keys():
-                self.types_map[proto_name][type_name] = get_type(protos, proto_name, type_name)
+                t = get_type(protos, proto_name, type_name)
+                by_name[t.type_name] = t
+                if t.id is not None:
+                    by_id[t.id] = t
+            self.types_by_name[proto_name] = by_name
+            self.types_by_id[proto_def["proto_id"]] = by_id
 
     def get_type(self, proto_name, type_name):
-        return self.types_map[proto_name][type_name]
+        return self.types_by_name[proto_name][type_name]
+
+    def parse(self, proto_id, msg_id, data):
+        t = self.types_by_id[proto_id][msg_id]
+        msg, sz = t.deserialize(data)
+        return (t, msg, sz)
+
 
 def get_message_info(data: bytes):
-    return struct.unpack("<HHI", data[:8])
+    return struct.unpack("<HHI", data[:MESSAGE_INFO_SIZE])
