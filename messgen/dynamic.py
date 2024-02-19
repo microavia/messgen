@@ -1,5 +1,5 @@
 import struct
-from messgen.protocols import Protocols
+from .protocols import Protocols
 
 STRUCT_TYPES_MAP = {
     "uint8": "B",
@@ -211,10 +211,7 @@ class StringType(Type):
         self.struct_fmt = "<%is"
 
     def serialize(self, data):
-        out = []
-        out.append(self.size_type.serialize(len(data)))
-        out.append(struct.pack(self.struct_fmt % len(data), data.encode("utf-8")))
-        return b"".join(out)
+        return self.size_type.serialize(len(data)) + struct.pack(self.struct_fmt % len(data), data.encode("utf-8"))
 
     def deserialize(self, data):
         n, n_size = self.size_type.deserialize(data)
@@ -250,12 +247,14 @@ def get_type(protocols, curr_proto_name, type_name):
 
 
 class Codec:
+    def __init__(self):
+        self.types_by_name = {}
+        self.types_by_id = {}
+
     def load(self, basedirs: list, protocols: list):
         protos = Protocols()
         protos.load(basedirs, protocols)
 
-        self.types_by_name = {}
-        self.types_by_id = {}
         for proto_name, proto_def in protos.proto_map.items():
             by_name = (proto_def["proto_id"], {})
             by_id = (proto_name, {})
@@ -267,16 +266,16 @@ class Codec:
             self.types_by_name[proto_name] = by_name
             self.types_by_id[proto_def["proto_id"]] = by_id
 
-    # def get_type_by_name(self, proto_name, type_name):
-    #     return self.types_by_name[proto_name][1][type_name]
+    def get_type_by_name(self, proto_name, type_name):
+        return self.types_by_name[proto_name][1][type_name]
 
-    def serialize(self, proto_name: str, msg_name: str, msg: dict) -> bytes:
+    def serialize(self, proto_name: str, msg_name: str, msg: dict) -> (int, int, bytes):
         proto_id, p = self.types_by_name[proto_name]
         t = p[msg_name]
         payload = t.serialize(msg)
         return proto_id, t.id, payload
 
-    def deserialize(self, proto_id: int, msg_id: int, data: bytes):
+    def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> (str, str, dict, int):
         proto_name, p = self.types_by_id[proto_id]
         t = p[msg_id]
         msg, sz = t.deserialize(data)

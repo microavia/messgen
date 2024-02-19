@@ -90,11 +90,10 @@ class Protocols:
                 proto_path = base_dir + os.path.sep + proto_name
 
                 if os.path.exists(proto_path):
-                    print("Loading protocol: %s from %s" % (proto_name, base_dir))
                     self.proto_map[proto_name] = self._load_protocol(proto_path)
                     loaded = True
             if not loaded:
-                print("Protocol %s not found in base directories (%s)" % (proto_name, base_dirs))
+                raise RuntimeError("Protocol %s not found in base directories (%s)" % (proto_name, base_dirs))
 
     def get_type(self, curr_proto_name, type_name) -> dict:
         # Scalar
@@ -196,13 +195,9 @@ class Protocols:
         }
         for fn in os.listdir(proto_path):
             file_path = proto_path + os.path.sep + fn
-
             if not (os.path.isfile(file_path) and fn.endswith(CONFIG_EXT)):
                 continue
-
             item_name = fn.replace(CONFIG_EXT, "")
-            print("  - %s" % item_name)
-
             with open(file_path, "r") as f:
                 item = yaml.safe_load(f)
                 if item_name == PROTOCOL_ITEM:

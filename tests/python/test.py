@@ -1,10 +1,14 @@
-from port.python.messgen_dynamic import Codec
+import sys
+from pathlib import Path
+path_root = Path(__file__).parents[2]
+sys.path.append(str(path_root))
+from messgen.dynamic import Codec
 
 if __name__ == "__main__":
     codec = Codec()
     codec.load(["tests/messages"], ["messgen/test_proto"])
 
-    t = codec.get_type("messgen/test_proto", "simple_struct")
+    t = codec.get_type_by_name("messgen/test_proto", "simple_struct")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f2": 1.2345678901234567890,
@@ -26,7 +30,7 @@ if __name__ == "__main__":
     print("Deserialized msg:", msg2)
     print()
 
-    t = codec.get_type("messgen/test_proto", "var_size_struct")
+    t = codec.get_type_by_name("messgen/test_proto", "var_size_struct")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],

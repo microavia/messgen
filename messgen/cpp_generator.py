@@ -1,4 +1,4 @@
-from . import common
+from .common import SEPARATOR, SIZE_TYPE
 from .protocols import Protocols
 import os
 
@@ -24,7 +24,7 @@ def _indent(c):
 
 
 def _cpp_namespace(proto_name: str) -> str:
-    return proto_name.replace(common.SEPARATOR, "::")
+    return proto_name.replace(SEPARATOR, "::")
 
 
 class FieldsGroup:
@@ -74,7 +74,7 @@ class CppGenerator:
 
     def generate(self, out_dir, proto_name, proto):
         self._ctx["proto_name"] = proto_name
-        proto_out_dir = out_dir + os.path.sep + proto_name.replace(common.SEPARATOR, os.path.sep)
+        proto_out_dir = out_dir + os.path.sep + proto_name.replace(SEPARATOR, os.path.sep)
 
         try:
             os.makedirs(proto_out_dir)
@@ -150,7 +150,7 @@ class CppGenerator:
             type_def = self._protocols.get_type(proto_name, type_name)
             type_id = type_def.get("id")
             if type_id is not None:
-                self._add_include(proto_name + common.SEPARATOR + type_name + self._EXT_HEADER)
+                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
 
         code.append("")
         code.append("} // namespace %s" % namespace)
@@ -196,18 +196,18 @@ class CppGenerator:
             return self._get_alignment(el_type_def)
         elif type_class == "vector":
             # Alignment of array is equal to max of size field alignment and alignment of element
-            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], common.SIZE_TYPE))
+            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
             a_el = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"]))
             return max(a_sz, a_el)
         elif type_class == "map":
             # Alignment of array is equal to max of size field alignment and alignment of element
-            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], common.SIZE_TYPE))
+            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
         elif type_class == "string":
             # Alignment of string is equal size field alignment
-            return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], common.SIZE_TYPE))
+            return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
         else:
             raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
 
@@ -427,7 +427,7 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for string: %s" % mode)
         elif t["type_class"] in ["enum", "struct"]:
-            if common.SEPARATOR in type_name:
+            if SEPARATOR in type_name:
                 scope = "global"
             else:
                 scope = "local"
