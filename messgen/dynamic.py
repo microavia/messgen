@@ -276,7 +276,9 @@ class Codec:
         return proto_id, t.id, payload
 
     def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> (str, str, dict, int):
-        proto_name, p = self.types_by_id[proto_id]
-        t = p[msg_id]
+        p = self.types_by_id.get(proto_id)
+        if p is None:
+            return None, None, None, 0
+        t = p[1][msg_id]
         msg, sz = t.deserialize(data)
-        return proto_name, t.type_name, msg, sz
+        return p[0], t.type_name, msg, sz
