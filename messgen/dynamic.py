@@ -279,6 +279,8 @@ class Codec:
         p = self.types_by_id.get(proto_id)
         if p is None:
             return None, None, None, 0
-        t = p[1][msg_id]
+        t = p[1].get(msg_id)
+        if t is None:
+            return None, None, None, 0
         msg, sz = t.deserialize(data)
         return p[0], t.type_name, msg, sz
