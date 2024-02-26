@@ -224,7 +224,7 @@ class StringType(Type):
         return ""
 
 
-def get_type(protocols, curr_proto_name, type_name):
+def get_type(protocols, curr_proto_name, type_name) -> Type:
     type_def = protocols.get_type(curr_proto_name, type_name)
     type_class = type_def["type_class"]
     if type_class == "scalar":
@@ -266,8 +266,13 @@ class Codec:
             self.types_by_name[proto_name] = by_name
             self.types_by_id[proto_def["proto_id"]] = by_id
 
-    def get_type_by_name(self, proto_name, type_name):
+    def get_type_by_name(self, proto_name, type_name) -> Type:
+        # TODO check if proto_name is valid
         return self.types_by_name[proto_name][1][type_name]
+
+    def get_type_by_id(self, proto_id, type_id) -> Type:
+        # TODO check if proto_id is valid
+        return self.types_by_id[proto_id][1][type_id]
 
     def serialize(self, proto_name: str, msg_name: str, msg: dict) -> (int, int, bytes):
         proto_id, p = self.types_by_name[proto_name]
