@@ -162,6 +162,8 @@ class CppGenerator:
         return code
 
     def _generate_comment_type(self, type_def):
+        if "comment" not in type_def:
+            return []
         code = []
         code.append("/**")
         code.append(" * %s" % type_def["comment"])
