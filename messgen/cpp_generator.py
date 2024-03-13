@@ -1,6 +1,7 @@
+import os
+
 from .common import SEPARATOR, SIZE_TYPE
 from .protocols import Protocols
-import os
 
 
 def _inline_comment(comment):
@@ -28,14 +29,10 @@ def _cpp_namespace(proto_name: str) -> str:
 
 
 class FieldsGroup:
-    fields: list
-    field_names: list
-    size: int
-
     def __init__(self):
-        self.fields = []
-        self.field_names = []
-        self.size = 0
+        self.fields: list = []
+        self.field_names: list = []
+        self.size: int = 0
 
     def __repr__(self):
         return str(self)
@@ -61,16 +58,11 @@ class CppGenerator:
         "float64": "double",
     }
 
-    _protocols: Protocols
-    _options: dict
-    _includes: set
-    _ctx: dict
-
-    def __init__(self, protos, options):
-        self._protocols = protos
-        self._options = options
-        self._includes = set()
-        self._ctx = {}
+    def __init__(self, protos: Protocols, options: dict):
+        self._protocols: Protocols = protos
+        self._options: dict = options
+        self._includes: set = set()
+        self._ctx: dict = {}
 
     def generate(self, out_dir, proto_name, proto):
         self._ctx["proto_name"] = proto_name
@@ -440,7 +432,6 @@ class CppGenerator:
         groups = [FieldsGroup()]
         for field in fields:
             type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
-            type_class = type_def["type_class"]
             align = self._get_alignment(type_def)
             size = type_def.get("size")
             # Check if there is padding before this field
