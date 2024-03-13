@@ -49,6 +49,10 @@ from .common import SEPARATOR
 #     },
 #     ...
 #   ]
+#   // - external
+#   class: <name>,             // name of the type in the external protocol
+#   include: <include>,       // header where external type is defined
+#   alignment: <alignment>,   // alignment in bytes
 # }
 #
 # Field type structure:

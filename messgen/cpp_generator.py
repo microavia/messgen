@@ -118,6 +118,8 @@ class CppGenerator:
             code.extend(self._generate_type_enum(type_name, type_def))
         elif type_def["type_class"] == "struct":
             code.extend(self._generate_type_struct(type_name))
+        elif type_def["type_class"] == "external":
+            code.extend(self._generate_type_external(type_name))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
@@ -208,12 +210,26 @@ class CppGenerator:
         elif type_class == "string":
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
+        elif type_class == "external":
+            return type_def.get("alignment")
         else:
             raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
 
     def _check_alignment(self, type_def, offs):
         align = self._get_alignment(type_def)
         return offs % align == 0
+
+    def _generate_type_external(self, type_name):
+        curr_proto_name = self._ctx["proto_name"]
+        type_def = self._protocols.get_type(curr_proto_name, type_name)
+
+        self._add_include("cstddef")
+        self._add_include("cstring")
+        self._add_include("messgen/messgen.h")
+        self._add_include(type_def["include"])
+
+        code = []
+        code.extend(self._generate_comment_type(type_def))
 
     def _generate_type_struct(self, type_name):
         curr_proto_name = self._ctx["proto_name"]
@@ -371,7 +387,7 @@ class CppGenerator:
 
         return code
 
-    def _add_include(self, inc, scope="global"):
+    def _add_include(self, inc: str, scope="global"):
         self._includes.add((inc, scope))
 
     def _generate_includes(self):
@@ -433,6 +449,8 @@ class CppGenerator:
                 scope = "local"
             self._add_include("%s.h" % type_name, scope)
             return _cpp_namespace(type_name)
+        elif t["type_class"] == "external":
+            return t["class"]
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
@@ -510,6 +528,9 @@ class CppGenerator:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
             c.append("_size += %s.size();" % field_name)
+
+        elif type_class == "external":
+            c.append("_size += %s.serialize(&_buf[_size]);" % field_name)
 
         else:
             raise RuntimeError("Unsupported type_class in _serialize_field: %s" % type_class)
@@ -612,6 +633,12 @@ class CppGenerator:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
+
+        elif type_class == "external":
+            alloc = ""
+            if mode == "nostl":
+                alloc = ", _alloc"
+            c.append("_size += %s.deserialize(&_buf[_size]%s);" % (field_name, alloc))
         else:
             raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % type_class)
 
@@ -665,6 +692,9 @@ class CppGenerator:
         elif type_class == "string":
             c.append("_size += sizeof(messgen::size_type);")
             c.append("_size += %s.size();" % field_name)
+
+        elif type_class == "external":
+            c.append("_size += %s.get_size();" % field_name)
 
         else:
             raise RuntimeError("Unsupported type_class in _serialized_size_field: %s" % field_type_def["type_class"])
