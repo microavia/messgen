@@ -16,6 +16,10 @@ STRUCT_TYPES_MAP = {
 }
 
 
+class MessgenError(Exception):
+    pass
+
+
 class Type:
     def __init__(self, protos, curr_proto_name, type_name):
         self.proto_name = curr_proto_name
@@ -224,7 +228,28 @@ class StringType(Type):
         return ""
 
 
-def get_type(protocols, curr_proto_name, type_name) -> Type:
+class BytesType(Type):
+    def __init__(self, protos, curr_proto_name, type_name):
+        super().__init__(protos, curr_proto_name, type_name)
+        assert self.type_class == "bytes"
+        self.size_type = get_type(protos, curr_proto_name, "uint32")
+        self.struct_fmt = "<%is"
+
+    def serialize(self, data):
+        return self.size_type.serialize(len(data)) + struct.pack(self.struct_fmt % len(data), data)
+
+    def deserialize(self, data):
+        n, n_size = self.size_type.deserialize(data)
+        offset = n_size
+        value = struct.unpack(self.struct_fmt % n, data[offset:offset + n])[0]
+        offset += n
+        return value, offset
+
+    def default_value(self):
+        return b""
+
+
+def get_type(protocols, curr_proto_name, type_name):
     type_def = protocols.get_type(curr_proto_name, type_name)
     type_class = type_def["type_class"]
     if type_class == "scalar":
@@ -241,6 +266,8 @@ def get_type(protocols, curr_proto_name, type_name) -> Type:
         t = MapType(protocols, curr_proto_name, type_name)
     elif type_class == "string":
         t = StringType(protocols, curr_proto_name, type_name)
+    elif type_class == "bytes":
+        t = BytesType(protocols, curr_proto_name, type_name)
     else:
         raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_name))
     return t
@@ -266,26 +293,29 @@ class Codec:
             self.types_by_name[proto_name] = by_name
             self.types_by_id[proto_def["proto_id"]] = by_id
 
-    def get_type_by_name(self, proto_name, type_name) -> Type:
-        # TODO check if proto_name is valid
+    def get_type_by_name(self, proto_name, type_name):
         return self.types_by_name[proto_name][1][type_name]
 
-    def get_type_by_id(self, proto_id, type_id) -> Type:
-        # TODO check if proto_id is valid
-        return self.types_by_id[proto_id][1][type_id]
-
     def serialize(self, proto_name: str, msg_name: str, msg: dict) -> (int, int, bytes):
-        proto_id, p = self.types_by_name[proto_name]
-        t = p[msg_name]
+        p = self.types_by_name.get(proto_name)
+        if p is None:
+            raise MessgenError("Unsupported proto_name in serialization: proto_name=%s" % proto_name)
+        t = p[1].get(msg_name)
+        if t is None:
+            raise MessgenError(
+                "Unsupported msg_name in serialization: proto_name=%s msg_name=%s" % (proto_name, msg_name))
         payload = t.serialize(msg)
-        return proto_id, t.id, payload
+        return p[0], t.id, payload
 
     def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> (str, str, dict, int):
         p = self.types_by_id.get(proto_id)
         if p is None:
-            return None, None, None, 0
+            raise MessgenError("Unsupported proto_id in deserialization: proto_id=%s" % proto_id)
         t = p[1].get(msg_id)
         if t is None:
-            return None, None, None, 0
+            raise MessgenError("Unsupported msg_id in deserialization: proto_id=%s msg_id=%s" % (proto_id, msg_id))
         msg, sz = t.deserialize(data)
-        return p[0], t.type_name, msg, sz
+        if sz != len(data):
+            raise MessgenError(
+                "Invalid message size: expected=%s actual=%s proto_id=%s msg_id=%s" % (sz, len(data), proto_id, msg_id))
+        return p[0], t.type_name, msg

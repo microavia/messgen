@@ -1,6 +1,7 @@
+import os
+
 from .common import SEPARATOR, SIZE_TYPE
 from .protocols import Protocols
-import os
 
 
 def _inline_comment(comment):
@@ -28,14 +29,10 @@ def _cpp_namespace(proto_name: str) -> str:
 
 
 class FieldsGroup:
-    fields: list
-    field_names: list
-    size: int
-
     def __init__(self):
-        self.fields = []
-        self.field_names = []
-        self.size = 0
+        self.fields: list = []
+        self.field_names: list = []
+        self.size: int = 0
 
     def __repr__(self):
         return str(self)
@@ -61,16 +58,11 @@ class CppGenerator:
         "float64": "double",
     }
 
-    _protocols: Protocols
-    _options: dict
-    _includes: set
-    _ctx: dict
-
-    def __init__(self, protos, options):
-        self._protocols = protos
-        self._options = options
-        self._includes = set()
-        self._ctx = {}
+    def __init__(self, protos: Protocols, options: dict):
+        self._protocols: Protocols = protos
+        self._options: dict = options
+        self._includes: set = set()
+        self._ctx: dict = {}
 
     def generate(self, out_dir, proto_name, proto):
         self._ctx["proto_name"] = proto_name
@@ -205,7 +197,7 @@ class CppGenerator:
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
-        elif type_class == "string":
+        elif type_class in ["string", "bytes"]:
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
         else:
@@ -426,6 +418,14 @@ class CppGenerator:
                 return "std::string_view"
             else:
                 raise RuntimeError("Unsupported mode for string: %s" % mode)
+        elif t["type_class"] == "bytes":
+            if mode == "stl":
+                self._add_include("vector")
+                return "std::vector<uint8_t>"
+            elif mode == "nostl":
+                return "messgen::vector<uint8_t>"
+            else:
+                raise RuntimeError("Unsupported mode for bytes: %s" % mode)
         elif t["type_class"] in ["enum", "struct"]:
             if SEPARATOR in type_name:
                 scope = "global"
@@ -440,7 +440,6 @@ class CppGenerator:
         groups = [FieldsGroup()]
         for field in fields:
             type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
-            type_class = type_def["type_class"]
             align = self._get_alignment(type_def)
             size = type_def.get("size")
             # Check if there is padding before this field
@@ -509,6 +508,12 @@ class CppGenerator:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
+            c.append("_size += %s.size();" % field_name)
+
+        elif type_class == "bytes":
+            c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("std::copy(%s.begin(), %s.end(), &_buf[_size]);" % (field_name, field_name))
             c.append("_size += %s.size();" % field_name)
 
         else:
@@ -612,6 +617,13 @@ class CppGenerator:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
+
+        elif type_class == "bytes":
+            c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("%s = {reinterpret_cast<const uint8_t *>(&_buf[_size]), _field_size};" % field_name)
+            c.append("_size += _field_size;")
+
         else:
             raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % type_class)
 
@@ -662,7 +674,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d.second" % level_n, value_type, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "string":
+        elif type_class in ["string", "bytes"]:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("_size += %s.size();" % field_name)
 

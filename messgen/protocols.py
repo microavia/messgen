@@ -149,6 +149,12 @@ class Protocols:
                 "type_class": "string",
             }
 
+        if type_name == "bytes":
+            return {
+                "type": type_name,
+                "type_class": "bytes",
+            }
+
         if "/" in type_name:
             # Type from another protocol
             p = type_name.split(SEPARATOR)
