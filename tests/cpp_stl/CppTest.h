@@ -111,6 +111,7 @@ TEST_F(CppTest, ComplexStruct) {
     msg.v_vec2[1][0].resize(3);
     msg.v_vec2[1][0][2] = 5;
     msg.str = "Hello messgen!";
+    msg.bs.assign({1, 2, 3, 4, 5});
     msg.str_vec.push_back("spam");
     msg.str_vec.push_back("eggs");
     msg.str_vec.push_back("sticks");
@@ -190,7 +191,7 @@ TEST_F(CppTest, TwoMsg) {
     messgen::test_proto::simple_struct msg1c{};
     messgen::test_proto::flat_struct msg2c{};
     size_t deser_size = msg1c.deserialize(_buf.data());
-    deser_size += msg2c.deserialize(_buf.data()+deser_size);
+    deser_size += msg2c.deserialize(_buf.data() + deser_size);
     EXPECT_EQ(deser_size, sz_check);
 
     EXPECT_EQ(msg1, msg1c);

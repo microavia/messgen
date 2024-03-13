@@ -621,7 +621,7 @@ class CppGenerator:
         elif type_class == "bytes":
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
-            c.append("%s = {reinterpret_cast<const uint8_t *>(&_buf[_size]), _field_size};" % field_name)
+            c.append("%s.assign(&_buf[_size], &_buf[_size + _field_size]);" % field_name)
             c.append("_size += _field_size;")
 
         else:
