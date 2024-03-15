@@ -100,11 +100,6 @@ class CppGenerator:
         namespace = _cpp_namespace(proto_name)
 
         self._reset_file()
-        if type_def["type_class"] == "variant":
-            self._add_include("variant")
-            for variant in type_def["variants"]:
-                self._add_include(variant["type"] + self._EXT_HEADER, "local")
-
         code = []
 
         code.append("namespace %s {" % namespace)
@@ -180,10 +175,14 @@ class CppGenerator:
     def _generate_type_variant(self, type_name, type_def):
         code = []
 
+        if type_def["type_class"] == "variant":
+            self._add_include("variant")
+            for variant in type_def["variants"]:
+                self._add_include(variant["type"] + self._EXT_HEADER, "local")
+
         code.extend(self._generate_comment_type(type_def))
         type_list = ", ".join([v["type"] for v in type_def["variants"]])
         code.append(f"using {type_name} = std::variant<{type_list}>;")
-        code.append("};")
 
         return code
 
