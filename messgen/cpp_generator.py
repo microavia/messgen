@@ -436,6 +436,8 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
         elif t["type_class"] == "variant":
+            for variant in t["variants"]:
+                self._add_include(variant["type"] + self._EXT_HEADER, "local")
             if mode == 'stl':
                 self._add_include("variant")
                 return "std::variant<%s>" % ", ".join([_cpp_namespace(v["type"]) for v in t["variants"]])
@@ -546,7 +548,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialize_field("_v", variant_type_def, level_n + 1)))
                 c.append(_indent("} else"))
             c.append(_indent("{"))
-            c.extend(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+            c.append(_indent("throw std::runtime_error(\"Invalid variant type\");"))
             c.append(_indent("}"))
             c.append("}, %s);" % field_name)
 
