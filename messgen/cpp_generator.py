@@ -97,10 +97,14 @@ class CppGenerator:
     def _generate_type_file(self, type_name, type_def) -> list:
         proto_name = self._ctx["proto_name"]
         print("Generate type: %s/%s" % (proto_name, type_name))
-
         namespace = _cpp_namespace(proto_name)
 
         self._reset_file()
+        if type_def["type_class"] == "variant":
+            self._add_include("variant")
+            for variant in type_def["variants"]:
+                self._add_include(variant["type"] + self._EXT_HEADER, "local")
+
         code = []
 
         code.append("namespace %s {" % namespace)
@@ -110,6 +114,8 @@ class CppGenerator:
             code.extend(self._generate_type_enum(type_name, type_def))
         elif type_def["type_class"] == "struct":
             code.extend(self._generate_type_struct(type_name))
+        elif type_def["type_class"] == "variant":
+            code.extend(self._generate_type_variant(type_name, type_def))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
@@ -167,6 +173,16 @@ class CppGenerator:
         code.append("enum class %s : %s {" % (type_name, self._cpp_type(type_def["base_type"])))
         for item in type_def["values"]:
             code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
+        code.append("};")
+
+        return code
+
+    def _generate_type_variant(self, type_name, type_def):
+        code = []
+
+        code.extend(self._generate_comment_type(type_def))
+        type_list = ", ".join([v["type"] for v in type_def["variants"]])
+        code.append(f"using {type_name} = std::variant<{type_list}>;")
         code.append("};")
 
         return code

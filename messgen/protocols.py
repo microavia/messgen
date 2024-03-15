@@ -161,6 +161,13 @@ class Protocols:
                 "type_class": "string",
             }
 
+        if type_name == "variant":
+            return {
+                "type": type_name,
+                "type_class": "variant",
+                "index_type": "int",
+            }
+
         if type_name == "bytes":
             return {
                 "type": type_name,
