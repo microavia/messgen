@@ -199,6 +199,15 @@ class CppGenerator:
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
+        elif type_class == "variant":
+            # Alignment of variant is equal to max of the field alignments
+            a_max = 0
+            for field in type_def["variants"]:
+                field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
+                a = self._get_alignment(field_type_def)
+                if a > a_max:
+                    a_max = a
+            return a_max
         elif type_class in ["string", "bytes"]:
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
@@ -411,6 +420,13 @@ class CppGenerator:
                 return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
+        elif t["type_class"] == "variant":
+            if mode == 'stl':
+                self._add_include("variant")
+                return "std::variant<%s>" % ", ".join([_cpp_namespace(v["type"]) for v in t["variants"]])
+            elif mode == "nostl":
+                self._add_include("variant")
+                return "messgen::variant<%s>" % ", ".join([_cpp_namespace(v["type"]) for v in t["variants"]])
         elif t["type_class"] == "string":
             if mode == "stl":
                 self._add_include("string")
@@ -505,6 +521,19 @@ class CppGenerator:
             c.extend(_indent(
                 self._serialize_field("_i%d.second" % level_n, value_type_def, level_n + 1)))
             c.append("}")
+        elif type_class == "variant":
+            c.append("*reinterpret_cast<%s *>(&_buf[_size]) = %s.index();" % (self._cpp_type(field_type_def['index_type']), field_name))
+            c.append("_size += sizeof(%s);" % self._cpp_type(field_type_def['index_type']))
+            c.append("std::visit([&](auto &&_v) {")
+            for i, variant in enumerate(field_type_def["variants"]):
+                variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
+                c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
+                c.extend(_indent(self._serialize_field("_v", variant_type_def, level_n + 1)))
+                c.append(_indent("} else"))
+            c.append(_indent("{"))
+            c.extend(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+            c.append(_indent("}"))
+            c.append("}, %s);" % field_name)
 
         elif type_class == "string":
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
@@ -614,6 +643,18 @@ class CppGenerator:
             c.append(_indent("}"))
             c.append("}")
 
+        elif type_class == "variant":
+            c.append(_indent("size_t index = *reinterpret_cast<const %s *>(&_buf[_size]);" % (self._cpp_type(field_type_def['index_type']))))
+            c.append("std::visit([&](auto &&_v) {")
+            for _, variant in enumerate(field_type_def["variants"]):
+                variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
+                c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
+                c.extend(_indent(self._deserialize_field("_v", variant_type_def, level_n + 1)))
+                c.append(_indent("} else"))
+            c.append(_indent("{"))
+            c.extend(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+            c.append(_indent("}"))
+            c.append("}, %s);" % field_name)
         elif type_class == "string":
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
@@ -675,6 +716,19 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d.first" % level_n, key_type, level_n + 1)))
                 c.extend(_indent(self._serialized_size_field("_i%d.second" % level_n, value_type, level_n + 1)))
                 c.append("}")
+        elif type_class == "variant":
+            size_type = self._protocols.get_type(self._ctx['proto_name'], field_type_def['index_type'])
+            c.append(f"_size += sizeof({size_type});")
+            c.append("std::visit([&](auto &&_v) {")
+            for i, variant in enumerate(field_type_def["variants"]):
+                variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
+                c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
+                c.extend(_indent(self._serialized_size_field("_v", variant_type_def, level_n + 1)))
+                c.append(_indent("} else"))
+            c.append(_indent("{"))
+            c.extend(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+            c.append(_indent("}"))
+            c.append("}, %s);" % field_name)
 
         elif type_class in ["string", "bytes"]:
             c.append("_size += sizeof(messgen::size_type);")

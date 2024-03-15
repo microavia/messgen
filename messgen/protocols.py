@@ -48,6 +48,18 @@ from .common import SEPARATOR
 #       ...
 #     },
 #     ...
+
+#   // - variant
+#   index_type: <scalar type>,   // optional, default int
+#   variants: [
+#     {
+#       type: <type_0>,
+#       comment: <comment_0>,   // optional
+#     },
+#     {
+#       ...
+#     },
+#     ...
 #   ]
 # }
 #
