@@ -663,13 +663,14 @@ class CppGenerator:
         elif type_class == "variant":
             c.append(_indent("size_t index = *reinterpret_cast<const %s *>(&_buf[_size]);" % (self._cpp_type(field_type_def['index_type']))))
             c.append("std::visit([&](auto &&_v) {")
+            # FIXME: this code is wrong
             for _, variant in enumerate(field_type_def["variants"]):
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
                 c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
                 c.extend(_indent(self._deserialize_field("_v", variant_type_def, level_n + 1)))
                 c.append(_indent("} else"))
             c.append(_indent("{"))
-            c.extend(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+            c.append(_indent("throw std::runtime_error(\"Invalid variant type\");"))
             c.append(_indent("}"))
             c.append("}, %s);" % field_name)
         elif type_class == "string":
@@ -743,7 +744,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_v", variant_type_def, level_n + 1)))
                 c.append(_indent("} else"))
             c.append(_indent("{"))
-            c.extend(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+            c.append(_indent("throw std::runtime_error(\"Invalid variant type\");"))
             c.append(_indent("}"))
             c.append("}, %s);" % field_name)
 
