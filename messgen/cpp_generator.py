@@ -661,16 +661,18 @@ class CppGenerator:
             c.append("}")
 
         elif type_class == "variant":
-            c.append(_indent("size_t index = *reinterpret_cast<const %s *>(&_buf[_size]);" % (self._cpp_type(field_type_def['index_type']))))
-            c.append("std::visit([&](auto &&_v) {")
+            c.append("size_t index = *reinterpret_cast<const %s *>(&_buf[_size]);" % (self._cpp_type(field_type_def['index_type'])))
+            c.append("_size += sizeof(%s);" % self._cpp_type(field_type_def['index_type']))
+            c.append("switch (index) {")
             # FIXME: this code is wrong
-            for _, variant in enumerate(field_type_def["variants"]):
+            for i, variant in enumerate(field_type_def["variants"]):
+                c.append(_indent(f"case {i}: {{"))
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
-                c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
-                c.extend(_indent(self._deserialize_field("_v", variant_type_def, level_n + 1)))
-                c.append(_indent("} else"))
-            c.append(_indent("{"))
-            c.append(_indent("throw std::runtime_error(\"Invalid variant type\");"))
+                c.append(_indent(_indent(f"auto &v = {field_name}.emplace<{variant['type']}>();")))
+                c.extend(_indent(_indent(self._deserialize_field("v", variant_type_def, level_n + 1))))
+                c.append(_indent("}"))
+            c.append(_indent("default: {"))
+            c.append(_indent(_indent("throw std::runtime_error(\"Invalid variant type\");")))
             c.append(_indent("}"))
             c.append("}, %s);" % field_name)
         elif type_class == "string":
@@ -736,7 +738,7 @@ class CppGenerator:
                 c.append("}")
         elif type_class == "variant":
             size_type = self._protocols.get_type(self._ctx['proto_name'], field_type_def['index_type'])
-            c.append(f"_size += sizeof({size_type});")
+            c.append(f"_size += sizeof({size_type.get('size')});")
             c.append("std::visit([&](auto &&_v) {")
             for i, variant in enumerate(field_type_def["variants"]):
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
