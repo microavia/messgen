@@ -664,7 +664,6 @@ class CppGenerator:
             c.append("size_t index = *reinterpret_cast<const %s *>(&_buf[_size]);" % (self._cpp_type(field_type_def['index_type'])))
             c.append("_size += sizeof(%s);" % self._cpp_type(field_type_def['index_type']))
             c.append("switch (index) {")
-            # FIXME: this code is wrong
             for i, variant in enumerate(field_type_def["variants"]):
                 c.append(_indent(f"case {i}: {{"))
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
@@ -674,7 +673,7 @@ class CppGenerator:
             c.append(_indent("default: {"))
             c.append(_indent(_indent("throw std::runtime_error(\"Invalid variant type\");")))
             c.append(_indent("}"))
-            c.append("}, %s);" % field_name)
+            c.append("}")
         elif type_class == "string":
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
