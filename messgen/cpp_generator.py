@@ -274,7 +274,7 @@ class CppGenerator:
 
         code_ser.extend([
             "size_t _size = 0;",
-            "size_t _field_size;",
+            "[[maybe_unused]] size_t _field_size;",
             "",
         ])
 
@@ -305,7 +305,7 @@ class CppGenerator:
 
         code_deser.extend([
             "size_t _size = 0;",
-            "size_t _field_size;",
+            "[[maybe_unused]] size_t _field_size;",
             "",
         ])
 
