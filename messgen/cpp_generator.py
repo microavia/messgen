@@ -1,8 +1,7 @@
 import os
 
-from .common import SEPARATOR, SIZE_TYPE
+from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
 from .protocols import Protocols
-
 
 def _inline_comment(comment):
     if comment:
@@ -75,21 +74,16 @@ class CppGenerator:
 
         for type_name, type_def in proto["types"].items():
             fn = os.path.join(proto_out_dir, type_name) + self._EXT_HEADER
-            self._write_code_file(fn, self._generate_type_file(type_name, type_def))
+            write_file_if_diff(fn, self._generate_type_file(type_name, type_def))
 
         proto_fn = proto_out_dir + self._EXT_HEADER
-        self._write_code_file(proto_fn, self._generate_proto_file(proto_name))
+        write_file_if_diff(proto_fn, self._generate_proto_file(proto_name))
 
     def _get_mode(self):
         return self._options.get("mode", "stl")
 
     def _get_cpp_standard(self):
         return int(self._options.get("cpp_standard", "11"))
-
-    def _write_code_file(self, fn, code):
-        with open(fn, "w+") as f:
-            for line in code:
-                f.write(line + os.linesep)
 
     def _reset_file(self):
         self._includes.clear()
