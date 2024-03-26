@@ -138,6 +138,38 @@ class CppGenerator:
             if type_id is not None:
                 self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
 
+        code.append("inline constexpr struct {")
+        code.append("template <class T, class USER_T>")
+        code.append("bool dispatch_message(int msg_id, const uint8_t *payload, T &handler, USER_T &user_obj) {")
+        code.append("    switch (msg_id) {")
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                code.append("        case %s::TYPE_ID:" % type_name)
+                code.append("            if constexpr (requires { handler(%s()); }) {" % type_name)
+                if type_def["is_flat"]:
+                    code.append("                auto &msg = *reinterpret_cast<const %s *>(payload);" % type_name)
+                else:
+                    code.append("                %s msg;" % type_name)
+                    code.append("                msg.deserialize(payload);")
+                code.append("                handler.on_message(msg, user_obj);")
+                code.append("                return true;")
+                code.append("            } else {")
+                code.append("                return false;")
+                code.append("            }")
+        code.append("        default:")
+        code.append("            return false;")
+        code.append("    }")
+        code.append("}")
+        code.append("} dispatch_message;")
+
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+
         code.append("")
         code.append("} // namespace %s" % namespace)
 
@@ -228,7 +260,9 @@ class CppGenerator:
 
         # IS_FLAT flag
         is_flat_str = "false"
-        if (len(groups) == 1 and groups[0].size is not None):
+        is_flat = len(groups) == 1 and groups[0].size is not None
+        type_def["is_flat"] = is_flat
+        if is_flat:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % groups[0].size))
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
