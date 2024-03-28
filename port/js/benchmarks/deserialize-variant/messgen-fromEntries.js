@@ -506,7 +506,7 @@ export class Buffer {
 
         let fields = struct.fields,
             dv = this._dataView,
-          resEntries = new Array(struct.fields.length );
+          resEntries = new Array(struct.fields.length )
 
 
         let currOffset = 0
