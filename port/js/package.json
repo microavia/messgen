@@ -3,23 +3,25 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/messgen.js",
+  "type": "module",
   "scripts": {
-    "build": "node_modules/.bin/rollup -c --bundleConfigAsCjs",
-    "test": "jest --coverage --coverageReporters json-summary",
+    "build": "vite build",
+    "test": "vitest",
     "prettier": "prettier --write  \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
     "gen-json": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l json -o ../../tests/js",
     "gen-ts": "npm run gen-json && python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l ts -o ../../tests/js",
     "gen-cpp": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l cpp -o ../../tests/js",
-    "gen-md": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l md -o ../../tests/js"
+    "gen-md": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l md -o ../../tests/js",
+    "benchmark": "vitest bench"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@babel/preset-env": "^7.22.14",
     "@rollup/plugin-terser": "^0.4.3",
-    "@types/jest": "^29.5.4",
-    "jest": "^29.6.4",
     "prettier": "3.0.3",
-    "rollup": "^3.28.1"
+    "rollup": "^3.28.1",
+    "tinybench": "^2.6.0",
+    "vite": "^5.2.6",
+    "vitest": "^1.4.0"
   }
 }
