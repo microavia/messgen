@@ -2,8 +2,8 @@ import { bench } from 'vitest'
 
 import {Struct} from '../src/messgen.js';
 import {Buffer} from './deserialize-variant/messgen-old.js';
-import { Buffer as  BufferFormEntries} from './deserialize-variant/messgen-fromEntries.js';
-import { Buffer as  BufferPrebild, Struct as StructPrebild} from './deserialize-variant/messgen-prebild.js';
+import { Buffer as  BufferFromEntries} from './deserialize-variant/messgen-fromEntries.js';
+import { Buffer as  BufferPreBuild, Struct as StructPreBuild} from './deserialize-variant/messgen-pre-build.js';
 
 import { bench, describe } from 'vitest'
 
@@ -35,7 +35,7 @@ let srcStruct = new Struct({
   ]
 });
 
-let srcStructPrebild = new StructPrebild({
+let srcStructPrebild = new StructPreBuild({
   id: 2,
   fields: [
     { name: 'type_Int8', type: 'Int8' },
@@ -103,10 +103,10 @@ describe('Buffer(b).deserialize ', () => {
     b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
   })
   bench('Object.fromEntries', () => {
-    let res = new BufferFormEntries(b).deserialize(srcStruct);
+    let res = new BufferFromEntries(b).deserialize(srcStruct);
   })
-  bench('preBuild object Object', () => {
-    let res = new BufferPrebild(b).deserialize(srcStructPrebild);
+  bench('pre build object Object', () => {
+    let res = new BufferPreBuild(b).deserialize(srcStructPrebild);
   })
   bench('mutation Object', () => {
     let res = new Buffer(b).deserialize(srcStruct);
