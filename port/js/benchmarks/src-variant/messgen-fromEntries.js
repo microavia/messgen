@@ -506,7 +506,7 @@ export class Buffer {
 
         let fields = struct.fields,
             dv = this._dataView,
-          resEntries = [];
+          resEntries = new Array(struct.fields.length );
 
 
         let currOffset = 0
@@ -528,7 +528,7 @@ export class Buffer {
 
 
                     let value = new ArrayType(length)
-                    resEntries.push([fi.name, value])
+                    resEntries[f]=([fi.name, value])
 
                     let currOffset_dyn = DYN_TYPE_SIZE + currOffset
 
@@ -568,7 +568,7 @@ export class Buffer {
                     //Static size array
                     //
                     let value = new ArrayType(p.length)
-                    resEntries.push([fi.name, value])
+                    resEntries[f]=([fi.name, value])
 
 
                     if (p.typeIndex === typeIndex.String) {
@@ -600,9 +600,9 @@ export class Buffer {
                 }
             } else {
                 if (p.isComplex) {
-                    resEntries.push([fi.name, this.__deserialize__(p.typeIndex, currOffset, sizeOffset)])
+                    resEntries[f]=([fi.name, this.__deserialize__(p.typeIndex, currOffset, sizeOffset)])
                 } else {
-                    resEntries.push([fi.name, readFunc[p.typeIndex](dv, currOffset + this._dynamicOffset)])
+                    resEntries[f]=([fi.name, readFunc[p.typeIndex](dv, currOffset + this._dynamicOffset)])
 
                     if (p.typeIndex === typeIndex.String) {
                         this._dynamicOffset += dv.getUint32(currOffset + this._dynamicOffset, true)
