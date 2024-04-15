@@ -1,3 +1,6 @@
 /dist
 /node_modules
 /coverage
+
+/tests/another_proto/
+/tests/messgen/

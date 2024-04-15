@@ -41,7 +41,7 @@ Each protocol should be placed in directory `base_dir/protocol`.
 
 Message generator usage:
 ```
-python3 messgen.py --basedir <base_dir> --protocol <protocol> --lang <lang> --outdir <out_dir> [--options key1=value1,key2=value2,...]
+python3 messgen-generate.py --basedir <base_dir> --protocol <protocol> --lang <lang> --outdir <out_dir> [--options key1=value1,key2=value2,...]
 ```
 
 Generated messages placed in `out_dir` directory.
@@ -51,7 +51,7 @@ Generated messages placed in `out_dir` directory.
 Example for C++ messages generation:
 
 ```
-python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang cpp --outdir out/cpp --options cpp_standard=20
+python3 messgen-generate.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang cpp --outdir out/cpp --options cpp_standard=20
 ```
 
 #### JSON
@@ -59,7 +59,7 @@ python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --la
 Example for JS messages generation:
 
 ```
-python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang json --outdir out/json
+python3 messgen-generate.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang json --outdir out/json
 ```
 This command will generate json schema containing full protocol description. 
 

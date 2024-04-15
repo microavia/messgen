@@ -10,13 +10,13 @@ export type Schema = {
 
 
 export class Struct {
-  constructor(schema: Schema) {}
+  constructor(schema: Schema)
   
   get schema(): Schema
   
   get id(): number
   
-  get _size(): number
+  get size(): number
   
   get fields(): Field[]
   
@@ -57,7 +57,7 @@ export class Buffer {
   
   static serialize(fields: Field[], includeMessages?: Messages<string>)
   
-  get _size(): number
+  get size(): number
   
   get dataView(): DataView
   

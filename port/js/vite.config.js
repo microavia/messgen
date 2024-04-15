@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import {defineConfig} from 'vite'
 import pkg from './package.json'
 import terser from '@rollup/plugin-terser'
 

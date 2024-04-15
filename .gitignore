@@ -14,7 +14,3 @@ dump.txt
 tests/cpp/messgen
 .done.*
 
-tests/js/tmp
-tests/js/coverage
-tests/js/messgen
-tests/js/MessgenHelper.ts
