@@ -1,6 +1,6 @@
 'use strict'
 
-import { encodeUTF8, decodeUTF8 } from '../src/utf8.js'
+import { encodeUTF8, decodeUTF8 } from '../src/utf8.ts'
 
 describe('UTF8 function test', () => {
     it('Encoding decoding test', () => {

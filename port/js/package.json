@@ -2,7 +2,7 @@
   "name": "messgenjs",
   "version": "1.0.0",
   "description": "",
-  "main": "src/messgen.js",
+  "main": "src/messgen.ts",
   "type": "module",
   "scripts": {
     "build": "vite build",

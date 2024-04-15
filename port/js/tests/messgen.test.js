@@ -1,6 +1,9 @@
 'use strict';
 
-import {Buffer, Struct, HEADER_STRUCT, initializeMessages} from '../src/messgen.js';
+import {initializeMessages} from '../src/messgen.ts';
+import {Struct} from "../src/Struct.ts";
+import {HEADER_STRUCT} from "../src/HEADER_STRUCT.ts";
+import {Buffer} from "../src/Buffer.ts";
 
 describe('Serialization deserialization tests', () => {
     it('Basic types', () => {

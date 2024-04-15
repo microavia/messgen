@@ -7,7 +7,7 @@ const OUTPUT_NAME = `dist/messgen`
 export default defineConfig({
   build: {
     lib: {
-      entry: 'src/messgen.js',
+      entry: 'src/messgen.ts',
       name: pkg.name,
       fileName: `messgen`
 
