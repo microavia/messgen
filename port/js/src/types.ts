@@ -12,13 +12,12 @@ export type SchemaObj = {
 }
 
 
-export type Messages<KEYS extends string> = {
+export type Messages<KEYS extends IName = IName> = {
   __id__: Struct[]
   __name__: KEYS[]
+  HEADER_STRUCT: Struct
 } &
-  Record<KEYS, Struct> &
-  addPrefixToObject<UppercaseObjectKeys<Record<KEYS, Struct>>, 'MSG_'> &
-  Record<string, Struct>;
+  Record<IName, Struct>
 
 
 export type Obj = Record<string, any>;
@@ -65,22 +64,3 @@ type SubType = `${ArrayDynamicSize | ArrayFixSize}` | '';
 export type IType = `${IName | IPrimitiveType}${SubType}${SubType}${SubType}`
 
 
-/*
-    ____,-------------------------------,____
-    \   |            HELPERS            |   /
-    /___|-------------------------------|___\
-
-*/
-
-
-// https://stackoverflow.com/questions/71824852/convert-typescript-object-keys-to-uppercase
-// All string-type keys in the object, and then uppercased
-type UppercaseStringKeys<T> = Uppercase<Extract<keyof T, string>>;
-// An object consisting of the above keys with the same values from the original object
-type UppercaseObjectKeys<T extends { [key: string | number | symbol]: any }> = {
-  [x in UppercaseStringKeys<T>]: x extends string ? T[Lowercase<x>] : T[x];
-};
-// https://stackoverflow.com/questions/57510388/define-prefix-for-object-keys-using-types-in-typescript
-type addPrefixToObject<T, P extends string> = {
-  [K in keyof T as K extends string ? `${P}${K}` : never]: T[K]
-}
