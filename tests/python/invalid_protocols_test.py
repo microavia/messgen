@@ -16,13 +16,14 @@ if __name__ == "__main__":
             proto_list.append(proto_dir + "/" + proto)
 
     for lang in langs:
-        protos = Protocols()
-        protos.load([base_dir], proto_list)
-        g = generator.get_generator(lang, protos, {})
-        for proto_name, proto in protos.proto_map.items():
+        for single_proto in proto_list:
             try:
-                g.generate(output_dir + "/" + lang, proto_name, proto)
-                print("Generated " + lang + " files for proto '" + proto_name + "', but exception expected")
+                protos = Protocols()
+                protos.load([base_dir], [single_proto])
+                g = generator.get_generator(lang, protos, {})
+                for proto_name, proto in protos.proto_map.items():
+                    g.generate(output_dir + "/" + lang, proto_name, proto)
+                print("Generated " + lang + " files for proto '" + single_proto + "', but exception expected")
                 sys.exit(1)
             except RuntimeError as e:
-                print(f"Successfully raised exception for {proto_name} ({lang}): {e}")
+                print(f"Successfully raised exception for {single_proto} ({lang}): {e}")
