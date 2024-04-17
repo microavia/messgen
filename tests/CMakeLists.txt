@@ -11,3 +11,7 @@ target_link_libraries(test_cpp gtest msgs_test_proto)
 add_executable(test_cpp_nostl "cpp_nostl/main.cpp")
 messgen_add_library(msgs_test_proto_nostl "${MESSGEN_BASE_DIR}" "messgen/test_proto" "nostl" "cpp_standard=20")
 target_link_libraries(test_cpp_nostl gtest msgs_test_proto_nostl)
+
+add_executable(cpp_serialize_to_files "cpp_serialize_to_files/main.cpp")
+messgen_add_library(msgs_serialize_to_files "${MESSGEN_BASE_DIR}" "messgen/test_proto;another_proto" "stl" "cpp_standard=20")
+target_link_libraries(cpp_serialize_to_files msgs_serialize_to_files)

@@ -4,6 +4,7 @@
 # Build files
 *.pyc
 *.pyd
+cmake-build-*/
 
 # Log files
 dump.txt
