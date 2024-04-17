@@ -26,8 +26,7 @@ describe('parseType', () => {
     HEADER_STRUCT: HEADER_STRUCT,
   } as unknown as Messages<string>;
   
-  // Should correctly parse a simple primitive type without array notation
-  it('должен правильно разбирать простой примитивный тип без обозначения массива', () => {
+  it('Should correctly parse a simple primitive type without array notation', () => {
     // Given
     const typeStr = 'int8';
     
@@ -43,8 +42,7 @@ describe('parseType', () => {
     });
   });
   
-  // Should correctly parse a simple primitive type with array notation
-  it('Должен правильно разбирать простой примитивный тип с использованием массивной нотации', () => {
+  it('Should correctly parse a simple primitive type with array notation', () => {
     const typeStr = 'int32[5]';
     
     const result = parseType(typeStr, includeMessages);
@@ -63,8 +61,7 @@ describe('parseType', () => {
       }
     );
   });
-  // Should correctly parse a simple primitive type with array notation
-  it('Должен правильно разбирать простой примитивный тип с использованием массивной нотации вложеной в map', () => {
+  it('Should correctly parse a simple primitive type with array notation', () => {
     const typeStr = 'int32[5]{int32}';
     
     const result = parseType(typeStr, includeMessages);
@@ -89,16 +86,14 @@ describe('parseType', () => {
     );
   });
   
-  // Should throw an error when encountering an unknown type
-  it('должен выбросить ошибку, когда встречается неизвестный тип', () => {
+  it('Should throw an error when encountering an unknown type', () => {
     expect(() => {
       // @ts-ignore
       parseType('UnknownType', includeMessages);
     }).toThrowError('Unknown type: UnknownType, if is complex type you must define before the struct.');
   });
   
-  // Should correctly parse a simple complex type without array notation and with includeMessages parameter
-  it('Должен правильно разбирать простой сложный тип без обозначения массива и с параметром includeMessages', () => {
+  it('Should correctly parse a simple complex type without array notation and with includeMessages parameter', () => {
     // Given
     const typeStr = 'MyType' as IType;
     
@@ -114,8 +109,7 @@ describe('parseType', () => {
     });
   });
   
-  // Should correctly parse a simple complex type with array notation and with includeMessages parameter
-  it('Должен правильно разбирать простой сложный тип с массивной нотацией и с параметром includeMessages', () => {
+  it('Should correctly parse a simple complex type with array notation and with includeMessages parameter', () => {
     // Given
     const typeStr = "MyType[10]";
     
@@ -136,8 +130,7 @@ describe('parseType', () => {
     });
   });
   
-  // Should correctly parse a simple primitive type with array notation and a length of 0
-  it('Должен правильно разбирать простой примитивный тип с массивной нотацией и длиной 0', () => {
+  it('Should correctly parse a simple primitive type with array notation and a length of 0', () => {
     const typeStr = "int8[0]";
     
     
@@ -156,8 +149,8 @@ describe('parseType', () => {
     });
   });
   
-  // Should correctly parse a simple primitive type with array notation and a length of 1
-  it('Должен правильно разбирать простой примитивный тип с массивной нотацией и длиной 1', () => {
+  //
+  it('Must correctly parse a simple primitive type with array notation and length 1', () => {
     // Given
     const typeStr = "int8[1]";
     
@@ -178,8 +171,7 @@ describe('parseType', () => {
     });
   });
   
-  // Should correctly parse a simple complex type with array notation and a length of 0 and with includeMessages parameter
-  it('Должен правильно разбирать простой сложный тип с массивной нотацией и длиной 0 и с параметром includeMessages', () => {
+  it('Should correctly parse a simple complex type with array notation and a length of 0 and with includeMessages parameter', () => {
     // Given
     const typeStr = "MyType[0]";
     
@@ -200,16 +192,14 @@ describe('parseType', () => {
     });
   });
   
-  // Should throw an error when encountering a complex type without includeMessages parameter
-  it('должен выбросить ошибку, когда встречается сложный тип без параметра includeMessages', () => {
+  it('Should throw an error when encountering a complex type without includeMessages parameter', () => {
     expect(() => {
       // @ts-ignore
       parseType('ComplexType', undefined);
     }).toThrowError('Unknown type: ComplexType, if is complex type you must define before the struct.');
   });
   
-  // Should correctly parse a simple complex type with array notation and a length of 1 and with includeMessages parameter
-  it('Должен правильно разбирать простой сложный тип с массивной нотацией и длиной 1 с параметром includeMessages', () => {
+  it('Should correctly parse a simple complex type with array notation and a length of 1 and with includeMessages parameter', () => {
     // Given
     const typeStr = "MyType[1]";
     
@@ -230,8 +220,7 @@ describe('parseType', () => {
     });
   });
   
-  // Should throw an error when encountering an unknown type with array notation
-  it('должен выбросить ошибку, когда встречается неизвестный тип с использованием массивной нотации', () => {
+  it('Should throw an error when encountering an unknown type with array notation', () => {
     // Given
     const typeStr = "UnknownType[5]";
 
@@ -244,8 +233,7 @@ describe('parseType', () => {
   });
 
 
-  // Should correctly parse a simple complex type with array notation and with a SubType and with includeMessages parameter
-  it('Должен правильно разбирать простой сложный тип с массивной нотацией и с подтипом и с параметром includeMessages', () => {
+  it('Should correctly parse a simple complex type with array notation and with a SubType and with includeMessages parameter', () => {
     // Given
     const typeStr = "MyType[10][20][30]";
     
@@ -273,7 +261,7 @@ describe('parseType', () => {
       ]
     });
   });
-  it('должен выбросить ошибку, когда встречается неизвестный тип', () => {
+  it('should throw an error when an unknown type is encountered', () => {
     // Given
     const typeStr = 'int32[5]{invalidType}';
     
@@ -284,7 +272,7 @@ describe('parseType', () => {
     }).toThrowError(`Unknown type: invalidType, if is complex type you must define before the struct.`);
   });
   
-  it('Должен правильно разбирать сложный тип с несколькими массивными и картографическими обозначениями', () => {
+  it('Must correctly parse complex type with multiple massive and cartographic notations', () => {
     const typeStr = 'MyType[10]{int32}[5]';
     
     const result = parseType(typeStr, includeMessages);
@@ -311,7 +299,7 @@ describe('parseType', () => {
     });
   });
   
-  it('Должен правильно разбирать простой примитивный тип с использованием массивной нотации вложеной в map', () => {
+  it('Must correctly parse a simple primitive type using array notation nested in map', () => {
     const typeStr = 'int32[5]{int32}';
     
     const result = parseType(typeStr, includeMessages);
