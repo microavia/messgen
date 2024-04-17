@@ -16,6 +16,7 @@ export function initializeMessages<KEYS extends IName = IName>(
   let res = {
     __id__: [],
     __name__: [],
+    __messages__: {},
     HEADER_STRUCT: headerSchema ? new Struct(headerSchema) : HEADER_STRUCT
   } as unknown as Messages<KEYS>;
   
@@ -30,7 +31,7 @@ export function initializeMessages<KEYS extends IName = IName>(
       
       res.__id__[id] = msg_struct;
       res.__name__[id] = name
-      res[name] = msg_struct;
+      res.__messages__[name] = msg_struct;
       
     } else {
       console.warn(`Warning: message ${id} ${name} already exists.`);

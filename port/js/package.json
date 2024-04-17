@@ -7,6 +7,7 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest",
+    "test-ui": "vitest --watch --ui",
     "prettier": "prettier --write  \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
     "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto --protocol messgen/messgen_test --protocol another_proto --outdir ./tests",
     "gen-json": "npm run gen -- --lang json",
@@ -19,8 +20,10 @@
   "license": "ISC",
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
+    "@vitest/ui": "^1.5.0",
     "prettier": "3.2.5",
     "tinybench": "^2.7.0",
+    "typescript": "^5.4.5",
     "vite": "^5.2.8",
     "vitest": "^1.5.0"
   }

@@ -15,9 +15,9 @@ export type SchemaObj = {
 export type Messages<KEYS extends IName = IName> = {
   __id__: Struct[]
   __name__: KEYS[]
+  __messages__: Record<IName, Struct>
   HEADER_STRUCT: Struct
-} &
-  Record<IName, Struct>
+}
 
 
 export type Obj = Record<string, any>;
@@ -39,26 +39,26 @@ export type NominalStrict<NAME extends string | number, Type = string> = Type & 
 export type Nominal<NAME extends string | number, Type = string> = Type & { [NominalType]?: NAME }
 
 
-export type IName = Nominal<'Name', string>
+export type IName = string
 export type IId = Nominal<'Id', number>
 export type IPrimitiveType =
-  "Int8" |
-  "Uint8" |
-  "Int16" |
-  "Uint16" |
-  "Int32" |
-  "Uint32" |
-  "Int64" |
-  "Uint64" |
-  "String" |
-  "Double" |
-  "Char"
+  "int8" |
+  "uint8" |
+  "int16" |
+  "uint16" |
+  "int32" |
+  "uint32" |
+  "int64" |
+  "uint64" |
+  "double" |
+  "string" |
+  "char"
 
 type ArrayDynamicSize = '[]';
 type ArrayFixSize = `[${number}]`;
-type MapType = `{${'string' | 'number'}`;
+type MapType = `{${IPrimitiveType}}`;
 
-type SubType = `${ArrayDynamicSize | ArrayFixSize}` | '';
+type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
 
 
 export type IType = `${IName | IPrimitiveType}${SubType}${SubType}${SubType}`

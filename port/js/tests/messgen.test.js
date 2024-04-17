@@ -1,11 +1,10 @@
-'use strict';
-
 import {initializeMessages} from '../src/messgen.ts';
 import {Struct} from "../src/Struct.ts";
 import {HEADER_STRUCT} from "../src/HEADER_STRUCT.ts";
 import {Buffer} from "../src/Buffer.ts";
 
 describe('Serialization deserialization tests', () => {
+
     it('Basic types', () => {
 
         let srcStruct = new Struct({
@@ -335,6 +334,7 @@ describe('Serialization deserialization tests', () => {
     });
 
     it('Complex type with dynamic array size', () => {
+
 
         let schema = {
             "MyYZ": {

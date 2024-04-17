@@ -25,7 +25,7 @@ export class Buffer {
   
   // TODO: перенести в модуль messages
   // а модуль messages генерализировать
-  static deserialize(messages, data, headerStruct = HEADER_STRUCT, includeMessages?: Messages<string>) {
+  static deserialize(messages, data: ArrayBufferLike, headerStruct = HEADER_STRUCT, includeMessages?: Messages<string>) {
     let res = [];
     let buf = new Buffer(data);
     let cur = 0;
@@ -125,9 +125,9 @@ export class Buffer {
       let sk = schemaFields[k],
         type = sk.type;
       
-      if (includeMessages && includeMessages[type]) {
+      if (includeMessages && includeMessages.__messages__[type]) {
         arr[k] = {
-          'value': Buffer.createValueArray(includeMessages[type].fields, obj[sk.name], includeMessages),
+          'value': Buffer.createValueArray(includeMessages.__messages__[type].fields, obj[sk.name], includeMessages),
           'type': type
         }
       } else {
@@ -162,7 +162,7 @@ export class Buffer {
     return Buffer.serialize(arr, includeMessages);
   }
   
-  static writeDataView(fields: FieldStruct[], dataView, includeMessages?: Messages<string>, offset: number = 0) {
+  static writeDataView(fields: FieldStruct[], dataView: DataView, includeMessages?: Messages<string>, offset: number = 0) {
     
     for (let i = 0, len = fields.length; i < len; i++) {
       

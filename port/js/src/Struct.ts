@@ -15,8 +15,8 @@ export type FieldStruct = Field & {
 export class Struct {
   _id = 0;
   _size = 0;
-  _fields: Array<FieldStruct> = null;
-  _schema = null;
+  _fields: Array<FieldStruct> | null = null;
+  _schema: SchemaObj | null = null;
   _includeMessages?: Messages<string>
   
   constructor(schema: SchemaObj, includeMessages?: Messages<string>) {
@@ -40,7 +40,7 @@ export class Struct {
     return this._fields;
   }
   
-  set(schema) {
+  set(schema: SchemaObj) {
     if (schema) {
       this._id = schema.id || 0;
       this._size = 0;
