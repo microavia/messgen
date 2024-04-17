@@ -5,6 +5,7 @@
 #include <messgen/test_proto/struct_with_enum.h>
 #include <messgen/test_proto/var_size_struct.h>
 #include <messgen/test_proto/flat_struct.h>
+#include <messgen/test_proto/complex_struct_with_empty.h>
 #include <another_proto.h>
 
 #include <gtest/gtest.h>
@@ -196,4 +197,9 @@ TEST_F(CppTest, TwoMsg) {
 
     EXPECT_EQ(msg1, msg1c);
     EXPECT_EQ(msg2, msg2c);
+}
+
+TEST_F(CppTest, ComplexStructWithEmpty) {
+    messgen::test_proto::complex_struct_with_empty e{};
+    test_serialization(e);
 }

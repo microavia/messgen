@@ -1,0 +1,3 @@
+type_class: struct
+comment: "Struct without data. May be used for heartbeat, command with no args, etc"
+fields:

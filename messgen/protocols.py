@@ -173,6 +173,7 @@ class Protocols:
             elif t["type_class"] == "struct":
                 sz = 0
                 fixed_size = True
+                t["fields"] = t.get("fields") if isinstance(t.get("fields"), list) else []
                 for i in t["fields"]:
                     it = self.get_type(curr_proto_name, i["type"])
                     isz = it.get("size")
