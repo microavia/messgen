@@ -1,0 +1,3 @@
+type_class: struct
+fields:
+  - { type: "int8", comment: "I have type and a comment but no name" }
