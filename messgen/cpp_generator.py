@@ -261,8 +261,6 @@ class CppGenerator:
                 field_name = field["name"]
                 field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
                 code_ser.extend(self._serialize_field(field_name, field_type_def))
-            else:
-                raise RuntimeError("Empty group in struct %s" % type_name)
             code_ser.append("")
         code_ser.append("return _size;")
 
@@ -293,8 +291,6 @@ class CppGenerator:
                 field_name = field["name"]
                 field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
                 code_deser.extend(self._deserialize_field(field_name, field_type_def))
-            else:
-                raise RuntimeError("Empty group in struct %s" % type_name)
             code_deser.append("")
         code_deser.append("return _size;")
 
@@ -345,11 +341,14 @@ class CppGenerator:
         if self._get_cpp_standard() < 20:
             # Operator ==
             code_eq = []
-            field_name = fields[0]["name"]
-            code_eq.append("return l.%s == r.%s" % (field_name, field_name))
-            for field in fields[1:]:
-                field_name = field["name"]
-                code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
+            if len(fields) > 0:
+                field_name = fields[0]["name"]
+                code_eq.append("return l.%s == r.%s" % (field_name, field_name))
+                for field in fields[1:]:
+                    field_name = field["name"]
+                    code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
+            else:
+                code_eq.append("return true")
             code_eq[-1] += ";"
 
             code.extend([
