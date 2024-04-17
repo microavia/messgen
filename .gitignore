@@ -1,5 +1,6 @@
 # IntelliJ project files
 .idea
+.run
 
 # Build files
 *.pyc
@@ -14,6 +15,3 @@ dump.txt
 tests/cpp/messgen
 .done.*
 
-tests/js/tmp
-tests/js/coverage
-tests/js/messgen

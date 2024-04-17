@@ -2,27 +2,29 @@
   "name": "messgenjs",
   "version": "1.0.0",
   "description": "",
-  "main": "src/messgen.js",
+  "main": "src/messgen.ts",
+  "type": "module",
   "scripts": {
-    "build": "node_modules/.bin/rollup -c --bundleConfigAsCjs",
-    "test": "jest --coverage --coverageReporters json-summary",
-    "gen-json": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l json -o ../../tests/js",
-    "gen-ts": "npm run gen-json && python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l ts -o ../../tests/js",
-    "gen-cpp": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l cpp -o ../../tests/js",
-    "gen-md": "python3 ../../generate.py -b ../../tests/messages -m messgen/messgen_test -l md -o ../../tests/js"
+    "build": "vite build",
+    "test": "vitest",
+    "test-ui": "vitest --watch --ui",
+    "prettier": "prettier --write  \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
+    "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto --protocol messgen/messgen_test --protocol another_proto --outdir ./tests",
+    "gen-json": "npm run gen -- --lang json",
+    "gen-ts": "npm run gen-json && npm run gen -- --lang ts",
+    "gen-cpp": "npm run gen -- --lang cpp",
+    "gen-md": "npm run gen -- --lang md",
+    "benchmark": "vitest bench"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@babel/preset-env": "^7.21.4",
-    "@rollup/plugin-terser": "^0.4.0",
-    "@types/jest": "^29.5.0",
-    "jest": "^29.5.0",
-    "rollup": "^3.20.2"
-  },
-  "jest": {
-    "transform": {
-      "^.+\\.jsx?$": "babel-jest"
-    }
+    "@rollup/plugin-terser": "^0.4.4",
+    "@vitest/ui": "^1.5.0",
+    "prettier": "3.2.5",
+    "tinybench": "^2.7.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.8",
+    "vitest": "^1.5.0"
   }
 }
