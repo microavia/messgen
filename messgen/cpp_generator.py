@@ -17,7 +17,7 @@ def _indent(c):
     elif type(c) is list:
         r = []
         for i in c:
-            r.append(spaces + i)
+            r.append(spaces + i if i else "")
         return r
     else:
         raise RuntimeError("Unsupported type for indent: %s" % type(c))
@@ -228,10 +228,12 @@ class CppGenerator:
 
         # IS_FLAT flag
         is_flat_str = "false"
-        if (len(groups) == 1 and groups[0].size is not None):
-            code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % groups[0].size))
+        is_empty = len(groups) == 0
+        if is_empty or (len(groups) == 1 and groups[0].size is not None):
+            code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
+        code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
         code.append("")
 
         for field in type_def["fields"]:
@@ -328,7 +330,7 @@ class CppGenerator:
                    "size_t serialized_size() const {",
                    _indent("// %s" % ", ".join(fixed_fields)),
                    _indent("size_t _size = %d;" % fixed_size),
-                   _indent(""),
+                   "",
                    ] + _indent(code_ss) + [
                       "}"]
         code.extend(_indent(code_ss))
@@ -433,7 +435,7 @@ class CppGenerator:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
     def _field_groups(self, fields):
-        groups = [FieldsGroup()]
+        groups = [FieldsGroup()] if len(fields) > 0 else []
         for field in fields:
             type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
             align = self._get_alignment(type_def)
@@ -478,7 +480,9 @@ class CppGenerator:
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
-            if el_size is not None and el_size % el_align == 0:
+            if el_size == 0:
+                pass
+            elif el_size is not None and el_size % el_align == 0:
                 # Vector of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (el_size, field_name))
                 c.extend(self._memcpy_to_buf("%s[0]" % field_name, "_field_size"))
@@ -540,7 +544,9 @@ class CppGenerator:
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
-            if el_size is not None and el_size % el_align == 0:
+            if el_size == 0:
+                pass
+            elif el_size is not None and el_size % el_align == 0:
                 # Vector or array of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (el_size, field_name))
                 c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
@@ -557,7 +563,9 @@ class CppGenerator:
                 el_align = self._get_alignment(el_type_def)
                 c.append("%s.resize(*reinterpret_cast<const messgen::size_type *>(&_buf[_size]));" % field_name)
                 c.append("_size += sizeof(messgen::size_type);")
-                if el_size is not None and el_size % el_align == 0:
+                if el_size == 0:
+                    pass
+                elif el_size is not None and el_size % el_align == 0:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     c.append("_field_size = %d * %s.size();" % (el_size, field_name))
                     c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
@@ -574,7 +582,9 @@ class CppGenerator:
                 c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
                 c.append("%s = {_alloc.alloc<%s>(_field_size), _field_size};" % (field_name, el_c_type))
                 c.append("_size += sizeof(messgen::size_type);")
-                if el_size is not None and el_size % el_align == 0:
+                if el_size == 0:
+                    pass
+                elif el_size is not None and el_size % el_align == 0:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     if el_size != 1:
                         c.append("_field_size *= %d;" % el_size)
@@ -598,7 +608,7 @@ class CppGenerator:
                     "for (size_t _i%d = 0; _i%d < _map_size%d; ++_i%d) {" % (level_n, level_n, level_n, level_n)))
             c.append(_indent(_indent("%s _key%d;" % (key_c_type, level_n))))
             c.append(_indent(_indent("%s _value%d;" % (value_c_type, level_n))))
-            c.append(_indent(_indent("")))
+            c.append("")
             c.extend(_indent(
                 _indent(
                     self._deserialize_field("_key%d" % level_n, key_type_def, level_n + 1))))
