@@ -1,0 +1,5 @@
+type_class: struct
+fields:
+  - { name: "hello", type: "int8",   comment: "first field" }
+  - { name: "world", type: "uint8" }
+  - { name: "hello", type: "uint16", comment: "second field with same name as first field but different type" }
