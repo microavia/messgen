@@ -1,15 +1,44 @@
 import { Struct } from "./Struct";
 
 
-export type Field = {
+export interface Field {
   name: IName
   type: IType
+  comment?: string;
 }
 
-export type SchemaObj = {
-  id: IId
-  fields: Field[]
+export interface TypeClass {
+  type_class: "struct";
+  comment?: string;
+  fields: Field[];
 }
+
+export interface EnumValue {
+  name: IName;
+  value: number;
+  comment: string;
+}
+
+export interface EnumTypeClass {
+  type_class: "enum";
+  comment: string;
+  base_type: IPrimitiveType;
+  values: EnumValue[];
+}
+
+export interface Types {
+  [key: string]: TypeClass | EnumTypeClass;
+}
+
+export interface ProtocolJSON {
+  proto_id: number;
+  types: Types;
+  messages: Record<string, unknown>;
+  types_map: Record<string, string>;
+  version: string;
+}
+
+export type SchemaObj = TypeClass
 
 
 export type Messages<KEYS extends IName = IName> = {

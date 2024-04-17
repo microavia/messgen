@@ -1,6 +1,6 @@
 import { parseType } from "../src/parseType";
 import { describe, it, expect } from 'vitest';
-import { Messages, IName, IType } from "../src/types";
+import { Messages, IType } from "../src/types";
 import { Struct } from "../src/Struct";
 import { HEADER_STRUCT } from "../src/HEADER_STRUCT";
 
@@ -12,7 +12,7 @@ describe('parseType', () => {
     __messages__: {
       MyType: new Struct(
         {
-          id: 0,
+          type_class: "struct",
           fields: [
             { name: "field1", type: "int8" },
             { name: "field2", type: "int16" },
@@ -20,7 +20,8 @@ describe('parseType', () => {
             { name: "field4", type: "int64" },
             { name: "field5", type: "int32" }
           ]
-        }
+        },
+        0
       ),
     },
     HEADER_STRUCT: HEADER_STRUCT,
@@ -223,7 +224,7 @@ describe('parseType', () => {
   it('Should throw an error when encountering an unknown type with array notation', () => {
     // Given
     const typeStr = "UnknownType[5]";
-
+    
     
     // When
     const parseTypeWrapper = () => parseType(typeStr, includeMessages);
@@ -231,8 +232,8 @@ describe('parseType', () => {
     // Then
     expect(parseTypeWrapper).toThrowError("Unknown type: UnknownType, if is complex type you must define before the struct.");
   });
-
-
+  
+  
   it('Should correctly parse a simple complex type with array notation and with a SubType and with includeMessages parameter', () => {
     // Given
     const typeStr = "MyType[10][20][30]";
@@ -322,5 +323,48 @@ describe('parseType', () => {
         ]
       }
     );
+  });
+  it('Should throw an "Unknown type" error if there are no includeMessages and the type is complex', () => {
+    const typeStr = 'MyType' as IType;
+    
+    expect(() => {
+      parseType(typeStr);
+    }).toThrowError('Unknown type: MyType, if is complex type you must define before the struct.');
+  });
+  
+  it('should  correctly parse a simple primitive type if there are no includeMessages', function () {
+    const typeStr = 'int8';
+    
+    const result = parseType(typeStr);
+    
+    expect(result).toEqual({
+      variant: 'primitive',
+      typeIndex: 0,
+      typeSize: 1,
+      wrapper: []
+    });
+    
+  });
+  it('should  correctly parse a simple primitive type if there are no includeMessages with array and map notation', function () {
+    const typeStr = 'int8[5]{int32}';
+    
+    const result = parseType(typeStr);
+    
+    expect(result).toEqual({
+      variant: 'primitive',
+      typeIndex: 0,
+      typeSize: 1,
+      wrapper: [
+        {
+          variant: 'array',
+          length: 5
+        },
+        {
+          variant: 'map',
+          keyType: 'int32',
+          keyTypeSize: 4
+        }
+      ]
+    });
   });
 });

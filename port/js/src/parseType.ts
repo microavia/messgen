@@ -31,7 +31,7 @@ export type ParseComplexType =
     wrapper: Array<ParseArrayType | ParseMapType>
   }
 
-export function parseType(typeStr: IType, includeMessages: Messages<string>): ParsePrimitiveType | ParseComplexType {
+export function parseType(typeStr: IType, includeMessages?: Messages<string>): ParsePrimitiveType | ParseComplexType {
   let wrapper: Array<ParseArrayType | ParseMapType> = [];
   let basisType: IPrimitiveType | IName;
   let typeParts = typeStr.split(
@@ -77,7 +77,6 @@ export function parseType(typeStr: IType, includeMessages: Messages<string>): Pa
     }
     
   } else if (includeMessages) {
-    
     let struct = includeMessages.__messages__[basisType];
     if (!struct) {
       throw new Error(`Unknown type: ${basisType}, if is complex type you must define before the struct.`)
