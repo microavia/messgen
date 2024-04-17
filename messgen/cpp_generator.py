@@ -17,7 +17,7 @@ def _indent(c):
     elif type(c) is list:
         r = []
         for i in c:
-            r.append(spaces + i)
+            r.append(spaces + i if i else "")
         return r
     else:
         raise RuntimeError("Unsupported type for indent: %s" % type(c))
@@ -232,6 +232,7 @@ class CppGenerator:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % groups[0].size))
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
+        code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
         code.append("")
 
         for field in type_def["fields"]:
@@ -328,7 +329,7 @@ class CppGenerator:
                    "size_t serialized_size() const {",
                    _indent("// %s" % ", ".join(fixed_fields)),
                    _indent("size_t _size = %d;" % fixed_size),
-                   _indent(""),
+                   "",
                    ] + _indent(code_ss) + [
                       "}"]
         code.extend(_indent(code_ss))
@@ -598,7 +599,7 @@ class CppGenerator:
                     "for (size_t _i%d = 0; _i%d < _map_size%d; ++_i%d) {" % (level_n, level_n, level_n, level_n)))
             c.append(_indent(_indent("%s _key%d;" % (key_c_type, level_n))))
             c.append(_indent(_indent("%s _value%d;" % (value_c_type, level_n))))
-            c.append(_indent(_indent("")))
+            c.append("")
             c.extend(_indent(
                 _indent(
                     self._deserialize_field("_key%d" % level_n, key_type_def, level_n + 1))))
