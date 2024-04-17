@@ -232,6 +232,7 @@ class CppGenerator:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % groups[0].size))
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
+        code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
         code.append("")
 
         for field in type_def["fields"]:
