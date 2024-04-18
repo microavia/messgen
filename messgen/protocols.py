@@ -1,6 +1,7 @@
 import os
 import yaml
-from .common import SEPARATOR, is_valid_name
+from .common import SEPARATOR
+from .validation import is_valid_name, validate_yaml_item
 
 # Protocols map structure:
 # {
@@ -41,6 +42,18 @@ from .common import SEPARATOR, is_valid_name
 #   fields: [
 #     {
 #       name: <name_0>,
+#       type: <type_0>,
+#       comment: <comment_0>,   // optional
+#     },
+#     {
+#       ...
+#     },
+#     ...
+
+#   // - variant
+#   index_type: <scalar type>,   // optional, default int32
+#   variants: [
+#     {
 #       type: <type_0>,
 #       comment: <comment_0>,   // optional
 #     },
@@ -149,6 +162,13 @@ class Protocols:
                 "type_class": "string",
             }
 
+        if type_name == "variant":
+            return {
+                "type": type_name,
+                "type_class": "variant",
+                "index_type": "uint8",
+            }
+
         if type_name == "bytes":
             return {
                 "type": type_name,
@@ -173,6 +193,8 @@ class Protocols:
         type_class = t.get("type_class", "")
         if type_class == "enum":
             t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
+        elif type_class == "variant":
+            t["index_type"] = t.get("index_type", "uint8")
         elif type_class == "struct":
             sz = 0
             fixed_size = True
@@ -205,15 +227,6 @@ class Protocols:
             raise RuntimeError("Invalid type class in %s: %s" % (curr_proto_name, type_class))
         return t
 
-    def _validate_yaml_item(self, item_name, item):
-        if not is_valid_name(item_name):
-            raise RuntimeError("Invalid message name %s" % item_name)
-        if "type_class" not in item:
-            raise RuntimeError("type_class missing in '%s': %s" % (item_name, item))
-        type_class = item.get("type_class", "")
-        if type_class not in ["struct", "enum"]:
-            raise RuntimeError("type_class '%s' in '%s' is not supported %s" % (type_class, item_name, item))
-
     def _load_protocol(self, proto_path: str) -> dict:
         proto = {
             "proto_id": None,
@@ -230,6 +243,6 @@ class Protocols:
                 if item_name == PROTOCOL_ITEM:
                     proto.update(item)
                 else:
-                    self._validate_yaml_item(item_name, item)
+                    validate_yaml_item(item_name, item)
                     proto["types"][item_name] = item
         return proto

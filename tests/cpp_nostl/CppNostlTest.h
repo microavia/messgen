@@ -9,21 +9,9 @@
 #include <gtest/gtest.h>
 
 class CppNostlTest : public ::testing::Test {
-public:
-    CppNostlTest() {
-    }
-
 protected:
     std::vector<uint8_t> _buf;
     messgen::StaticAllocator<1024 * 1024> _alloc;
-
-    void SetUp() final {
-        using namespace messgen::test_proto;
-        _buf.clear();
-    }
-
-    void TearDown() final {
-    }
 
     template<class T>
     void test_serialization(const T &msg) {

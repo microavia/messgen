@@ -6,25 +6,14 @@
 #include <messgen/test_proto/var_size_struct.h>
 #include <messgen/test_proto/flat_struct.h>
 #include <messgen/test_proto/complex_struct_with_empty.h>
+#include <messgen/test_proto/struct_with_variant.h>
 #include <another_proto.h>
 
 #include <gtest/gtest.h>
 
 class CppTest : public ::testing::Test {
-public:
-    CppTest() {
-    }
-
 protected:
     std::vector<uint8_t> _buf;
-
-    void SetUp() final {
-        using namespace messgen::test_proto;
-        _buf.clear();
-    }
-
-    void TearDown() final {
-    }
 
     template<class T>
     void test_serialization(const T &msg) {
@@ -202,4 +191,9 @@ TEST_F(CppTest, TwoMsg) {
 TEST_F(CppTest, ComplexStructWithEmpty) {
     messgen::test_proto::complex_struct_with_empty e{};
     test_serialization(e);
+}
+
+TEST_F(CppTest, StructWithVariant) {
+    test_serialization(messgen::test_proto::struct_with_variant{.variant_field = std::string("ha")});
+    test_serialization(messgen::test_proto::struct_with_variant{.variant_field = 42});
 }
