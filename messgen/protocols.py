@@ -49,6 +49,18 @@ from .validation import is_valid_name, validate_yaml_item
 #       ...
 #     },
 #     ...
+
+#   // - variant
+#   index_type: <scalar type>,   // optional, default int
+#   variants: [
+#     {
+#       type: <type_0>,
+#       comment: <comment_0>,   // optional
+#     },
+#     {
+#       ...
+#     },
+#     ...
 #   ]
 # }
 #
@@ -148,6 +160,13 @@ class Protocols:
             return {
                 "type": type_name,
                 "type_class": "string",
+            }
+
+        if type_name == "variant":
+            return {
+                "type": type_name,
+                "type_class": "variant",
+                "index_type": "int",
             }
 
         if type_name == "bytes":
