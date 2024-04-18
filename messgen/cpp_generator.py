@@ -171,8 +171,6 @@ class CppGenerator:
 
         if type_def["type_class"] == "variant":
             self._add_include("variant")
-            for variant in type_def["variants"]:
-                self._add_include(variant["type"] + self._EXT_HEADER, "local")
 
         code.extend(self._generate_comment_type(type_def))
         type_list = ", ".join([v["type"] for v in type_def["variants"]])
@@ -432,10 +430,11 @@ class CppGenerator:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
         elif t["type_class"] == "variant":
             for variant in t["variants"]:
-                self._add_include(variant["type"] + self._EXT_HEADER, "local")
+                self._cpp_type(variant["type"])  # adds #include for variant types
             if mode == 'stl':
                 self._add_include("variant")
-                return "std::variant<%s>" % ", ".join([_cpp_namespace(v["type"]) for v in t["variants"]])
+                self._add_include("stdexcept")
+                return "std::variant<%s>" % ", ".join([_cpp_namespace(self._cpp_type(v["type"])) for v in t["variants"]])
             elif mode == "nostl":
                 self._add_include("variant")
                 return "messgen::variant<%s>" % ", ".join([_cpp_namespace(v["type"]) for v in t["variants"]])
@@ -538,15 +537,14 @@ class CppGenerator:
         elif type_class == "variant":
             c.append("*reinterpret_cast<%s *>(&_buf[_size]) = %s.index();" % (self._cpp_type(field_type_def['index_type']), field_name))
             c.append("_size += sizeof(%s);" % self._cpp_type(field_type_def['index_type']))
-            c.append("std::visit([&](auto &&_v) {")
+            c.append("std::visit([&](auto &&_value) {")
+            c.append("using TYPE = std::decay_t<decltype(_value)>; // Strip refs and qualifiers")
             for i, variant in enumerate(field_type_def["variants"]):
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
-                c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
-                c.extend(_indent(self._serialize_field("_v", variant_type_def, level_n + 1)))
+                c.append(_indent("if constexpr (std::is_same_v<TYPE, %s>) {" % _cpp_namespace(self._cpp_type(variant["type"]))))
+                c.extend(_indent(_indent(self._serialize_field("_value", variant_type_def, level_n + 1))))
                 c.append(_indent("} else"))
-            c.append(_indent("{"))
-            c.append(_indent("throw std::runtime_error(\"Invalid variant type\");"))
-            c.append(_indent("}"))
+            c[-1] = _indent("}")
             c.append("}, %s);" % field_name)
 
         elif type_class == "string":
@@ -670,11 +668,13 @@ class CppGenerator:
             for i, variant in enumerate(field_type_def["variants"]):
                 c.append(_indent(f"case {i}: {{"))
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
-                c.append(_indent(_indent(f"auto &v = {field_name}.emplace<{variant['type']}>();")))
-                c.extend(_indent(_indent(self._deserialize_field("v", variant_type_def, level_n + 1))))
+                c.append(_indent(_indent(f"auto &_value = {field_name}.emplace<{self._cpp_type(variant['type'])}>();")))
+                c.extend(_indent(_indent(self._deserialize_field("_value", variant_type_def, level_n + 1))))
+                c.append(_indent(_indent("break;")))
                 c.append(_indent("}"))
             c.append(_indent("default: {"))
-            c.append(_indent(_indent("throw std::runtime_error(\"Invalid variant type\");")))
+            err_msg = "\"Failed to deserialize '%s', variant index for '%s' is out of bounds: \" + std::to_string(index)" % (field_name, field_type_def["type"])
+            c.append(_indent(_indent("throw std::runtime_error(%s);" % err_msg)))
             c.append(_indent("}"))
             c.append("}")
         elif type_class == "string":
@@ -740,16 +740,15 @@ class CppGenerator:
                 c.append("}")
         elif type_class == "variant":
             size_type = self._protocols.get_type(self._ctx['proto_name'], field_type_def['index_type'])
-            c.append(f"_size += sizeof({size_type.get('size')});")
-            c.append("std::visit([&](auto &&_v) {")
+            c.append(f"_size += sizeof({self._cpp_type(size_type.get('type'))}); // index")
+            c.append("std::visit([&](auto &&_value) {")
+            c.append(_indent("using TYPE = std::decay_t<decltype(_value)>; // Strip references and qualifiers"))
             for i, variant in enumerate(field_type_def["variants"]):
                 variant_type_def = self._protocols.get_type(self._ctx["proto_name"], variant["type"])
-                c.append(_indent("if constexpr (std::is_same_v<decltype(_v), %s>) {" % _cpp_namespace(variant["type"])))
-                c.extend(_indent(self._serialized_size_field("_v", variant_type_def, level_n + 1)))
+                c.append(_indent("if constexpr (std::is_same_v<TYPE, %s>) {" % _cpp_namespace(self._cpp_type(variant["type"]))))
+                c.extend(_indent(_indent(self._serialized_size_field("_value", variant_type_def, level_n + 1))))
                 c.append(_indent("} else"))
-            c.append(_indent("{"))
-            c.append(_indent("throw std::runtime_error(\"Invalid variant type\");"))
-            c.append(_indent("}"))
+            c[-1] = _indent("}")
             c.append("}, %s);" % field_name)
 
         elif type_class in ["string", "bytes"]:

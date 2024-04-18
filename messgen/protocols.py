@@ -166,7 +166,7 @@ class Protocols:
             return {
                 "type": type_name,
                 "type_class": "variant",
-                "index_type": "int32",
+                "index_type": "uint8",
             }
 
         if type_name == "bytes":
@@ -194,7 +194,7 @@ class Protocols:
         if type_class == "enum":
             t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
         elif type_class == "variant":
-            t["index_type"] = t.get("index_type", "int32")
+            t["index_type"] = t.get("index_type", "uint8")
         elif type_class == "struct":
             sz = 0
             fixed_size = True
