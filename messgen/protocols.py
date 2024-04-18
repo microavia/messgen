@@ -51,7 +51,7 @@ from .validation import is_valid_name, validate_yaml_item
 #     ...
 
 #   // - variant
-#   index_type: <scalar type>,   // optional, default int
+#   index_type: <scalar type>,   // optional, default int32
 #   variants: [
 #     {
 #       type: <type_0>,
@@ -166,7 +166,7 @@ class Protocols:
             return {
                 "type": type_name,
                 "type_class": "variant",
-                "index_type": "int",
+                "index_type": "int32",
             }
 
         if type_name == "bytes":
@@ -193,6 +193,8 @@ class Protocols:
         type_class = t.get("type_class", "")
         if type_class == "enum":
             t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
+        elif type_class == "variant":
+            t["index_type"] = t.get("index_type", "int32")
         elif type_class == "struct":
             sz = 0
             fixed_size = True

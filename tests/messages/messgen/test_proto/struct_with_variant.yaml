@@ -1,0 +1,4 @@
+type_class: struct
+comment: "Struct with variant"
+fields:
+  - { name: "v", type: "simple_variant" }
