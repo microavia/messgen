@@ -1,6 +1,7 @@
 import os
 import yaml
-from .common import SEPARATOR, is_valid_name
+from .common import SEPARATOR
+from .validation import is_valid_name, validate_yaml_item
 
 # Protocols map structure:
 # {
@@ -205,15 +206,6 @@ class Protocols:
             raise RuntimeError("Invalid type class in %s: %s" % (curr_proto_name, type_class))
         return t
 
-    def _validate_yaml_item(self, item_name, item):
-        if not is_valid_name(item_name):
-            raise RuntimeError("Invalid message name %s" % item_name)
-        if "type_class" not in item:
-            raise RuntimeError("type_class missing in '%s': %s" % (item_name, item))
-        type_class = item.get("type_class", "")
-        if type_class not in ["struct", "enum"]:
-            raise RuntimeError("type_class '%s' in '%s' is not supported %s" % (type_class, item_name, item))
-
     def _load_protocol(self, proto_path: str) -> dict:
         proto = {
             "proto_id": None,
@@ -230,6 +222,6 @@ class Protocols:
                 if item_name == PROTOCOL_ITEM:
                     proto.update(item)
                 else:
-                    self._validate_yaml_item(item_name, item)
+                    validate_yaml_item(item_name, item)
                     proto["types"][item_name] = item
         return proto
