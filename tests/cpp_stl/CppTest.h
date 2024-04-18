@@ -11,20 +11,8 @@
 #include <gtest/gtest.h>
 
 class CppTest : public ::testing::Test {
-public:
-    CppTest() {
-    }
-
 protected:
     std::vector<uint8_t> _buf;
-
-    void SetUp() final {
-        using namespace messgen::test_proto;
-        _buf.clear();
-    }
-
-    void TearDown() final {
-    }
 
     template<class T>
     void test_serialization(const T &msg) {
