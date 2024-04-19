@@ -1,6 +1,6 @@
-import { bench, describe } from 'vitest'
-import {Struct} from "../src/Struct.ts";
-import {Buffer} from "../src/Buffer.ts";
+import {bench, describe} from 'vitest'
+import {Struct} from "../src/Old/Struct.ts";
+import {Buffer} from "../src/Old/Buffer.ts";
 
 let srcStruct = new Struct({
   id: 2,

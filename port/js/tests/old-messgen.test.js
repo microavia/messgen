@@ -1,7 +1,7 @@
 import {initializeMessages} from '../src/messgen.ts';
-import {Struct} from "../src/Struct.ts";
+import {Struct} from "../src/Old/Struct.ts";
 import {HEADER_STRUCT} from "../src/HEADER_STRUCT.ts";
-import {Buffer} from "../src/Buffer.ts";
+import {Buffer} from "../src/Old/Buffer.ts";
 
 describe('Serialization deserialization tests', () => {
 

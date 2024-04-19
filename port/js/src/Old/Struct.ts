@@ -1,6 +1,6 @@
-import { parseType, ParseType } from "./parseType.js";
-import { DYN_TYPE_SIZE } from "./constants.js";
-import { TypeClass, Messages, Field, IId } from "./types";
+import { parseType, ParseType } from "../utils/parseType";
+import { DYN_TYPE_SIZE } from "../constants";
+import { TypeClass, Messages, Field, IId } from "../types";
 
 
 export type FieldStruct = Field & {

@@ -1,7 +1,8 @@
-import { decodeUTF8 } from "./utf8";
+import { decodeUTF8 } from "./utils/utf8";
+import { BasicTypesConfig, IPrimitiveType } from "./types";
 
-const IS_LITTLE_ENDIAN = true;
-const DYNAMIC_SIZE_TYPE = "Uint32";
+export const IS_LITTLE_ENDIAN = false; // todo check
+export const DYNAMIC_SIZE_TYPE: IPrimitiveType = "uint32";
 /**
  *
  * Read function returns value from byte array.
@@ -10,7 +11,7 @@ const DYNAMIC_SIZE_TYPE = "Uint32";
 export const basicTypes = [
   {
     name: "int8",
-    size: 1,
+    size: () => 1,
     read: (v, s) => v.getInt8(s),
     write: (v, s, a) => {
       v.setInt8(s, a);
@@ -18,7 +19,7 @@ export const basicTypes = [
     }
   }, {
     name: "uint8",
-    size: 1,
+    size: () => 1,
     read: (v, s) => v.getUint8(s),
     write: (v, s, a) => {
       v.setUint8(s, a);
@@ -26,7 +27,7 @@ export const basicTypes = [
     }
   }, {
     name: "int16",
-    size: 2,
+    size: () => 2,
     read: (v, s) => v.getInt16(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setInt16(s, a, IS_LITTLE_ENDIAN);
@@ -34,7 +35,7 @@ export const basicTypes = [
     }
   }, {
     name: "uint16",
-    size: 2,
+    size: () => 2,
     read: (v, s) => v.getUint16(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setUint16(s, a, IS_LITTLE_ENDIAN);
@@ -42,7 +43,7 @@ export const basicTypes = [
     }
   }, {
     name: "int32",
-    size: 4,
+    size: () => 4,
     read: (v, s) => v.getInt32(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setInt32(s, a, IS_LITTLE_ENDIAN);
@@ -50,7 +51,7 @@ export const basicTypes = [
     }
   }, {
     name: "uint32",
-    size: 4,
+    size: () => 4,
     read: (v, s) => v.getUint32(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setUint32(s, a, IS_LITTLE_ENDIAN);
@@ -58,7 +59,7 @@ export const basicTypes = [
     }
   }, {
     name: "int64",
-    size: 8,
+    size: () => 8,
     read: (v, s) => v.getBigInt64(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setBigInt64(s, a, IS_LITTLE_ENDIAN);
@@ -66,31 +67,31 @@ export const basicTypes = [
     }
   }, {
     name: "uint64",
-    size: 8,
+    size: () => 8,
     read: (v, s) => v.getBigUint64(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setBigUint64(s, a, IS_LITTLE_ENDIAN);
       return 8;
     }
   }, {
-    name: "float",
-    size: 4,
-    read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
-    write: (v, s, a) => {
-      v.setFloat32(s, a, IS_LITTLE_ENDIAN);
-      return 4;
-    }
-  }, {
+    //   name: "float",
+    //   size: () => 4,
+    //   read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
+    //   write: (v, s, a) => {
+    //     v.setFloat32(s, a, IS_LITTLE_ENDIAN);
+    //     return 4;
+    //   }
+    // }, {
     name: "float32",
-    size: 4,
+    size: () => 4,
     read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setFloat32(s, a, IS_LITTLE_ENDIAN);
       return 4;
     }
   }, {
-    name: "double",
-    size: 8,
+    name: "float64",
+    size: () => 8,
     read: (v, s) => v.getFloat64(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setFloat64(s, a, IS_LITTLE_ENDIAN);
@@ -98,31 +99,36 @@ export const basicTypes = [
     }
   }, {
     name: "char",
-    size: 1,
+    size: () => 1,
     read: (v, s) => String.fromCharCode(v.getInt8(s)),
     write: (v, s, a) => {
       v.setInt8(s, a ? a.toString().charCodeAt(0) : 0);
       return 1;
     }
   }, {
-    name: "string",
-    size: 4,
-    read: (v, s) => decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN))),
+    name: "bool",
+    size: () => 1,
+    read: (v, s) => Boolean(v.getInt8(s)),
     write: (v, s, a) => {
+      v.setInt8(s, a ? 1 : 0);
+      return 1;
+    }
+  }, {
+    name: "string",
+    size: (value: string) => value.length + 4,
+    read: (v, s) => {
+      return decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN)));
+    },
+    write: (v, s, a: string) => {
       let size = a.length;
       v.setUint32(s, size, true);
       for (let i = 0, s2 = s + 4; i < size; i++) {
-        v.setUint8(s2 + i, a[i]);
+        v.setUint8(s2 + i, (a[i] as unknown as number));
       }
       return size + 4;
     }
   }
-] satisfies {
-  name: string;
-  size: number;
-  read: (v: DataView, byteOffset: number) => any;
-  write: (v: DataView, byteOffset: number, value: any) => number;
-}[]
+] satisfies BasicTypesConfig[]
 
 
 export let typeIndex: Record<string, number> = {}

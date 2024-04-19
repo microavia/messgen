@@ -1,6 +1,10 @@
-import { Struct } from "./Struct";
+import { Struct } from "./Old/Struct";
 import { HEADER_STRUCT } from "./HEADER_STRUCT";
-import { Messages, SchemaObj, IName, ProtocolJSON } from "./types";
+import { Messages, SchemaObj, IName, ProtocolJSON, IType, BasicTypesConfig, TypeClass } from "./types";
+import { PrimitiveConverter } from "./PrimitiveConverter";
+import { basicTypes } from "./constants";
+import { Converter } from "./Converter";
+import { StructConverter } from "./StructConverter";
 
 //
 // /**
@@ -51,7 +55,8 @@ import { Messages, SchemaObj, IName, ProtocolJSON } from "./types";
 
 
 export class Messgen {
-  private includeMessages: Messages<string>
+  private includeMessages: Messages
+  private HEADER_STRUCT: StructConverter;
   
   constructor(
     private protocolJson: ProtocolJSON,
@@ -59,63 +64,69 @@ export class Messgen {
   ) {
     this.includeMessages = this.initializeMessages(protocolJson, headerSchema);
     
+    this.HEADER_STRUCT = new StructConverter(
+      'head',
+      headerSchema ? headerSchema : HEADER_STRUCT,
+      this.includeMessages.converters
+    )
+    
+  }
+  
+  static initializePrimitiveConverter() {
+    return basicTypes.reduce((acc, config: BasicTypesConfig) => {
+      acc.set(config.name, new PrimitiveConverter(config));
+      return acc;
+    }, new Map<IType, Converter>())
   }
   
   private initializeMessages(
     protocolJson: ProtocolJSON,
-    headerSchema?: SchemaObj
+    headerSchema?: TypeClass
   ) {
     
+    const map = Messgen.initializePrimitiveConverter();
     let res = {
-      __id__: [],
-      __name__: [],
-      __messages__: {},
-      HEADER_STRUCT: headerSchema ? new Struct(headerSchema) : HEADER_STRUCT
-    } as unknown as Messages<IName>;
+      typesMap: new Map<number, Converter>(),
+      converters: map,
+    } satisfies Messages;
     
-    let typesList = Object.entries<IName>(protocolJson.types_map).map(([k, v]) => ({
+    // TODO: add sorting types by dependency
+    Object.entries(protocolJson.types).forEach(([k, v]) => {
+      switch (v.type_class) {
+        case "struct":
+          v.fields.forEach((field) => {
+            if (field.type.includes("[") || field.type.includes("{")) {
+              throw new Error("Enum is not supported yet");
+            }
+          })
+          
+          res.converters.set(k as IType,
+            new StructConverter(
+              k as IName,
+              v,
+              map
+            )
+          );
+        case "enum":
+          throw new Error("Enum is not supported yet");
+      }
+      
+    })
+    
+    Object.entries<IType>(protocolJson.types_map).map(([k, v]) => ({
       id: Number(k),
-      name: v.trim()
-    })).sort((a, b) => a.id - b.id);
+      name: v.trim() as IType
+    })).forEach((m) => {
+      
+      let converter = map.get(m.name);
+      if (!converter) {
+        throw new Error(`Converter for type ${m.name} is not found `);
+      }
+      res.typesMap.set(m.id, converter);
+    })
     
-    for (let {
-      name, id
-    } of typesList) {
-      
-      let messageObj = protocolJson.types[name];
-      
-      if (messageObj.type_class !== 'struct') {
-        throw new Error(`Error: message ${id} ${name} is not a struct.`);
-      }
-      
-      
-      if (res.__id__[id]) {
-        throw new Error(`Warning: message ${id} ${name} already exists.`);
-      }
-      
-      let msg_struct = new Struct(messageObj, id, res);
-      
-      res.__id__[id] = msg_struct;
-      res.__name__[id] = name
-      res.__messages__[name] = msg_struct;
-      
-    }
-    
-    for (let m of Object.entries(protocolJson.types)) {
-      let name = m[0];
-      let messageObj = m[1];
-      
-      if (messageObj.type_class !== 'struct') {
-        throw new Error(`Error: message ${name} is not a struct.`);
-        
-      }
-      if (!res.__messages__[name]) {
-        res.__messages__[name] = new Struct(messageObj, undefined, res);
-      }
-    }
     
     return res;
-    
   }
   
   serializeMessage(message: Record<string, any>) {

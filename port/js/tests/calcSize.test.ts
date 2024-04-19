@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { FieldStruct } from "../src/Struct";
+import { FieldStruct } from "../src/Old/Struct";
 import { Messages } from "../src/types";
-import { Buffer } from "../src/Buffer";
+import { Buffer } from "../src/Old/Buffer";
 
 describe('calcSize', () => {
   

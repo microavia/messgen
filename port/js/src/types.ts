@@ -1,4 +1,4 @@
-import { Struct } from "./Struct";
+import { Converter } from "./Converter";
 
 
 export interface Field {
@@ -41,11 +41,9 @@ export interface ProtocolJSON {
 export type SchemaObj = TypeClass
 
 
-export type Messages<KEYS extends IName = IName> = {
-  __id__: Struct[]
-  __name__: KEYS[]
-  __messages__: Record<IName, Struct>
-  HEADER_STRUCT: Struct
+export type Messages = {
+  typesMap: Map<number, Converter>
+  converters: Map<IType, Converter>
 }
 
 
@@ -71,16 +69,18 @@ export type Nominal<NAME extends string | number, Type = string> = Type & { [Nom
 export type IName = string
 export type IId = Nominal<'Id', number>
 export type IPrimitiveType =
-  "int8" |
   "uint8" |
-  "int16" |
+  "int8" |
   "uint16" |
-  "int32" |
+  "int16" |
   "uint32" |
-  "int64" |
+  "int32" |
   "uint64" |
-  "double" |
+  "int64" |
+  "float32" |
+  "float64" |
   "string" |
+  "bool" |
   "char"
 
 type ArrayDynamicSize = '[]';
@@ -93,3 +93,15 @@ type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
 export type IType = `${IName | IPrimitiveType}${SubType}${SubType}${SubType}`
 
 
+let a = {
+  a: 1,
+  b: 2,
+  c: 3,
+  d: 4
+}
+export type BasicTypesConfig = {
+  name: IPrimitiveType;
+  size: (value: any) => number;
+  read: (v: DataView, byteOffset: number) => unknown;
+  write: (v: DataView, byteOffset: number, value: any) => number;
+};
