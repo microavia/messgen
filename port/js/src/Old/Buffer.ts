@@ -175,6 +175,7 @@ export class Buffer {
           offset += DYN_WRITE(dataView, offset, fi.value.length);
         }
         
+        
         // Write array
         for (let j = 0; j < arrayLength; j++) {
           let val = fi._bytes && fi._bytes[j] || fi.value[j];

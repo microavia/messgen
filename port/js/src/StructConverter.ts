@@ -1,6 +1,6 @@
 import { Converter } from "./Converter";
 import { Buffer } from "./Buffer";
-import { IName, TypeClass, IType } from "./types";
+import { IName, TypeClass, IType, IValue } from "./types";
 
 export class StructConverter extends Converter {
   constructor(
@@ -16,7 +16,7 @@ export class StructConverter extends Converter {
     })
   }
   
-  serialize(value: any, buffer: Buffer) {
+  serialize(value: IValue, buffer: Buffer) {
     this.schema.fields.forEach((field) => {
       // TODO: move to constructor
       let converter = this.converters.get(field.type);
@@ -35,7 +35,7 @@ export class StructConverter extends Converter {
     
   }
   
-  size(value: any): number {
+  size(value: IValue): number {
     return this.schema.fields.reduce((acc, field) => {
       // TODO: move to constructor
       let converter = this.converters.get(field.type);
@@ -53,7 +53,7 @@ export class StructConverter extends Converter {
     }, 0)
   }
   
-  deserialize(buffer: Buffer): any {
+  deserialize(buffer: Buffer): IValue {
     return this.schema.fields.reduce((acc, field) => {
       // TODO: move to constructor
       let converter = this.converters.get(field.type);
@@ -62,6 +62,6 @@ export class StructConverter extends Converter {
       }
       acc[field.name] = converter.deserialize(buffer);
       return acc;
-    }, {} as Record<IName, any>)
+    }, {} as Record<IName, IValue>)
   }
 }

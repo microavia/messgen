@@ -67,6 +67,7 @@ export type Nominal<NAME extends string | number, Type = string> = Type & { [Nom
 
 
 export type IName = string
+export type IValue = Nominal<'Value', any>
 export type IId = Nominal<'Id', number>
 export type IPrimitiveType =
   "uint8" |
@@ -102,6 +103,6 @@ let a = {
 export type BasicTypesConfig = {
   name: IPrimitiveType;
   size: (value: any) => number;
-  read: (v: DataView, byteOffset: number) => unknown;
-  write: (v: DataView, byteOffset: number, value: any) => number;
+  read: (v: DataView, byteOffset: number) => IValue;
+  write: (v: DataView, byteOffset: number, value: IValue) => number;
 };

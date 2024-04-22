@@ -1,4 +1,3 @@
-import { Struct } from "./Old/Struct";
 import { HEADER_STRUCT } from "./HEADER_STRUCT";
 import { Messages, SchemaObj, IName, ProtocolJSON, IType, BasicTypesConfig, TypeClass } from "./types";
 import { PrimitiveConverter } from "./PrimitiveConverter";
@@ -145,11 +144,4 @@ export class Messgen {
     // TODO: implement
   }
   
-  getStruct(msgName: IName): Struct {
-    return this.includeMessages.__messages__[msgName];
-  }
-  
-  getNameByStruct<T extends IName = IName>(struct: Struct): T {
-    return this.includeMessages.__name__[struct.id]! as T
-  }
 }
