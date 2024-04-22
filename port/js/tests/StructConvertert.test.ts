@@ -470,5 +470,28 @@ describe('StructConverter', () => {
     // Then
     expect(serializeFn).toThrowError(`Field field1 is not found in ${name}`);
   });
+  // Should handle input object with null or undefined values
+  it('Должен выдовать ошибку если ключи зарезервированы js object', () => {
+    // Given
+    const name = "TestStruct";
+    const schema: TypeClass = {
+      type_class: "struct",
+      fields: [
+        { name: "toString", type: "string" },
+        { name: "valueOf", type: "int32" },
+        { name: "hasOwnProperty", type: "bool" }
+      ]
+    };
+    const converters = Messgen.initializePrimitiveConverter();
+    
+    
+    // When
+    const serializeFn = () =>
+      new StructConverter(name, schema, converters);
+    
+    // Then
+    expect(serializeFn).toThrow();
+    
+  });
   
 });

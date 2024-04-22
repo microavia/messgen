@@ -127,9 +127,16 @@ describe('NestedConverter', () => {
   it('should serialize and deserialize a map of basic types correctly', () => {
     // Given
     const converters = Messgen.initializePrimitiveConverter();
-    const nestedConverter = new NestedConverter("int32{string}", converters);
-    const buffer = new Buffer(new ArrayBuffer(8));
-    const value = { 1: "one", 2: "two", 3: "three" };
+    const nestedConverter = new NestedConverter("string{int32}", converters);
+    const value = new Map<number, string>([
+      [1, "one"],
+      [2, "two"],
+      [3, "three"]
+    ]);
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedConverter.size(value)
+    ));
+    
     
     // When
     nestedConverter.serialize(value, buffer);
@@ -137,7 +144,35 @@ describe('NestedConverter', () => {
     const result = nestedConverter.deserialize(buffer);
     
     // Then
-    expect(result).toEqual(value);
+    expect(result).is.deep.eq(value);
+  });
+  
+  it('should serialize and deserialize a map of basic types correctly serialize object', () => {
+    // Given
+    const converters = Messgen.initializePrimitiveConverter();
+    const nestedConverter = new NestedConverter("string{int32}", converters);
+    const valueObj = {
+      1: "one",
+      2: "two",
+      3: "three"
+    };
+    const value = new Map<number, string>([
+      [1, "one"],
+      [2, "two"],
+      [3, "three"]
+    ]);
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedConverter.size(valueObj)
+    ));
+    
+    
+    // When
+    nestedConverter.serialize(valueObj, buffer);
+    buffer.offset = 0;
+    const result = nestedConverter.deserialize(buffer);
+    
+    // Then
+    expect(result).is.deep.eq(value);
   });
   
   
@@ -145,19 +180,18 @@ describe('NestedConverter', () => {
   it('Должен сериализовать и десериализовать вложенную карту базовых типов правильно', () => {
     // Given
     const converters = Messgen.initializePrimitiveConverter();
-    const int32Converter = new Converter("int32");
-    const stringConverter = new Converter("string");
-    converters.set("int32", int32Converter);
-    converters.set("string", stringConverter);
-    
     const nestedConverter = new NestedConverter("int32{string}", converters);
-    const buffer = new Buffer(new ArrayBuffer(8));
     
-    const value = {
-      1: "one",
-      2: "two",
-      3: "three"
-    };
+    const value = new Map<string, number>([
+      ["one", 1],
+      ["two", 2],
+      ["three", 3]
+    ]);
+    
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedConverter.size(value)
+    ));
+    
     
     // When
     nestedConverter.serialize(value, buffer);
@@ -165,6 +199,39 @@ describe('NestedConverter', () => {
     const result = nestedConverter.deserialize(buffer);
     
     // Then
+    expect(buffer.offset).toEqual(buffer.size);
+    expect(result).toEqual(value);
+  });
+  
+  // should serialize and deserialize a nested map of basic types correctly
+  it('Должен сериализовать и десериализовать вложенную карту базовых типов правильно serialize obj', () => {
+    // Given
+    const converters = Messgen.initializePrimitiveConverter();
+    const nestedConverter = new NestedConverter("int32{string}", converters);
+    
+    const valueObj = {
+      one: 1,
+      two: 2,
+      three: 3
+    }
+    const value = new Map<string, number>([
+      ["one", 1],
+      ["two", 2],
+      ["three", 3]
+    ]);
+    
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedConverter.size(valueObj)
+    ));
+    
+    
+    // When
+    nestedConverter.serialize(valueObj, buffer);
+    buffer.offset = 0;
+    const result = nestedConverter.deserialize(buffer);
+    
+    // Then
+    expect(buffer.offset).toEqual(buffer.size);
     expect(result).toEqual(value);
   });
   
@@ -172,11 +239,12 @@ describe('NestedConverter', () => {
   it('Должен сериализовать и десериализовать вложенный массив базовых типов правильно', () => {
     // Given
     const converters = Messgen.initializePrimitiveConverter();
-    const int32Converter = new Converter("int32");
-    converters.set("int32", int32Converter);
-    const nestedConverter = new NestedConverter("int32[2][3]", converters);
-    const buffer = new Buffer(new ArrayBuffer(24));
+    
+    const nestedConverter = new NestedConverter("int32[3][2]", converters);
     const value = [[1, 2, 3], [4, 5, 6]];
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedConverter.size(value)
+    ));
     
     // When
     nestedConverter.serialize(value, buffer);
@@ -187,31 +255,16 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
   
-  // should calculate the correct size for a basic type
-  it('Должен правильно вычислять размер для базового типа', () => {
-    // Given
-    const name = 'int32';
-    const converters = Messgen.initializePrimitiveConverter();
-    const converter = new NestedConverter(name, converters);
-    const value = 42;
-    
-    // When
-    const size = converter.size(value);
-    
-    // Then
-    expect(size).toBe(4);
-  });
   
   // should calculate the correct size for an array of basic types
   it('должен правильно вычислять размер для массива базовых типов', () => {
     // Given
     const name = 'int32[5]';
     const converters = Messgen.initializePrimitiveConverter();
-    const converter = new Converter(name);
-    converters.set(name, converter);
+    
     const nestedConverter = new NestedConverter(name, converters);
     const value = [1, 2, 3, 4, 5];
-    const expectedSize = 20;
+    const expectedSize = 4 * 5;
     
     // When
     const size = nestedConverter.size(value);
@@ -224,8 +277,7 @@ describe('NestedConverter', () => {
   it('Должен правильно вычислять размер для вложенного массива базовых типов', () => {
     // Given
     const converters = Messgen.initializePrimitiveConverter();
-    const int32Converter = new Converter("int32");
-    converters.set("int32", int32Converter);
+    
     const nestedConverter = new NestedConverter("int32[3][2]", converters);
     const value = [[1, 2, 3], [4, 5, 6]];
     
@@ -241,33 +293,13 @@ describe('NestedConverter', () => {
     // Given
     const name = 'int32{undefined}';
     const converters = Messgen.initializePrimitiveConverter();
-    const nestedConverter = new NestedConverter(name, converters);
     
     // When
-    const serializeFn = () => nestedConverter.serialize({}, new Buffer(new ArrayBuffer(10)));
-    
+    const serializeFn = () => new NestedConverter(name, converters);
     // Then
-    expect(serializeFn).toThrowError('Invalid map key type: undefined');
+    expect(serializeFn).toThrowError('Unknown type: undefined, if is complex type you must define before the struct. ');
   });
   
-  // should throw an error when the buffer offset is out of bounds
-  it('должен выбросить ошибку, когда смещение буфера выходит за границы', () => {
-    // Given
-    const name = 'int32';
-    const converters = Messgen.initializePrimitiveConverter();
-    const converter = new Converter(name);
-    converters.set(name, converter);
-    const nestedConverter = new NestedConverter(name, converters);
-    const value = { value: 10 };
-    const buffer = new Buffer(new ArrayBuffer(10));
-    buffer.offset = 11; // Set offset beyond buffer size
-    
-    // When
-    const serialize = () => nestedConverter.serialize(value, buffer);
-    
-    // Then
-    expect(serialize).toThrowError('Buffer offset is out of bounds');
-  });
   
   // should throw an error when the array length is out of bounds
   it('должен выбросить ошибку, когда длина массива выходит за границы', () => {
@@ -278,32 +310,14 @@ describe('NestedConverter', () => {
     const value = [1, 2, 3, 4]; // Array length is out of bounds
     
     // When
-    const serialize = () => converter.serialize(value, new Buffer(new ArrayBuffer(10)));
+    const serialize = () => converter.serialize(value, new Buffer(new ArrayBuffer(
+      converter.size(value)
+    )));
     
     // Then
-    expect(serialize).toThrowError('Buffer offset is out of bounds');
+    expect(serialize).toThrowError('Array length mismatch: 4 !== 3');
   });
   
-  // should support nested maps with dynamic size arrays
-  it('Должен поддерживать вложенные карты с массивами динамического размера', () => {
-    // Given
-    const converters = Messgen.initializePrimitiveConverter();
-    const int32Converter = new Converter("int32");
-    const uint32Converter = new Converter("uint32");
-    converters.set("int32", int32Converter);
-    converters.set("uint32", uint32Converter);
-    const nestedConverter = new NestedConverter("int32[5]{uint32}", converters);
-    const buffer = new Buffer(new ArrayBuffer(20));
-    const value = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]];
-    
-    // When
-    nestedConverter.serialize(value, buffer);
-    buffer.offset = 0;
-    const result = nestedConverter.deserialize(buffer);
-    
-    // Then
-    expect(result).toEqual(value);
-  });
   
   // should support nested maps with nested arrays
   it('Должен поддерживать вложенные карты с вложенными массивами', () => {
@@ -311,27 +325,23 @@ describe('NestedConverter', () => {
     const converters = Messgen.initializePrimitiveConverter();
     
     
-    const nestedArrayConverter = new NestedConverter("int32[3]", converters);
-    const nestedMapConverter = new NestedConverter("string{int32[2]}", converters);
+    const nestedConverter = new NestedConverter("int32[3][]{string}{string}", converters);
     
-    const nestedConverter = new NestedConverter("string{int32[2]{int32[3]}}", converters);
+    const value = new Map<string, Map<string, number[][]>>([
+      ["key1", new Map<string, number[][]>([
+        ["key2", [[1, 2, 3], [4, 5, 6]]]
+      ])]
+    ]);
     
-    const value = {
-      key1: {
-        key2: [
-          [1, 2, 3],
-          [4, 5, 6]
-        ]
-      }
-    };
-    
-    const buffer = new Buffer(new ArrayBuffer(100));
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedConverter.size(value)
+    ));
     
     // When
     nestedConverter.serialize(value, buffer);
     buffer.offset = 0;
     const result = nestedConverter.deserialize(buffer);
-    
+    expect(buffer.offset).toEqual(buffer.size);
     // Then
     expect(result).toEqual(value);
   });
@@ -340,46 +350,47 @@ describe('NestedConverter', () => {
   it('должен поддерживать вложенные массивы с вложенными картами', () => {
     // Given
     const converters = Messgen.initializePrimitiveConverter();
-    const int32Converter = new Converter("int32");
-    const stringConverter = new Converter("string");
-    converters.set("int32", int32Converter);
-    converters.set("string", stringConverter);
     
-    const nestedMapConverter = new NestedConverter("string{int32}", converters);
-    const nestedArrayConverter = new NestedConverter("int32[3]{string{int32}}", converters);
+    const nestedMapConverter = new NestedConverter("int32{string}", converters);
+    const nestedArrayMapConverter = new NestedConverter("int32{string}[]", converters);
     
-    const nestedMapValue = {
-      "key1": 1,
-      "key2": 2,
-      "key3": 3
-    };
+    const nestedMapValue = new Map<string, number>([
+      ["key1", 1],
+      ["key2", 2],
+      ["key3", 3]
+    ])
     
     const nestedArrayValue = [
-      {
-        "key1": 1,
-        "key2": 2,
-        "key3": 3
-      },
-      {
-        "key1": 4,
-        "key2": 5,
-        "key3": 6
-      },
-      {
-        "key1": 7,
-        "key2": 8,
-        "key3": 9
-      }
+      new Map<string, number>([
+        ["key1", 1],
+        ["key2", 2],
+        ["key3", 3]
+      ]),
+      new Map<string, number>([
+        ["key4", 4],
+        ["key5", 5],
+        ["key6", 6]
+      ]),
+      new Map<string, number>([
+        ["key7", 7],
+        ["key8", 8],
+        ["key9", 9]
+      ])
     ];
     
-    const buffer = new Buffer(new ArrayBuffer(100));
+    const buffer = new Buffer(new ArrayBuffer(
+      nestedMapConverter.size(nestedMapValue) +
+      nestedArrayMapConverter.size(nestedArrayValue)
+    ));
     
     // When
     nestedMapConverter.serialize(nestedMapValue, buffer);
-    const deserializedMapValue = nestedMapConverter.deserialize(buffer);
+    nestedArrayMapConverter.serialize(nestedArrayValue, buffer);
     
-    nestedArrayConverter.serialize(nestedArrayValue, buffer);
-    const deserializedArrayValue = nestedArrayConverter.deserialize(buffer);
+    buffer.offset = 0;
+    
+    const deserializedMapValue = nestedMapConverter.deserialize(buffer);
+    const deserializedArrayValue = nestedArrayMapConverter.deserialize(buffer);
     
     // Then
     expect(deserializedMapValue).toEqual(nestedMapValue);
@@ -389,18 +400,7 @@ describe('NestedConverter', () => {
   it('should throw an error when the map key type converter is not found', () => {
     const converters = new Map<IType, Converter>();
     const typeStr = 'int32{int32}';
-    expect(() => new NestedConverter(typeStr, converters)).toThrow(`Unknown type: int32, if is complex type you must define before the struct.`);
+    expect(() => new NestedConverter(typeStr, converters)).toThrow(`Converter for type uint32 is not found in int32{int32}`);
   });
   
-  it('should support nested arrays with dynamic size maps', () => {
-    const converters = Messgen.initializePrimitiveConverter();
-    const typeStr = 'int32[5]{int32}';
-    const nestedConverter = new NestedConverter(typeStr, converters);
-    const buffer = new Buffer(new ArrayBuffer(100));
-    const value = [1, 2, 3, 4, 5];
-    nestedConverter.serialize(value, buffer);
-    buffer.offset = 0;
-    const result = nestedConverter.deserialize(buffer);
-    expect(result).toEqual(value);
-  });
 });

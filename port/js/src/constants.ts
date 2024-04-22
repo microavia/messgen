@@ -1,7 +1,7 @@
-import { decodeUTF8 } from "./utils/utf8";
+import { decodeUTF8, encodeUTF8 } from "./utils/utf8";
 import { BasicTypesConfig, IPrimitiveType } from "./types";
 
-export const IS_LITTLE_ENDIAN = false; // todo check
+export const IS_LITTLE_ENDIAN = true; // todo check
 export const DYNAMIC_SIZE_TYPE: IPrimitiveType = "uint32";
 /**
  *
@@ -121,31 +121,34 @@ export const basicTypes = [
     },
     write: (v, s, a: string) => {
       let size = a.length;
-      v.setUint32(s, size, true);
-      for (let i = 0, s2 = s + 4; i < size; i++) {
-        v.setUint8(s2 + i, (a[i] as unknown as number));
-      }
+      v.setUint32(s, size, IS_LITTLE_ENDIAN);
+      
+      let uint8View = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+      const encode = encodeUTF8(a)
+      
+      uint8View.set(encode, s + 4);
+   
       return size + 4;
     }
   }
 ] satisfies BasicTypesConfig[]
 
 
-export let typeIndex: Record<string, number> = {}
-export let typeSize: number[] = []
-
-export let readFunc: ((v: DataView, s: number) => any)[] = []
-export let writeFunc: ((v: DataView, s: number, a: any) => number)[] = [];
-
-for (let i = 0; i < basicTypes.length; i++) {
-  let ti = basicTypes[i];
-  typeIndex[ti.name] = i;
-  typeSize[i] = ti.size;
-  readFunc[i] = ti.read;
-  writeFunc[i] = ti.write;
-}
-
-const DYN_TYPE = typeIndex[DYNAMIC_SIZE_TYPE];
-export const DYN_TYPE_SIZE = typeSize[DYN_TYPE];
-export const DYN_READ = readFunc[DYN_TYPE];
-export const DYN_WRITE = writeFunc[DYN_TYPE];
+// export let typeIndex: Record<string, number> = {}
+// export let typeSize: number[] = []
+//
+// export let readFunc: ((v: DataView, s: number) => any)[] = []
+// export let writeFunc: ((v: DataView, s: number, a: any) => number)[] = [];
+//
+// for (let i = 0; i < basicTypes.length; i++) {
+//   let ti = basicTypes[i];
+//   typeIndex[ti.name] = i;
+//   typeSize[i] = ti.size;
+//   readFunc[i] = ti.read;
+//   writeFunc[i] = ti.write;
+// }
+//
+// const DYN_TYPE = typeIndex[DYNAMIC_SIZE_TYPE];
+// export const DYN_TYPE_SIZE = typeSize[DYN_TYPE];
+// export const DYN_READ = readFunc[DYN_TYPE];
+// export const DYN_WRITE = writeFunc[DYN_TYPE];
