@@ -2,9 +2,13 @@ import argparse
 from messgen.protocols import Protocols
 from messgen import generator
 
+import os
+print(os.getcwd())
+print(os.path.dirname(os.path.realpath(__file__)))
 def generate(args):
     if not args.protocol:
         raise RuntimeError("No protocols to generate (--protocol)")
+
 
     protos = Protocols()
     protos.load(args.basedir, args.protocol)
@@ -34,4 +38,5 @@ if __name__ == "__main__":
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--options", default="", help="Generator options")
     args = parser.parse_args()
+
     generate(args)

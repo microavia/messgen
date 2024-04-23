@@ -9,15 +9,15 @@ export class StructConverter extends Converter {
     private converters: Map<IType, Converter>
   ) {
     super(name);
-    schema.fields.forEach((field, index) => {
-      if (schema.fields.slice(index + 1).some((f) => f.name === field.name)) {
+    schema.fields?.forEach((field, index) => {
+      if (schema.fields?.slice(index + 1).some((f) => f.name === field.name)) {
         throw new Error(`Field ${field.name} is duplicated in ${this.name}`);
       }
     })
   }
   
   serialize(value: IValue, buffer: Buffer) {
-    this.schema.fields.forEach((field) => {
+    this.schema.fields?.forEach((field) => {
       // TODO: move to constructor
       let converter = this.converters.get(field.type);
       if (!converter) {
@@ -36,7 +36,7 @@ export class StructConverter extends Converter {
   }
   
   size(value: IValue): number {
-    return this.schema.fields.reduce((acc, field) => {
+    return this.schema.fields?.reduce((acc, field) => {
       // TODO: move to constructor
       let converter = this.converters.get(field.type);
       if (!converter) {
@@ -50,11 +50,11 @@ export class StructConverter extends Converter {
       }
       
       return acc + converter.size(data);
-    }, 0)
+    }, 0) || 0
   }
   
   deserialize(buffer: Buffer): IValue {
-    return this.schema.fields.reduce((acc, field) => {
+    return this.schema.fields?.reduce((acc, field) => {
       // TODO: move to constructor
       let converter = this.converters.get(field.type);
       if (!converter) {
@@ -62,6 +62,6 @@ export class StructConverter extends Converter {
       }
       acc[field.name] = converter.deserialize(buffer);
       return acc;
-    }, {} as Record<IName, IValue>)
+    }, {} as Record<IName, IValue>) || {}
   }
 }

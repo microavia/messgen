@@ -1,4 +1,4 @@
-import { IType, IPrimitiveType, IName } from "../types";
+import { IType, IBasicType, IName } from "../types";
 import { Converter } from "../converters/Converter";
 
 export type ParseArrayType =
@@ -49,23 +49,23 @@ export type ParseType =
  */
 export function parseType(typeStr: IType, converters: Map<IType, Converter>): ParseType {
   let wrapper: Array<ParseArrayType | ParseMapType> = [];
-  let basisType: IPrimitiveType | IName;
+  let basisType: IBasicType | IName;
   let typeParts = typeStr.split(
     /[\[\{]/ig
   );
   
   
-  basisType = typeParts[0] as IPrimitiveType | IName;
+  basisType = typeParts[0] as IBasicType | IName;
   
   for (let i = 1; i < typeParts.length; i++) {
     let item = typeParts[i];
-    let keyType: IPrimitiveType | undefined;
+    let keyType: IBasicType | undefined;
     
     if (item.includes(']')) {
       let lengthStr = item.slice(0, -1);
       wrapper.push({ variant: 'array', length: lengthStr ? parseInt(lengthStr) : undefined });
     } else if (item.includes('}')) {
-      keyType = item.slice(0, -1) as IPrimitiveType;
+      keyType = item.slice(0, -1) as IBasicType;
       if (keyType === undefined) {
         throw new Error(`Invalid map key type: ${item}`);
       }

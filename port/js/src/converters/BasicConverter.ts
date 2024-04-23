@@ -1,5 +1,5 @@
 import { Converter } from "./Converter";
-import { IPrimitiveType, IValue } from "../types";
+import { IBasicType, IValue } from "../types";
 import { Buffer } from "../Buffer";
 import { decodeUTF8, encodeUTF8 } from "../utils/utf8";
 
@@ -25,8 +25,8 @@ export class BasicConverter extends Converter {
     return result;
   }
   
-  static fromGlobalConfigs(): [IPrimitiveType, Converter][] {
-    return basicTypes.reduce<[IPrimitiveType, Converter][]>((acc, config) => {
+  static fromGlobalConfigs(): [IBasicType, Converter][] {
+    return basicTypes.reduce<[IBasicType, Converter][]>((acc, config) => {
       acc.push([config.name,
         new BasicConverter(config)
       ]);
@@ -37,7 +37,7 @@ export class BasicConverter extends Converter {
 
 
 export type BasicTypesConfig = {
-  name: IPrimitiveType;
+  name: IBasicType;
   size: (value: any) => number;
   read: (v: DataView, byteOffset: number) => IValue;
   write: (v: DataView, byteOffset: number, value: IValue) => number;
@@ -104,7 +104,7 @@ export const basicTypes = [
     size: () => 8,
     read: (v, s) => v.getBigInt64(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
-      v.setBigInt64(s, a, IS_LITTLE_ENDIAN);
+      v.setBigInt64(s, BigInt(String(a)), IS_LITTLE_ENDIAN);
       return 8;
     }
   }, {
@@ -112,7 +112,7 @@ export const basicTypes = [
     size: () => 8,
     read: (v, s) => v.getBigUint64(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
-      v.setBigUint64(s, a, IS_LITTLE_ENDIAN);
+      v.setBigUint64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
     }
   }, {

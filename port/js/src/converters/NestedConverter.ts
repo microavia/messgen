@@ -1,10 +1,10 @@
 import { Converter } from "./Converter";
-import { IType, IPrimitiveType, IValue } from "../types";
+import { IType, IBasicType, IValue } from "../types";
 import { Buffer } from "../Buffer";
 import { parseType, ParseType } from "../utils/parseType";
 import { ASSERT_EXHAUSTIVE } from "../utils/ASSERT_EXHAUSTIVE";
 
-export let DYNAMIC_SIZE_TYPE: IPrimitiveType = "uint32";
+export let DYNAMIC_SIZE_TYPE: IBasicType = "uint32";
 
 export class NestedConverter extends Converter {
   private types: ParseType;
@@ -52,7 +52,7 @@ export class NestedConverter extends Converter {
       case "map":
         // is map
         if ((value instanceof Map)) {
-          let map: Map<IPrimitiveType, IValue> = value
+          let map: Map<IBasicType, IValue> = value
           this.dynConverter.serialize(map.size, buffer)
           
           map.forEach((v, k) => {
@@ -108,7 +108,7 @@ export class NestedConverter extends Converter {
         return result;
       case "map":
         let mapSize = this.dynConverter.deserialize(buffer)
-        let map = new Map<IPrimitiveType, IValue>()
+        let map = new Map<IBasicType, IValue>()
         for (let i = 0; i < mapSize; i++) {
           let key = currentType.converter.deserialize(buffer)
           let value = this._deserialize(buffer, offsetWrapper - 1)
@@ -147,7 +147,7 @@ export class NestedConverter extends Converter {
       case "map":
         let mapSizeSize = this.dynConverter.size(value.size)
         if (value instanceof Map) {
-          let map: Map<IPrimitiveType, IValue> = value
+          let map: Map<IBasicType, IValue> = value
           
           let mapSize = mapSizeSize
           map.forEach((v, k) => {
@@ -156,7 +156,7 @@ export class NestedConverter extends Converter {
           
           return mapSize;
         } else if (value instanceof Object) {
-          let entries = Object.entries(value) as [IPrimitiveType, IValue][]
+          let entries = Object.entries(value) as [IBasicType, IValue][]
           let mapSize = mapSizeSize
           entries.forEach((entry) => {
             let k = entry[0]

@@ -14,7 +14,11 @@ class JsonGenerator:
         self._options = options
 
     def generate(self, out_dir, proto_name, proto):
-        proto_out_dir = out_dir + os.path.sep + proto_name.replace(common.SEPARATOR, os.path.sep)
+        current_dir = os.getcwd()
+
+        relative_proto_out_dir = str(os.path.join(out_dir, proto_name.replace(common.SEPARATOR, os.path.sep)))
+
+        proto_out_dir = os.path.abspath(os.path.join(current_dir, relative_proto_out_dir))
 
         try:
             os.makedirs(proto_out_dir)

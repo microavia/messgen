@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BasicConverter } from "../src/converters/BasicConverter";
+import { BasicConverter, BasicTypesConfig } from "../src/converters/BasicConverter";
 import { Buffer } from "../src/Buffer";
-import { BasicTypesConfig } from "../src/types";
 
 const jest = vi
 

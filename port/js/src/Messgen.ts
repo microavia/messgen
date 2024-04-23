@@ -1,10 +1,12 @@
 import { HEADER_STRUCT } from "./HEADER_STRUCT";
-import { Messages, SchemaObj, IName, ProtocolJSON, IType, TypeClass, Types, EnumTypeClass } from "./types";
+import { Messages, SchemaObj, ProtocolJSON, IType, TypeClass, Types, EnumTypeClass } from "./types";
 import { BasicConverter } from "./converters/BasicConverter";
 import { Converter } from "./converters/Converter";
 import { StructConverter } from "./converters/StructConverter";
 import { NestedConverter } from "./converters/NestedConverter";
 import { Buffer } from "./Buffer";
+import { EnumConverter } from "./converters/EnumConverter";
+import { topologicalSort } from "./utils/topologicalSort";
 
 
 export class Messgen {
@@ -24,7 +26,7 @@ export class Messgen {
     )
     
   }
-
+  
   private initializeMessages(
     protocolJson: ProtocolJSON,
   ) {
@@ -38,7 +40,7 @@ export class Messgen {
     Messgen.sortingTypesByDependency(protocolJson.types).forEach(([k, v]) => {
       switch (v.type_class) {
         case "struct":
-          v.fields.forEach((field) => {
+          v.fields?.forEach((field) => {
             if (field.type.includes("[") || field.type.includes("{")) {
               res.converters.set(field.type, new NestedConverter(
                 field.type,
@@ -46,16 +48,24 @@ export class Messgen {
               ));
             }
           })
-          
           res.converters.set(k as IType,
             new StructConverter(
-              k as IName,
+              k,
               v,
               map
             )
           );
+          break;
+        
         case "enum":
-          throw new Error("Enum is not supported yet");
+          res.converters.set(k as IType,
+            new EnumConverter(
+              k,
+              v,
+              map
+            )
+          );
+          break;
       }
     })
     
@@ -117,52 +127,27 @@ export class Messgen {
   }
   
   static sortingTypesByDependency(json: Types): [IType, TypeClass | EnumTypeClass][] {
-    return Object.entries(json).sort((a, b) => {
-      
-      let weightA = 0
-      let weightB = 0
-      let nameA = a[0]
-      let nameB = b[0]
-      let typeA = a[1]
-      let typeB = b[1]
-      
-      switch (typeA.type_class) {
-        case "struct":
-          weightA = Number(typeA.fields.some((field) => {
-            return field.type.replace(
-              /(\[|\{).+/g,
-              ""
-            ) === nameB
-          }))
-          break;
-        case "enum":
-          weightA = -2
-          break;
+    // Create a graph
+    let graph: { [key: string]: string[] } = {};
+    for (let typeName in json) {
+      graph[typeName] = [];
+      let jsonElement = json[typeName];
+      if (jsonElement.type_class === "struct") {
+        jsonElement.fields?.forEach((field) => {
+          let dependencyName = field.type.replace(/(\[|\{).+/g, "");
+          if (json[dependencyName]) {
+            graph[typeName].push(dependencyName);
+          }
+        });
       }
-      
-      switch (typeB.type_class) {
-        case "struct":
-          weightB = Number(typeB.fields.some((field) => {
-            return field.type.replace(
-              /(\[|\{).+/g,
-              ""
-            ) === nameA
-          }))
-          break;
-        case "enum":
-          weightB = -2
-          break;
-      }
-      
-      if (
-        weightA === 1 &&
-        weightB === 1
-      ) {
-        throw new Error(`Circular dependency between ${nameA} and ${nameB}`);
-      }
-      
-      return weightA - weightB;
-    })
+    }
+    // Perform topological sort
+    let sortedTypeNames = topologicalSort(graph)
+    
+    // Map sorted type names back to their corresponding type classes
+    let sortedTypes = sortedTypeNames.map((typeName) => [typeName, json[typeName]] as [IType, TypeClass | EnumTypeClass]);
+    
+    return sortedTypes;
   }
   
   

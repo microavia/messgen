@@ -9,7 +9,7 @@
     "test": "vitest",
     "test-ui": "vitest --watch --ui",
     "prettier": "prettier --write  \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
-    "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto --protocol messgen/messgen_test --protocol another_proto --outdir ./tests",
+    "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto  --protocol another_proto --outdir ./tests",
     "gen-json": "npm run gen -- --lang json",
     "gen-ts": "npm run gen-json && npm run gen -- --lang ts",
     "gen-cpp": "npm run gen -- --lang cpp",
@@ -20,6 +20,7 @@
   "license": "ISC",
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
+    "@types/node": "^20.12.7",
     "@vitest/ui": "^1.5.0",
     "prettier": "3.2.5",
     "tinybench": "^2.7.0",

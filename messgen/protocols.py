@@ -84,11 +84,12 @@ class Protocols:
         self.proto_map = {}
 
     def load(self, base_dirs: list, proto_list: list):
+        current_dir = os.getcwd()
         for proto_name in proto_list:
             loaded = False
             for base_dir in base_dirs:
-                proto_path = base_dir + os.path.sep + proto_name
-
+                absolute_base_dir = os.path.abspath(os.path.join(current_dir, base_dir))
+                proto_path = os.path.join(absolute_base_dir, proto_name)
                 if os.path.exists(proto_path):
                     self.proto_map[proto_name] = self._load_protocol(proto_path)
                     loaded = True
