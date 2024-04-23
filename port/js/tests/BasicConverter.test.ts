@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { PrimitiveConverter } from "../src/PrimitiveConverter";
+import { BasicConverter } from "../src/converters/BasicConverter";
 import { Buffer } from "../src/Buffer";
 import { BasicTypesConfig } from "../src/types";
 
@@ -16,7 +16,7 @@ describe('PrimitiveConverter', () => {
       read: jest.fn(),
       write: jest.fn(),
     };
-    const converter = new PrimitiveConverter(config);
+    const converter = new BasicConverter(config);
     const value = 'test value';
     
     // When
@@ -38,7 +38,7 @@ describe('PrimitiveConverter', () => {
         return 1;
       }
     };
-    const converter = new PrimitiveConverter(config);
+    const converter = new BasicConverter(config);
     const value = 3;
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
     buffer.dataView.setInt8(0, value);
@@ -63,7 +63,7 @@ describe('PrimitiveConverter', () => {
         return 1;
       }
     };
-    const converter = new PrimitiveConverter(config);
+    const converter = new BasicConverter(config);
     const value = 3;
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
     buffer.dataView.setInt8(0, value);
@@ -96,8 +96,8 @@ describe('PrimitiveConverter', () => {
         return 2;
       }
     };
-    const converter1 = new PrimitiveConverter(config1);
-    const converter2 = new PrimitiveConverter(config2);
+    const converter1 = new BasicConverter(config1);
+    const converter2 = new BasicConverter(config2);
     const value1 = 3;
     const value2 = 1000;
     const buffer = new Buffer(new ArrayBuffer(converter1.size(value1) + converter2.size(value2)));
@@ -137,8 +137,8 @@ describe('PrimitiveConverter', () => {
         return 8;
       },
     };
-    const converter1 = new PrimitiveConverter(config1);
-    const converter2 = new PrimitiveConverter(config2);
+    const converter1 = new BasicConverter(config1);
+    const converter2 = new BasicConverter(config2);
     const buffer = new Buffer(new ArrayBuffer(12));
     buffer.offset = 0;
     const value1 = 123;

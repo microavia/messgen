@@ -1,4 +1,4 @@
-import { Converter } from "./Converter";
+import { Converter } from "./converters/Converter";
 
 
 export interface Field {
@@ -16,12 +16,12 @@ export interface TypeClass {
 export interface EnumValue {
   name: IName;
   value: number;
-  comment: string;
+  comment?: string;
 }
 
 export interface EnumTypeClass {
   type_class: "enum";
-  comment: string;
+  comment?: string;
   base_type: IPrimitiveType;
   values: EnumValue[];
 }
@@ -93,16 +93,3 @@ type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
 
 export type IType = `${IName | IPrimitiveType}${SubType}${SubType}${SubType}`
 
-
-let a = {
-  a: 1,
-  b: 2,
-  c: 3,
-  d: 4
-}
-export type BasicTypesConfig = {
-  name: IPrimitiveType;
-  size: (value: any) => number;
-  read: (v: DataView, byteOffset: number) => IValue;
-  write: (v: DataView, byteOffset: number, value: IValue) => number;
-};

@@ -1,5 +1,5 @@
-import { Buffer } from "./Buffer";
-import { IType, IValue } from "./types";
+import { Buffer } from "../Buffer";
+import { IType, IValue } from "../types";
 
 export abstract class Converter {
   name: IType

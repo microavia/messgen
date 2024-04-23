@@ -1,6 +1,6 @@
 import { Converter } from "./Converter";
-import { Buffer } from "./Buffer";
-import { IName, TypeClass, IType, IValue } from "./types";
+import { Buffer } from "../Buffer";
+import { IName, TypeClass, IType, IValue } from "../types";
 
 export class StructConverter extends Converter {
   constructor(

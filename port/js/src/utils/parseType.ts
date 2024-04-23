@@ -1,5 +1,5 @@
 import { IType, IPrimitiveType, IName } from "../types";
-import { Converter } from "../Converter";
+import { Converter } from "../converters/Converter";
 
 export type ParseArrayType =
   {
@@ -26,7 +26,7 @@ export type ParseType =
  * const converters = new Map<IType, Converter>();
  * const result = parseType(typeStr, converters);
  * console.log(result);
- * // Output: { converter: Converter, wrapper: [ { variant: 'array', length: 5 }, { variant: 'map', converter: Converter } ] }
+ * // Output: { converters: Converter, wrapper: [ { variant: 'array', length: 5 }, { variant: 'map', converters: Converter } ] }
  * Code Analysis
  * Inputs
  * typeStr (string): The type string to be parsed.
@@ -37,12 +37,12 @@ export type ParseType =
  * Extract the basis type from the first part of the type string.
  * Iterate over the remaining parts of the type string.
  * If a part ends with ']', add an ParseArrayType object to the wrapper array with the length extracted from the part.
- * If a part ends with '}', extract the key type and add a ParseMapType object to the wrapper array with the corresponding converter.
- * Get the converter for the basis type from the converters map.
- * Return a ParseType object with the converter and the wrapper array.
+ * If a part ends with '}', extract the key type and add a ParseMapType object to the wrapper array with the corresponding converters.
+ * Get the converters for the basis type from the converters map.
+ * Return a ParseType object with the converters and the wrapper array.
  *
  * Outputs
- * ParseType object: An object containing the converter for the basis type and an array of ParseArrayType and ParseMapType objects representing the array and map notations in the type string.
+ * ParseType object: An object containing the converters for the basis type and an array of ParseArrayType and ParseMapType objects representing the array and map notations in the type string.
  *
  * @param typeStr
  * @param converters

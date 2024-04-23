@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TypeClass, IType } from "../src/types";
-import { Converter } from "../src/Converter";
-import { StructConverter } from "../src/StructConverter";
+import { Converter } from "../src/converters/Converter";
+import { StructConverter } from "../src/converters/StructConverter";
 import { Buffer } from "../src/Buffer";
-import { Messgen } from "../src/messgen";
+import { Messgen } from "../src/Messgen";
 
 
 describe('StructConverter', () => {
@@ -19,7 +19,7 @@ describe('StructConverter', () => {
         { name: 'field2', type: 'int8' },
       ],
     };
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const structConverter = new StructConverter(name, schema, converters);
     const value = {
       field1: 'value1',
@@ -47,7 +47,7 @@ describe('StructConverter', () => {
       ]
     };
     
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const structConverter = new StructConverter("struct", schema, converters);
     
@@ -93,7 +93,7 @@ describe('StructConverter', () => {
       type_class: "struct",
       fields: []
     };
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const structConverter = new StructConverter(name, schema, converters);
     
     // When
@@ -179,7 +179,7 @@ describe('StructConverter', () => {
     }
     
     
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     converters.set("shemaNested", new StructConverter("shemaNested", shemaNested, converters));
     const structConverter = new StructConverter("struct", schema, converters);
     
@@ -214,7 +214,7 @@ describe('StructConverter', () => {
       ]
     };
     
-    const converters: Map<IType, Converter> = Messgen.initializePrimitiveConverter();
+    const converters: Map<IType, Converter> = Messgen.initializeBasicConverter();
     
     const structConverter = new StructConverter("TestStruct", schema, converters);
     
@@ -244,7 +244,7 @@ describe('StructConverter', () => {
       ]
     };
     
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const structConverter = new StructConverter("TestStruct", schema, converters);
     
@@ -275,7 +275,7 @@ describe('StructConverter', () => {
       ]
     };
     
-    const converters: Map<IType, Converter> = Messgen.initializePrimitiveConverter();
+    const converters: Map<IType, Converter> = Messgen.initializeBasicConverter();
     
     const structConverter = new StructConverter("TestStruct", schema, converters);
     
@@ -316,7 +316,7 @@ describe('StructConverter', () => {
       ],
     };
     
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const structConverter = new StructConverter("TestStruct", schema, converters);
     
@@ -347,7 +347,7 @@ describe('StructConverter', () => {
       ],
     };
     
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     expect(() => new StructConverter("TestStruct", schema, converters)).toThrowError("Field field1 is duplicated in TestStruct");
     
@@ -364,7 +364,7 @@ describe('StructConverter', () => {
       ]
     };
     
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const structConverter = new StructConverter("TestStruct", schema, converters);
     
@@ -384,7 +384,7 @@ describe('StructConverter', () => {
   });
   
   
-  // Should throw an error if a converter for a field type is not found
+  // Should throw an error if a converters for a field type is not found
   it('должен выбросить ошибку, если конвертер для типа поля не найден', () => {
     // Given
     const fieldName = "field";
@@ -399,7 +399,7 @@ describe('StructConverter', () => {
         },
       ],
     };
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const structConverter = new StructConverter("struct", schema, converters);
     
     // When
@@ -430,7 +430,7 @@ describe('StructConverter', () => {
         }
       ]
     };
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const converter = new StructConverter('TestStruct', schema, converters);
     const buffer = new Buffer(new ArrayBuffer(100));
     
@@ -453,7 +453,7 @@ describe('StructConverter', () => {
         { name: "field3", type: "bool" }
       ]
     };
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     
     const structConverter = new StructConverter(name, schema, converters);
@@ -482,7 +482,7 @@ describe('StructConverter', () => {
         { name: "hasOwnProperty", type: "bool" }
       ]
     };
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     
     // When

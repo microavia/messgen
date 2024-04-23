@@ -1,8 +1,50 @@
-import { decodeUTF8, encodeUTF8 } from "./utils/utf8";
-import { BasicTypesConfig, IPrimitiveType } from "./types";
+import { Converter } from "./Converter";
+import { IPrimitiveType, IValue } from "../types";
+import { Buffer } from "../Buffer";
+import { decodeUTF8, encodeUTF8 } from "../utils/utf8";
+
+
+export class BasicConverter extends Converter {
+  constructor(private config: BasicTypesConfig) {
+    super(config.name);
+    
+  }
+  
+  serialize(value: IValue, buffer: Buffer) {
+    const size = this.config.write(buffer.dataView, buffer.offset, value);
+    buffer.offset += size;
+  }
+  
+  size(value: IValue): number {
+    return this.config.size(value)
+  }
+  
+  deserialize(buffer: Buffer): IValue {
+    let result = this.config.read(buffer.dataView, buffer.offset);
+    buffer.offset += this.config.size(result);
+    return result;
+  }
+  
+  static fromGlobalConfigs(): [IPrimitiveType, Converter][] {
+    return basicTypes.reduce<[IPrimitiveType, Converter][]>((acc, config) => {
+      acc.push([config.name,
+        new BasicConverter(config)
+      ]);
+      return acc;
+    }, [])
+  }
+}
+
+
+export type BasicTypesConfig = {
+  name: IPrimitiveType;
+  size: (value: any) => number;
+  read: (v: DataView, byteOffset: number) => IValue;
+  write: (v: DataView, byteOffset: number, value: IValue) => number;
+};
+
 
 export const IS_LITTLE_ENDIAN = true; // todo check
-export const DYNAMIC_SIZE_TYPE: IPrimitiveType = "uint32";
 /**
  *
  * Read function returns value from byte array.
@@ -127,28 +169,8 @@ export const basicTypes = [
       const encode = encodeUTF8(a)
       
       uint8View.set(encode, s + 4);
-   
+      
       return size + 4;
     }
   }
 ] satisfies BasicTypesConfig[]
-
-
-// export let typeIndex: Record<string, number> = {}
-// export let typeSize: number[] = []
-//
-// export let readFunc: ((v: DataView, s: number) => any)[] = []
-// export let writeFunc: ((v: DataView, s: number, a: any) => number)[] = [];
-//
-// for (let i = 0; i < basicTypes.length; i++) {
-//   let ti = basicTypes[i];
-//   typeIndex[ti.name] = i;
-//   typeSize[i] = ti.size;
-//   readFunc[i] = ti.read;
-//   writeFunc[i] = ti.write;
-// }
-//
-// const DYN_TYPE = typeIndex[DYNAMIC_SIZE_TYPE];
-// export const DYN_TYPE_SIZE = typeSize[DYN_TYPE];
-// export const DYN_READ = readFunc[DYN_TYPE];
-// export const DYN_WRITE = writeFunc[DYN_TYPE];

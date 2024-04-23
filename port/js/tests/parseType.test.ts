@@ -1,12 +1,12 @@
 import { parseType } from "../src/utils/parseType";
 import { describe, it, expect } from 'vitest';
 import { IType } from "../src/types";
-import { Messgen } from "../src/messgen";
-import { StructConverter } from "../src/StructConverter";
+import { Messgen } from "../src/Messgen";
+import { StructConverter } from "../src/converters/StructConverter";
 
 
 describe('parseType', () => {
-  let converters = Messgen.initializePrimitiveConverter()
+  let converters = Messgen.initializeBasicConverter()
   converters.set('MyType', new StructConverter('MyType', {
     type_class: 'struct',
     fields: [

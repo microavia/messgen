@@ -1,8 +1,8 @@
 import { Converter } from "./Converter";
-import { IType, IPrimitiveType, IValue } from "./types";
-import { Buffer } from "./Buffer";
-import { parseType, ParseType } from "./utils/parseType";
-import { ASSERT_EXHAUSTIVE } from "./utils/ASSERT_EXHAUSTIVE";
+import { IType, IPrimitiveType, IValue } from "../types";
+import { Buffer } from "../Buffer";
+import { parseType, ParseType } from "../utils/parseType";
+import { ASSERT_EXHAUSTIVE } from "../utils/ASSERT_EXHAUSTIVE";
 
 export let DYNAMIC_SIZE_TYPE: IPrimitiveType = "uint32";
 

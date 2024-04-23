@@ -1,4 +1,4 @@
-import {initializeMessages} from '../src/messgen.ts';
+import {initializeMessages} from '../src/Messgen.ts';
 import {Struct} from "../src/Old/Struct.ts";
 import {HEADER_STRUCT} from "../src/HEADER_STRUCT.ts";
 import {Buffer} from "../src/Old/Buffer.ts";

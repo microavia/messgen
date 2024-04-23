@@ -1,11 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NestedConverter } from "../src/NestedConverter";
+import { NestedConverter, DYNAMIC_SIZE_TYPE } from "../src/converters/NestedConverter";
 import { IType } from "../src/types";
-import { Converter } from "../src/Converter";
+import { Converter } from "../src/converters/Converter";
 import { Buffer } from "../src/Buffer";
-import { Messgen } from "../src/messgen";
-import { DYNAMIC_SIZE_TYPE, basicTypes } from "../src/constants";
-import { PrimitiveConverter } from "../src/PrimitiveConverter";
+import { Messgen } from "../src/Messgen";
+import { BasicConverter, basicTypes } from "../src/converters/BasicConverter";
 
 const jest = vi
 
@@ -15,7 +14,7 @@ describe('NestedConverter', () => {
   it('должен сериализовать и десериализовать базовый тип правильно', () => {
     // Given
     const name = 'int32';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const converter = new NestedConverter(name, converters);
     const value = 42;
     const buffer = new Buffer(new ArrayBuffer(4));
@@ -33,7 +32,7 @@ describe('NestedConverter', () => {
   it('должен сериализовать и десериализовать массив базовых типов правильно', () => {
     // Given
     const name = 'int32[3]';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const converter = new NestedConverter(name, converters);
     const value = [1, 2, 3];
     const buffer = new Buffer(new ArrayBuffer(12));
@@ -51,7 +50,7 @@ describe('NestedConverter', () => {
   it('должен выбросить ошибку, когда базовый тип не найден в карте конвертеров', () => {
     // Given
     const name = 'customType';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     // When, Then
     expect(() => {
@@ -64,7 +63,7 @@ describe('NestedConverter', () => {
     // Given
     const name = 'int32[5]{int32}';
     const converters = new Map<IType, Converter>();
-    converters.set('int32', new PrimitiveConverter(basicTypes.find((type) => type.name === 'int32')!))
+    converters.set('int32', new BasicConverter(basicTypes.find((type) => type.name === 'int32')!))
     
     // When, Then
     expect(() => {
@@ -77,7 +76,7 @@ describe('NestedConverter', () => {
   it('должен выбросить ошибку, когда тип ключа карты не найден в карте конвертеров', () => {
     // Given
     const name = 'int32{customType}';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     // When, Then
     expect(() => {
@@ -89,7 +88,7 @@ describe('NestedConverter', () => {
   // should serialize and deserialize an array of dynamic length correctly
   it('Должен сериализовать и десериализовать массив переменной длины правильно', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter(`int32[][]`, converters);
     const value = [[1, 2, 3], [4, 5], [6, 7, 8, 9]];
     const size = nestedConverter.size(value);
@@ -107,7 +106,7 @@ describe('NestedConverter', () => {
   // should serialize and deserialize a nested array of dynamic length correctly
   it('Должен сериализовать и десериализовать вложенный массив переменной длины правильно', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("int32[3][]", converters);
     const value = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
     const size = nestedConverter.size(value);
@@ -126,7 +125,7 @@ describe('NestedConverter', () => {
   // should serialize and deserialize a map of basic types correctly
   it('should serialize and deserialize a map of basic types correctly', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("string{int32}", converters);
     const value = new Map<number, string>([
       [1, "one"],
@@ -149,7 +148,7 @@ describe('NestedConverter', () => {
   
   it('should serialize and deserialize a map of basic types correctly serialize object', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("string{int32}", converters);
     const valueObj = {
       1: "one",
@@ -179,7 +178,7 @@ describe('NestedConverter', () => {
   // should serialize and deserialize a nested map of basic types correctly
   it('Должен сериализовать и десериализовать вложенную карту базовых типов правильно', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("int32{string}", converters);
     
     const value = new Map<string, number>([
@@ -206,7 +205,7 @@ describe('NestedConverter', () => {
   // should serialize and deserialize a nested map of basic types correctly
   it('Должен сериализовать и десериализовать вложенную карту базовых типов правильно serialize obj', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("int32{string}", converters);
     
     const valueObj = {
@@ -238,7 +237,7 @@ describe('NestedConverter', () => {
   // should serialize and deserialize a nested array of basic types correctly
   it('Должен сериализовать и десериализовать вложенный массив базовых типов правильно', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const nestedConverter = new NestedConverter("int32[3][2]", converters);
     const value = [[1, 2, 3], [4, 5, 6]];
@@ -260,7 +259,7 @@ describe('NestedConverter', () => {
   it('должен правильно вычислять размер для массива базовых типов', () => {
     // Given
     const name = 'int32[5]';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const nestedConverter = new NestedConverter(name, converters);
     const value = [1, 2, 3, 4, 5];
@@ -276,7 +275,7 @@ describe('NestedConverter', () => {
   // should calculate the correct size for a nested array of basic types
   it('Должен правильно вычислять размер для вложенного массива базовых типов', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const nestedConverter = new NestedConverter("int32[3][2]", converters);
     const value = [[1, 2, 3], [4, 5, 6]];
@@ -292,7 +291,7 @@ describe('NestedConverter', () => {
   it('должен выбросить ошибку, когда тип ключа карты не определен', () => {
     // Given
     const name = 'int32{undefined}';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     // When
     const serializeFn = () => new NestedConverter(name, converters);
@@ -305,7 +304,7 @@ describe('NestedConverter', () => {
   it('должен выбросить ошибку, когда длина массива выходит за границы', () => {
     // Given
     const name = 'int32[3]';
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     const converter = new NestedConverter(name, converters);
     const value = [1, 2, 3, 4]; // Array length is out of bounds
     
@@ -322,7 +321,7 @@ describe('NestedConverter', () => {
   // should support nested maps with nested arrays
   it('Должен поддерживать вложенные карты с вложенными массивами', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     
     const nestedConverter = new NestedConverter("int32[3][]{string}{string}", converters);
@@ -349,7 +348,7 @@ describe('NestedConverter', () => {
   // should support nested arrays with nested maps
   it('должен поддерживать вложенные массивы с вложенными картами', () => {
     // Given
-    const converters = Messgen.initializePrimitiveConverter();
+    const converters = Messgen.initializeBasicConverter();
     
     const nestedMapConverter = new NestedConverter("int32{string}", converters);
     const nestedArrayMapConverter = new NestedConverter("int32{string}[]", converters);
@@ -397,7 +396,7 @@ describe('NestedConverter', () => {
     expect(deserializedArrayValue).toEqual(nestedArrayValue);
   });
   
-  it('should throw an error when the map key type converter is not found', () => {
+  it('should throw an error when the map key type converters is not found', () => {
     const converters = new Map<IType, Converter>();
     const typeStr = 'int32{int32}';
     expect(() => new NestedConverter(typeStr, converters)).toThrow(`Converter for type uint32 is not found in int32{int32}`);
