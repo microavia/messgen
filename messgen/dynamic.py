@@ -248,30 +248,6 @@ class BytesType(Type):
     def default_value(self):
         return b""
 
-# TODO this code is not tested
-class VariantType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "variant"
-        self.index_type = get_type(protos, curr_proto_name, self.type_def["index_type"])
-        self.variants = []
-        for i, variant in enumerate(self.type_def["variants"]):
-            self.variants.append(get_type(protos, curr_proto_name, variant["type"]))
-
-    def serialize(self, data):
-        for i, variant in enumerate(self.variants):
-            if variant[0] == data[0]:
-                return self.index_type.serialize(i) + variant[1].serialize(data[1])
-        raise RuntimeError("Invalid variant type: %s" % data[0])
-
-    def deserialize(self, data):
-        index, index_size = self.index_type.deserialize(data)
-        return self.variants[index].deserialize(data[index_size:])
-
-    def default_value(self):
-        return self.variants[0].default_value()
-
-
 def get_type(protocols, curr_proto_name, type_name):
     type_def = protocols.get_type(curr_proto_name, type_name)
     type_class = type_def["type_class"]
@@ -291,8 +267,6 @@ def get_type(protocols, curr_proto_name, type_name):
         t = StringType(protocols, curr_proto_name, type_name)
     elif type_class == "bytes":
         t = BytesType(protocols, curr_proto_name, type_name)
-    elif type_class == "variant":
-        t = VariantType(protocols, curr_proto_name, type_name)
     else:
         raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_name))
     return t

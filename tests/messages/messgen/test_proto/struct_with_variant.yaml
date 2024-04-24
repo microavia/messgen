@@ -1,4 +1,0 @@
-type_class: struct
-comment: "Struct with variant"
-fields:
-  - { name: "variant_field", type: "simple_variant" }
