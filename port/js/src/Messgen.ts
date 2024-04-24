@@ -31,7 +31,9 @@ export class Messgen {
     protocolJson: ProtocolJSON,
   ) {
     
-    const map = Messgen.initializeBasicConverter();
+    const map = new Map<IType, Converter>(
+      BasicConverter.fromGlobalConfigs()
+    )
     let res = {
       typesMap: new Map<number, Converter>(),
       converters: map,

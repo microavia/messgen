@@ -102,15 +102,20 @@ export const basicTypes = [
   }, {
     name: "int64",
     size: () => 8,
-    read: (v, s) => v.getBigInt64(s, IS_LITTLE_ENDIAN),
+    read: function (v, s) {
+      return v.getBigInt64(s, IS_LITTLE_ENDIAN);
+    },
     write: (v, s, a) => {
-      v.setBigInt64(s, BigInt(String(a)), IS_LITTLE_ENDIAN);
+      v.setBigInt64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
     }
   }, {
     name: "uint64",
     size: () => 8,
-    read: (v, s) => v.getBigUint64(s, IS_LITTLE_ENDIAN),
+    read: (v, s) => {
+      
+      return v.getBigUint64(s, IS_LITTLE_ENDIAN);
+    },
     write: (v, s, a) => {
       v.setBigUint64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
@@ -169,6 +174,21 @@ export const basicTypes = [
       const encode = encodeUTF8(a)
       
       uint8View.set(encode, s + 4);
+      
+      return size + 4;
+    }
+  }, {
+    name: 'bytes',
+    size: (value: Uint8Array) => value.length + 4,
+    read: (v, s) => {
+      return new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN));
+    },
+    write: (v, s, a: Uint8Array) => {
+      let size = a.length;
+      v.setUint32(s, size, IS_LITTLE_ENDIAN);
+      
+      let uint8View = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+      uint8View.set(a, s + 4);
       
       return size + 4;
     }

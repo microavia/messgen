@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BasicConverter, BasicTypesConfig } from "../src/converters/BasicConverter";
+import { BasicConverter, BasicTypesConfig, basicTypes } from "../src/converters/BasicConverter";
 import { Buffer } from "../src/Buffer";
 
 const jest = vi
@@ -28,15 +28,8 @@ describe('PrimitiveConverter', () => {
   // Should correctly serialize and deserialize a value
   it('Должен корректно сериализовать и десериализовать значение', () => {
     // Given
-    const config: BasicTypesConfig = {
-      name: "int8",
-      size: () => 1,
-      read: (v, s) => v.getInt8(s),
-      write: (v, s, a) => {
-        v.setInt8(s, a);
-        return 1;
-      }
-    };
+    const config: BasicTypesConfig = basicTypes.find(type => type.name === 'int8')!
+    
     const converter = new BasicConverter(config);
     const value = 3;
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
@@ -51,50 +44,10 @@ describe('PrimitiveConverter', () => {
     expect(deserializedValue).toBe(value);
   });
   
-  it('Должен корректно возвращать размер сериализованного значения', () => {
+  it('Должен корректно десериализовать значения разных размеров из одного буфера', () => {
     // Given
-    const config: BasicTypesConfig = {
-      name: "int8",
-      size: () => 1,
-      read: (v, s) => v.getInt8(s),
-      write: (v, s, a) => {
-        v.setInt8(s, a);
-        return 1;
-      }
-    };
-    const converter = new BasicConverter(config);
-    const value = 3;
-    const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
-    buffer.dataView.setInt8(0, value);
-    
-    // When
-    converter.serialize(value, buffer);
-    buffer.offset = 0;
-    const serializedSize = converter.size(value);
-    
-    // Then
-    expect(serializedSize).toBe(buffer.size);
-  });
-  it('Должен корректно десериализовать значения разных размеров', () => {
-    // Given
-    const config1: BasicTypesConfig = {
-      name: "int8",
-      size: () => 1,
-      read: (v, s) => v.getInt8(s),
-      write: (v, s, a) => {
-        v.setInt8(s, a);
-        return 1;
-      }
-    };
-    const config2: BasicTypesConfig = {
-      name: "int16",
-      size: () => 2,
-      read: (v, s) => v.getInt16(s),
-      write: (v, s, a) => {
-        v.setInt16(s, a);
-        return 2;
-      }
-    };
+    const config1: BasicTypesConfig = basicTypes.find(type => type.name === 'int8')!
+    const config2: BasicTypesConfig = basicTypes.find(type => type.name === 'int16')!
     const converter1 = new BasicConverter(config1);
     const converter2 = new BasicConverter(config2);
     const value1 = 3;
@@ -118,24 +71,8 @@ describe('PrimitiveConverter', () => {
   
   it('Должен корректно обрабатывать сериализацию значений разных размеров', () => {
     // Given
-    const config1: BasicTypesConfig = {
-      name: 'int32',
-      size: (value: any) => 4,
-      read: (v: DataView, byteOffset: number) => v.getInt32(byteOffset),
-      write: (v: DataView, byteOffset: number, value: any) => {
-        v.setInt32(byteOffset, value);
-        return 4;
-      },
-    };
-    const config2: BasicTypesConfig = {
-      name: 'float32',
-      size: (value: any) => 8,
-      read: (v: DataView, byteOffset: number) => v.getFloat64(byteOffset),
-      write: (v: DataView, byteOffset: number, value: any) => {
-        v.setFloat64(byteOffset, value);
-        return 8;
-      },
-    };
+    const config1: BasicTypesConfig = basicTypes.find(type => type.name === 'int32')!
+    const config2: BasicTypesConfig = basicTypes.find(type => type.name === 'float64')!
     const converter1 = new BasicConverter(config1);
     const converter2 = new BasicConverter(config2);
     const buffer = new Buffer(new ArrayBuffer(12));
@@ -149,5 +86,23 @@ describe('PrimitiveConverter', () => {
     
     // Then
     expect(buffer.offset).toBe(12);
+  });
+  
+  it('Должен корректно сериализовать и десериализовать значение типа bytes', () => {
+    // Given
+    const config = basicTypes.find(type => type.name === 'bytes')!;
+    const converter = new BasicConverter(config);
+    const value = new Uint8Array([1, 2, 3, 4]);
+    const buffer = new Buffer(new ArrayBuffer(
+      converter.size(value)
+    ));
+    
+    // When
+    converter.serialize(value, buffer);
+    buffer.offset = 0;
+    const result = converter.deserialize(buffer);
+    
+    // Then
+    expect(result).toEqual(value);
   });
 });

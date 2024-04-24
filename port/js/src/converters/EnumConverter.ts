@@ -5,6 +5,8 @@ import { Buffer } from "../Buffer";
 
 export class EnumConverter extends Converter {
   private converter: Converter;
+  private enumsByName: Record<string, number>;
+  private enumsByValue: string[];
   
   constructor(
     name: string,
@@ -19,14 +21,27 @@ export class EnumConverter extends Converter {
     }
     this.converter = converter;
     
+    this.enumsByName = types.values.reduce((acc, value) => {
+      acc[value.name] = value.value;
+      return acc;
+    }, {} as Record<string, number>)
+    this.enumsByValue = types.values.reduce((acc, value) => {
+      
+      acc[value.value] = value.name;
+      return acc;
+      
+    }, [] as string[]);
   }
   
   serialize(value: IValue, buffer: Buffer) {
-    this.converter.serialize(value, buffer);
+    this.converter.serialize(
+      this.enumsByName[value] ?? value,
+      buffer
+    );
   }
   
   deserialize(buffer: Buffer) {
-    return this.converter.deserialize(buffer);
+    return this.enumsByValue[this.converter.deserialize(buffer)]; //TODO: is return string it is correct?
   }
   
   size(value: IValue) {

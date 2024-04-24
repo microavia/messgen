@@ -85,7 +85,8 @@ export type IBasicType =
   INumberType |
   "string" |
   "bool" |
-  "char"
+  "char" |
+  'bytes'
 
 type ArrayDynamicSize = '[]';
 type ArrayFixSize = `[${number}]`;

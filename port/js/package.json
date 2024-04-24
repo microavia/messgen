@@ -14,6 +14,7 @@
     "gen-ts": "npm run gen-json && npm run gen -- --lang ts",
     "gen-cpp": "npm run gen -- --lang cpp",
     "gen-md": "npm run gen -- --lang md",
+    "generate-bit": "cd ../.. && python3 tests/python/generate_serialized_data.py",
     "benchmark": "vitest bench"
   },
   "author": "",

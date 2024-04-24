@@ -141,7 +141,6 @@ export class NestedConverter extends Converter {
             throw new Error(`Array length mismatch: ${value.length} !== ${currentType.length}`)
           }
         }
-        
         return arrayLengthSize + value.reduce((acc: number, v: IValue) => acc + this._size(v, offsetWrapper - 1), 0);
       
       case "map":
