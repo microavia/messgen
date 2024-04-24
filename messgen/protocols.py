@@ -175,6 +175,13 @@ class Protocols:
                 "type_class": "bytes",
             }
 
+        if len(type_name) > 1 and type_name.endswith("?"):
+            return {
+                "type": type_name,
+                "type_class": "optional",
+                "option_type": type_name[:-1]
+            }
+
         if "/" in type_name:
             # Type from another protocol
             p = type_name.split(SEPARATOR)

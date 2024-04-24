@@ -1,0 +1,5 @@
+type_class: struct
+comment: "Struct with optional string field"
+fields:
+  - { name: "s_opt", type: "string?" }
+  - { name: "i_opt", type: "int32?" }

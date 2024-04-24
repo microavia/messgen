@@ -184,7 +184,7 @@ class CppGenerator:
             return type_def["size"]
         elif type_class == "struct":
             # Alignment of struct is equal to max of the field alignments
-            a_max = 0
+            a_max = 1
             for field in type_def["fields"]:
                 field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
                 a = self._get_alignment(field_type_def)
@@ -206,9 +206,12 @@ class CppGenerator:
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
+        elif type_class == "optional":
+            # Alignment of optional is equal to alignment of option type
+            return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["option_type"]))
         elif type_class == "variant":
             # Alignment of variant is equal to max of the field alignments
-            a_max = 0
+            a_max = 1
             for field in type_def["variants"]:
                 field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
                 a = self._get_alignment(field_type_def)
@@ -428,16 +431,20 @@ class CppGenerator:
                 return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
+        elif t["type_class"] == "optional":
+            if mode != 'stl':
+                raise RuntimeError("%s: optional type is not supported in nostl mode" % t["type"])
+            self._add_include("optional")
+            self._cpp_type(t["option_type"])  # adds #include for option_type
+            return "std::optional<%s>" % self._cpp_type(t["option_type"])
         elif t["type_class"] == "variant":
+            if mode != 'stl':
+                raise RuntimeError("%s: variant type is not supported in nostl mode" % t["type"])
             for variant in t["variants"]:
                 self._cpp_type(variant["type"])  # adds #include for variant types
-            if mode == 'stl':
-                self._add_include("variant")
-                self._add_include("stdexcept")
-                return "std::variant<%s>" % ", ".join([_cpp_namespace(self._cpp_type(v["type"])) for v in t["variants"]])
-            elif mode == "nostl":
-                self._add_include("variant")
-                return "messgen::variant<%s>" % ", ".join([_cpp_namespace(v["type"]) for v in t["variants"]])
+            self._add_include("variant")
+            self._add_include("stdexcept")
+            return "std::variant<%s>" % ", ".join([_cpp_namespace(self._cpp_type(v["type"])) for v in t["variants"]])
         elif t["type_class"] == "string":
             if mode == "stl":
                 self._add_include("string")
@@ -546,6 +553,15 @@ class CppGenerator:
                 c.append(_indent("} else"))
             c[-1] = _indent("}")
             c.append("}, %s);" % field_name)
+
+        elif type_class == "optional":
+            c.append("*reinterpret_cast<uint8_t *>(&_buf[_size]) = uint8_t(%s.has_value());" % field_name)
+            c.append("_size += sizeof(uint8_t);")
+            c.append("if (%s.has_value()) {" % field_name)
+            option_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def['option_type'])
+            c.append(_indent("const auto& _opt_value_%s = *%s;" % (field_name, field_name)))
+            c.extend(_indent(self._serialize_field("_opt_value_%s" % field_name, option_type_def)))
+            c.append("}")
 
         elif type_class == "string":
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
@@ -682,6 +698,24 @@ class CppGenerator:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
+        elif type_class == "optional":
+            has_opt_name = "_has_opt_%s" % field_name
+            c.append("const uint8_t %s = *reinterpret_cast<const uint8_t *>(&_buf[_size]);" % has_opt_name)
+            c.append("_size += sizeof(uint8_t);")
+            c.append("switch (%s) {" % has_opt_name)
+            c.append(_indent("case 0: {"))
+            c.append(_indent(_indent("s_opt = std::nullopt;")))
+            c.append(_indent(_indent("break;")))
+            c.append(_indent("}"))
+            c.append(_indent("case 1: {"))
+            option_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def['option_type'])
+            c.extend(_indent(_indent(self._deserialize_field(field_name, option_type_def, level_n + 1))))
+            c.append(_indent(_indent("break;")))
+            c.append(_indent("}"))
+            c.append(_indent("default: {"))
+            c.append(_indent(_indent("throw std::runtime_error(\"Can not deserialize optional<%s> in %s, first byte = \" + std::to_string(%s));" % (field_type_def["option_type"], field_name, has_opt_name))))
+            c.append(_indent("}"))
+            c.append("}")
 
         elif type_class == "bytes":
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
@@ -750,6 +784,11 @@ class CppGenerator:
                 c.append(_indent("} else"))
             c[-1] = _indent("}")
             c.append("}, %s);" % field_name)
+        elif type_class == "optional":
+            c.append("_size += sizeof(uint8_t); // has_value byte")
+            c.append("if (%s.has_value()) {" % field_name)
+            c.extend(_indent(self._serialized_size_field("%s.value()" % field_name, self._protocols.get_type(self._ctx["proto_name"], field_type_def["option_type"]), level_n + 1)))
+            c.append("}")
 
         elif type_class in ["string", "bytes"]:
             c.append("_size += sizeof(messgen::size_type);")

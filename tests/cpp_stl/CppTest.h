@@ -7,6 +7,7 @@
 #include <messgen/test_proto/flat_struct.h>
 #include <messgen/test_proto/complex_struct_with_empty.h>
 #include <messgen/test_proto/struct_with_variant.h>
+#include <messgen/test_proto/struct_with_optional.h>
 #include <another_proto.h>
 
 #include <gtest/gtest.h>
@@ -194,6 +195,13 @@ TEST_F(CppTest, ComplexStructWithEmpty) {
 }
 
 TEST_F(CppTest, StructWithVariant) {
-    test_serialization(messgen::test_proto::struct_with_variant{.variant_field = std::string("ha")});
+    test_serialization(messgen::test_proto::struct_with_variant{.variant_field = std::string("hi")});
     test_serialization(messgen::test_proto::struct_with_variant{.variant_field = 42});
+}
+
+TEST_F(CppTest, StructWithOptional) {
+    test_serialization(messgen::test_proto::struct_with_optional{.s_opt = std::string("hi"), .i_opt = 42});
+    test_serialization(messgen::test_proto::struct_with_optional{.s_opt = std::string("hi"), .i_opt = std::nullopt});
+    test_serialization(messgen::test_proto::struct_with_optional{.s_opt = std::nullopt, .i_opt = 42});
+    test_serialization(messgen::test_proto::struct_with_optional{.s_opt = std::nullopt, .i_opt = std::nullopt});
 }
