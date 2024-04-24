@@ -1,4 +1,0 @@
-type_class: variant
-variants:
-  - { type: "int64" }
-  - { type: "string" }

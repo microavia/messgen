@@ -50,20 +50,6 @@ from .validation import is_valid_name, validate_yaml_item
 #     },
 #     ...
 
-#   // - variant
-#   index_type: <scalar type>,   // optional, default int32
-#   variants: [
-#     {
-#       type: <type_0>,
-#       comment: <comment_0>,   // optional
-#     },
-#     {
-#       ...
-#     },
-#     ...
-#   ]
-# }
-#
 # Field type structure:
 # - scalar:
 #   e.g. "uint8"
@@ -162,13 +148,6 @@ class Protocols:
                 "type_class": "string",
             }
 
-        if type_name == "variant":
-            return {
-                "type": type_name,
-                "type_class": "variant",
-                "index_type": "uint8",
-            }
-
         if type_name == "bytes":
             return {
                 "type": type_name,
@@ -193,8 +172,6 @@ class Protocols:
         type_class = t.get("type_class", "")
         if type_class == "enum":
             t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
-        elif type_class == "variant":
-            t["index_type"] = t.get("index_type", "uint8")
         elif type_class == "struct":
             sz = 0
             fixed_size = True
