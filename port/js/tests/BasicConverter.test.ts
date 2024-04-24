@@ -6,8 +6,7 @@ const jest = vi
 
 describe('PrimitiveConverter', () => {
   
-  // Should correctly return the size of a serialized value
-  it('Должен корректно возвращать размер сериализованного значения', () => {
+  it('Should correctly return the size of the serialized value', () => {
     // Given
     const config: BasicTypesConfig = {
       name: 'string',
@@ -25,8 +24,7 @@ describe('PrimitiveConverter', () => {
     expect(config.size).toHaveBeenCalledWith(value);
   });
   
-  // Should correctly serialize and deserialize a value
-  it('Должен корректно сериализовать и десериализовать значение', () => {
+  it('Should correctly serialize and deserialize a value', () => {
     // Given
     const config: BasicTypesConfig = basicTypes.find(type => type.name === 'int8')!
     
@@ -44,7 +42,7 @@ describe('PrimitiveConverter', () => {
     expect(deserializedValue).toBe(value);
   });
   
-  it('Должен корректно десериализовать значения разных размеров из одного буфера', () => {
+  it('Should correctly deserialize values of different sizes from the same buffer', () => {
     // Given
     const config1: BasicTypesConfig = basicTypes.find(type => type.name === 'int8')!
     const config2: BasicTypesConfig = basicTypes.find(type => type.name === 'int16')!
@@ -69,7 +67,7 @@ describe('PrimitiveConverter', () => {
   });
   
   
-  it('Должен корректно обрабатывать сериализацию значений разных размеров', () => {
+  it('Should correctly handle serialization of values of different sizes', () => {
     // Given
     const config1: BasicTypesConfig = basicTypes.find(type => type.name === 'int32')!
     const config2: BasicTypesConfig = basicTypes.find(type => type.name === 'float64')!
@@ -88,7 +86,7 @@ describe('PrimitiveConverter', () => {
     expect(buffer.offset).toBe(12);
   });
   
-  it('Должен корректно сериализовать и десериализовать значение типа bytes', () => {
+  it('Must correctly serialize and deserialize bytes value', () => {
     // Given
     const config = basicTypes.find(type => type.name === 'bytes')!;
     const converter = new BasicConverter(config);

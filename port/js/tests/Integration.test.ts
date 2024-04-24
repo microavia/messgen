@@ -28,7 +28,7 @@ describe('integration', () => {
     }).not.toThrow()
     
   })
-  it('shut be parse flat_struct.json', () => {
+  it('shut be parse flat_struct', () => {
     const FlatStructJsonPath = path.resolve(__dirname, '../../../tests/serialized_data/json/flat_struct.json');
     const rawData = fs.readFileSync(FlatStructJsonPath);
     // @ts-ignore

@@ -6,8 +6,7 @@ import { Types } from "../src/types";
 describe('Messgen', () => {
   describe('sortingTypesByDependency', () => {
     
-    // Returns a sorted array of entries based on their dependencies.
-    it('должен возвращать отсортированный массив записей на основе их зависимостей', () => {
+    it('Returns a sorted array of entries based on their dependencies.', () => {
       // Given
       const json: Types = {
         type1: {
@@ -49,8 +48,7 @@ describe('Messgen', () => {
       ]);
     });
     
-    // Returns an empty array when the input is an empty object.
-    it('должен возвращать пустой массив, когда входной объект пустой', () => {
+    it('Returns an empty array when the input is an empty object.', () => {
       // Given
       const json: Types = {};
       
@@ -61,8 +59,7 @@ describe('Messgen', () => {
       expect(result).toEqual([]);
     });
     
-    // Throws an error when the input has circular dependencies.
-    it('должен выбрасывать ошибку, когда входные данные имеют циклические зависимости', () => {
+    it('Throws an error when the input has circular dependencies.', () => {
       // Given
       const json: Types = {
         type1: {
@@ -90,8 +87,7 @@ describe('Messgen', () => {
     });
     
     
-    // Returns an array with entries sorted by their dependencies, when some entries have dependencies that are not defined in the input.
-    it('должен возвращать массив с записями, отсортированными по их зависимостям, когда некоторые записи имеют зависимости, которые не определены во входных данных', () => {
+    it('Returns an array with entries sorted by their dependencies, when some entries have dependencies that are not defined in the input.', () => {
       // Given
       const json: Types = {
         type1: {
@@ -124,7 +120,7 @@ describe('Messgen', () => {
         ["type1", json.type1]
       ]);
     });
-    it('должен возвращать отсортированный массив записей на основе их зависимостей', () => {
+    it('should return a sorted array of entries based on their dependencies', () => {
       // Given
       const json: Types = {
         type1: {
@@ -166,7 +162,7 @@ describe('Messgen', () => {
       ]);
     });
   });
-  it('должен добавить тесты для полей типом EnumTypeClass', () => {
+  it('should add tests for fields of EnumTypeClass', () => {
     // Given
     const json: Types = {
       type1: {

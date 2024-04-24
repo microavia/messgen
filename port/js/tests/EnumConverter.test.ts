@@ -10,8 +10,7 @@ const jest = vi
 
 describe('EnumConverter', () => {
   
-  // Should correctly serialize and deserialize enum values with one value
-  it('Должен корректно сериализовывать и десериализовывать значения перечисления с одним значением', () => {
+  it('Should correctly serialize and deserialize single value enum values', () => {
     // Given
     const name = 'TestEnum';
     const baseType = 'int8';
@@ -32,8 +31,7 @@ describe('EnumConverter', () => {
   });
   
   
-  // Should correctly serialize and deserialize enum values with multiple values
-  it('Должен правильно сериализовывать и десериализовывать перечислимые значения с несколькими значениями', () => {
+  it('Should correctly serialize and deserialize enum values with multiple values', () => {
     // Given
     const name = 'testEnum';
     const baseType = 'int8';
@@ -66,8 +64,7 @@ describe('EnumConverter', () => {
   });
   
   
-  // Should throw an error if base type converter is not found
-  it('Должен выбросить ошибку, если конвертер базового типа не найден', () => {
+  it('Should throw an error if base type converter is not found', () => {
     const name = "test";
     const types: EnumTypeClass = {
       type_class: "enum",
@@ -82,8 +79,7 @@ describe('EnumConverter', () => {
     expect(serializeFn).toThrowError(`Converter for type ${types.base_type} is not found in ${name}`);
   });
   
-  // Should correctly return size of serialized enum value using base type converter
-  it('Должен правильно возвращать размер сериализованного значения с использованием конвертера базового типа', () => {
+  it('Should correctly return size of serialized enum value using base type converter', () => {
     // Given
     const name = "testName";
     const baseType = "int32";
@@ -112,8 +108,7 @@ describe('EnumConverter', () => {
   });
   
   
-  // Should handle enum values with non-string values
-  it('Должен обрабатывать перечислимые значения с нестроковыми значениями', () => {
+  it('Should handle enum values with non-string values', () => {
     const name = 'TestEnum';
     const baseType = 'int8';
     const values = [

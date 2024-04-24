@@ -10,8 +10,7 @@ const jest = vi
 
 describe('NestedConverter', () => {
   
-  // should serialize and deserialize a basic type correctly
-  it('должен сериализовать и десериализовать базовый тип правильно', () => {
+  it('should serialize and deserialize a basic type correctly', () => {
     // Given
     const name = 'int32';
     const converters = Messgen.initializeBasicConverter();
@@ -28,8 +27,7 @@ describe('NestedConverter', () => {
     expect(result).toBe(value);
   });
   
-  // should serialize and deserialize an array of basic types correctly
-  it('должен сериализовать и десериализовать массив базовых типов правильно', () => {
+  it('should serialize and deserialize an array of basic types correctly', () => {
     // Given
     const name = 'int32[3]';
     const converters = Messgen.initializeBasicConverter();
@@ -46,8 +44,7 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
   
-  // should throw an error when the basis type is not found in the converters map
-  it('должен выбросить ошибку, когда базовый тип не найден в карте конвертеров', () => {
+  it('should throw an error when the basis type is not found in the converters map', () => {
     // Given
     const name = 'customType';
     const converters = Messgen.initializeBasicConverter();
@@ -58,8 +55,7 @@ describe('NestedConverter', () => {
     }).toThrowError(`Unknown type: ${name}, if is complex type you must define before the struct.`);
   });
   
-  // should throw an error when the dynamic size type is not found in the converters map
-  it('должен выбросить ошибку, когда динамический размер типа не найден в карте конвертеров', () => {
+  it('should throw an error when the dynamic size type is not found in the converters map', () => {
     // Given
     const name = 'int32[5]{int32}';
     const converters = new Map<IType, Converter>();
@@ -72,8 +68,7 @@ describe('NestedConverter', () => {
     }).toThrowError(`Converter for type ${DYNAMIC_SIZE_TYPE} is not found in ${name}`);
   });
   
-  // should throw an error when the map key type is not found in the converters map
-  it('должен выбросить ошибку, когда тип ключа карты не найден в карте конвертеров', () => {
+  it('should throw an error when the map key type is not found in the converters map', () => {
     // Given
     const name = 'int32{customType}';
     const converters = Messgen.initializeBasicConverter();
@@ -85,8 +80,7 @@ describe('NestedConverter', () => {
     }).toThrowError(`Unknown type: customType, if is complex type you must define before the struct.`);
   });
   
-  // should serialize and deserialize an array of dynamic length correctly
-  it('Должен сериализовать и десериализовать массив переменной длины правильно', () => {
+  it('should serialize and deserialize an array of dynamic length correctly', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter(`int32[][]`, converters);
@@ -103,7 +97,7 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
   
-  // should serialize and deserialize a nested array of dynamic length correctly
+  //
   it('Должен сериализовать и десериализовать вложенный массив переменной длины правильно', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
@@ -175,8 +169,7 @@ describe('NestedConverter', () => {
   });
   
   
-  // should serialize and deserialize a nested map of basic types correctly
-  it('Должен сериализовать и десериализовать вложенную карту базовых типов правильно', () => {
+  it('should serialize and deserialize a nested map of basic types correctly', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("int32{string}", converters);
@@ -202,8 +195,7 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
   
-  // should serialize and deserialize a nested map of basic types correctly
-  it('Должен сериализовать и десериализовать вложенную карту базовых типов правильно serialize obj', () => {
+  it('should serialize and deserialize a nested map of basic types correctly', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("int32{string}", converters);
@@ -234,8 +226,7 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
   
-  // should serialize and deserialize a nested array of basic types correctly
-  it('Должен сериализовать и десериализовать вложенный массив базовых типов правильно', () => {
+  it('should serialize and deserialize a nested array of basic types correctly', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     
@@ -255,8 +246,7 @@ describe('NestedConverter', () => {
   });
   
   
-  // should calculate the correct size for an array of basic types
-  it('должен правильно вычислять размер для массива базовых типов', () => {
+  it('should calculate the correct size for an array of basic types', () => {
     // Given
     const name = 'int32[5]';
     const converters = Messgen.initializeBasicConverter();
@@ -272,8 +262,7 @@ describe('NestedConverter', () => {
     expect(size).toBe(expectedSize);
   });
   
-  // should calculate the correct size for a nested array of basic types
-  it('Должен правильно вычислять размер для вложенного массива базовых типов', () => {
+  it('should calculate the correct size for a nested array of basic types', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     
@@ -287,8 +276,7 @@ describe('NestedConverter', () => {
     expect(size).toBe(24);
   });
   
-  // should throw an error when the map key type is undefined
-  it('должен выбросить ошибку, когда тип ключа карты не определен', () => {
+  it('should throw an error when the map key type is undefined', () => {
     // Given
     const name = 'int32{undefined}';
     const converters = Messgen.initializeBasicConverter();
@@ -300,8 +288,7 @@ describe('NestedConverter', () => {
   });
   
   
-  // should throw an error when the array length is out of bounds
-  it('должен выбросить ошибку, когда длина массива выходит за границы', () => {
+  it('should throw an error when the array length is out of bounds', () => {
     // Given
     const name = 'int32[3]';
     const converters = Messgen.initializeBasicConverter();
@@ -318,8 +305,7 @@ describe('NestedConverter', () => {
   });
   
   
-  // should support nested maps with nested arrays
-  it('Должен поддерживать вложенные карты с вложенными массивами', () => {
+  it('should support nested maps with nested arrays', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     
@@ -345,8 +331,7 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
   
-  // should support nested arrays with nested maps
-  it('должен поддерживать вложенные массивы с вложенными картами', () => {
+  it('should support nested arrays with nested maps', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     

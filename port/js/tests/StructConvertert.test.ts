@@ -8,8 +8,7 @@ import { Messgen } from "../src/Messgen";
 
 describe('StructConverter', () => {
   
-  // Should correctly serialize a valid input object according to the schema
-  it('должен правильно сериализовать допустимый входной объект в соответствии со схемой', () => {
+  it('Should correctly serialize a valid input object according to the schema', () => {
     // Given
     const name = 'testStruct';
     const schema: TypeClass = {
@@ -35,8 +34,7 @@ describe('StructConverter', () => {
     expect(buffer.offset).toBe(11);
   });
   
-  // Should handle schema with multiple fields
-  it('Должен обрабатывать схему с несколькими полями', () => {
+  it('Should handle schema with multiple fields', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -66,8 +64,7 @@ describe('StructConverter', () => {
     expect(buffer.offset).toBeGreaterThan(0);
   });
   
-  // Should handle empty input object
-  it('должен обрабатывать пустой входной объект', () => {
+  it('Should handle empty input object', () => {
     // Given
     const name = "TestStruct";
     const schema: TypeClass = {
@@ -85,8 +82,7 @@ describe('StructConverter', () => {
     expect(result).toBe(0);
   });
   
-  // Should handle empty schema
-  it('Должен обрабатывать пустую схему', () => {
+  it('Should handle empty schema', () => {
     // Given
     const name = "TestStruct";
     const schema: TypeClass = {
@@ -107,8 +103,7 @@ describe('StructConverter', () => {
     expect(deserialized).toEqual({});
   });
   
-  // Should handle schema with one field
-  it('Должен обрабатывать схему с одним полем', () => {
+  it('Should handle schema with one field', () => {
     // Given
     const fieldName = 'field1';
     const fieldType = 'string';
@@ -139,8 +134,7 @@ describe('StructConverter', () => {
     expect(converterMock.serialize).toHaveBeenCalledWith(fieldValue, bufferMock);
   });
   
-  // Should handle nested schema
-  it('Должен обрабатывать вложенную схему', () => {
+  it('Should handle nested schema', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -202,8 +196,7 @@ describe('StructConverter', () => {
     expect(buffer.offset).toBeGreaterThan(0);
   });
   
-  // Should correctly return the size of a valid input object according to the schema
-  it('Должен корректно возвращать размер валидного входного объекта в соответствии со схемой', () => {
+  it('Should correctly return the size of a valid input object according to the schema', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -232,8 +225,7 @@ describe('StructConverter', () => {
   });
   
   
-  // Should handle schema with reserved field names
-  it('Должен обрабатывать схему с зарезервированными именами полей', () => {
+  it('Should handle schema with reserved field names', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -263,8 +255,7 @@ describe('StructConverter', () => {
     expect(buffer.offset).toBeGreaterThan(0);
   });
   
-  // Should correctly deserialize a valid input buffer according to the schema
-  it('Должен корректно десериализовать допустимый входной буфер в соответствии со схемой', () => {
+  it('Should correctly deserialize a valid input buffer according to the schema', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -302,8 +293,7 @@ describe('StructConverter', () => {
     });
   });
   
-  // Should handle schema with default values for fields
-  it('Должен обрабатывать схему со значениями по умолчанию для полей', () => {
+  it('Should handle schema with default values for fields', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -333,8 +323,7 @@ describe('StructConverter', () => {
     expect(buffer.offset).toBeGreaterThan(0);
   });
   
-  // Should handle schema with duplicate field names
-  it('Должен обрабатывать схему с повторяющимися именами полей', () => {
+  it('Should handle schema with duplicate field names', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -351,8 +340,7 @@ describe('StructConverter', () => {
     
   });
   
-  // Should handle input object with extra fields not defined in the schema
-  it('Должен обрабатывать входной объект с дополнительными полями, не определенными в схеме', () => {
+  it('Should handle input object with extra fields not defined in the schema', () => {
     // Given
     const schema: TypeClass = {
       type_class: "struct",
@@ -382,8 +370,7 @@ describe('StructConverter', () => {
   });
   
   
-  // Should throw an error if a converters for a field type is not found
-  it('должен выбросить ошибку, если конвертер для типа поля не найден', () => {
+  it('Should throw an error if a converters for a field type is not found', () => {
     // Given
     const fieldName = "field";
     const fieldType = "unknownType";
@@ -406,8 +393,7 @@ describe('StructConverter', () => {
     expect(serializeFn).toThrowError(`Converter for type ${fieldType} is not found`);
   });
   
-  // Should throw an error if a field is missing in the input object
-  it('должен выбросить ошибку, если поле отсутствует во входном объекте', () => {
+  it('Should throw an error if a field is missing in the input object', () => {
     // Given
     const fieldName = 'missingField';
     const fieldValue = 'value';
@@ -438,8 +424,7 @@ describe('StructConverter', () => {
     expect(serializeFn).toThrowError(`Field ${fieldName} is not found in TestStruct`);
   });
   
-  // Should handle input object with null or undefined values
-  it('Должен обрабатывать объект с значениями null или undefined', () => {
+  it('Should handle input object with null or undefined values', () => {
     // Given
     const name = "TestStruct";
     const schema: TypeClass = {
@@ -467,8 +452,8 @@ describe('StructConverter', () => {
     // Then
     expect(serializeFn).toThrowError(`Field field1 is not found in ${name}`);
   });
-  // Should handle input object with null or undefined values
-  it('Должен выдовать ошибку если ключи зарезервированы js object', () => {
+  
+  it('Should handle input object with null or undefined values', () => {
     // Given
     const name = "TestStruct";
     const schema: TypeClass = {
@@ -488,7 +473,5 @@ describe('StructConverter', () => {
     
     // Then
     expect(serializeFn).toThrow();
-    
   });
-  
 });
