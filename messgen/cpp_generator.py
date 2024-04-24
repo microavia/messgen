@@ -224,6 +224,9 @@ class CppGenerator:
             code.append("    static constexpr int PROTO_ID = %s;" % proto_id)
 
         groups = self._field_groups(fields)
+        if len(groups) > 1 and self._all_fields_scalar(fields):
+            print("Warn: padding in '%s' after '%s' causes extra memcpy call during serialization." % (
+                type_name, groups[0].fields[0]["name"]))
 
         # IS_FLAT flag
         is_flat_str = "false"
@@ -431,6 +434,13 @@ class CppGenerator:
             return _cpp_namespace(type_name)
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
+
+    def _all_fields_scalar(self, fields):
+        for field in fields:
+            field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
+            if field_type_def["type_class"] != "scalar":
+                return False
+        return True
 
     def _field_groups(self, fields):
         groups = [FieldsGroup()] if len(fields) > 0 else []

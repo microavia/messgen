@@ -118,6 +118,8 @@ class Protocols:
                 p = type_name[:-1].split("[")
                 el_type = "[".join(p[:-1])
                 array_size = int(p[-1])
+                if array_size > 0x10000:
+                    print("Warn: %s array size is too large and may cause SIGSEGV on init" % type_name)
                 res = {
                     "type": type_name,
                     "type_class": "array",
