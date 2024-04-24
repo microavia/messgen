@@ -23,7 +23,7 @@ export class NestedConverter extends Converter {
     this.types = parseType(name, converters);
   }
   
-  serialize(value: any, buffer: Buffer) {
+  serialize(value: IValue, buffer: Buffer) {
     this._serialize(value, buffer, this.types.wrapper.length - 1);
   }
   
@@ -80,11 +80,11 @@ export class NestedConverter extends Converter {
     }
   }
   
-  deserialize(buffer: Buffer): any {
+  deserialize(buffer: Buffer): IValue {
     return this._deserialize(buffer, this.types.wrapper.length - 1);
   }
   
-  private _deserialize(buffer: Buffer, offsetWrapper: number): any {
+  private _deserialize(buffer: Buffer, offsetWrapper: number): IValue {
     
     if (offsetWrapper < 0) {
       return this.types.converter.deserialize(buffer);
@@ -94,7 +94,7 @@ export class NestedConverter extends Converter {
     switch (currentType.variant) {
       case "array":
         let arrayLength
-        
+        // TODO: add support for TypedArray
         if (currentType.length === undefined) {
           arrayLength = this.dynConverter.deserialize(buffer);
         } else {
