@@ -1,0 +1,4 @@
+type_class: struct
+comment: "The name of this file is 42, which is invalid"
+fields:
+  - { name: "a", type: "int8" }

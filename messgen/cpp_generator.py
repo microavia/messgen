@@ -1,856 +1,710 @@
 import os
-from .messgen_ex import MessgenException
-from .json_generator import JsonGenerator
-from .version_protocol import VersionProtocol
 
-PROTO_ID_VAR_TYPE = "uint8_t"
-PROTO_MAX_MESSAGE_SIZE_TYPE = "uint32_t"
-MESSGEN_NAMESPACE = "messgen"
+from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
+from .protocols import Protocols
 
-MESSAGE_ID_C_TYPE = "uint8_t"
-MESSAGE_SIZE_C_TYPE = "size_t"
-MESSAGE_PROTO_C_TYPE = "uint8_t"
-
-TYPE_FIELD_SIZE = 1
-DYN_FIELD_LEN_SIZE = 4
-INPUT_BUF_NAME = "buf"
-INPUT_ALLOC_NAME = "allocator"
-INDENT = "    "
-
-PLAIN2CPP_TYPES_MAP = {
-    "char": "char",
-    "uint8": "uint8_t",
-    "uint16": "uint16_t",
-    "uint32": "uint32_t",
-    "uint64": "uint64_t",
-    "int8": "int8_t",
-    "int16": "int16_t",
-    "int32": "int32_t",
-    "int64": "int64_t",
-    "float32": "float",
-    "float64": "double",
-}
-
-
-def strlen(s):
-    return "%s.length()" % s
-
-
-def to_cpp_type(_type):
-    if _type in PLAIN2CPP_TYPES_MAP:
-        return PLAIN2CPP_TYPES_MAP[_type]
+def _inline_comment(comment):
+    if comment:
+        return "  ///< %s" % comment
     else:
-        return _type.replace("/", "::")
+        return ""
 
 
-def is_type_constant(_type):
-    return _type in PLAIN2CPP_TYPES_MAP
-
-
-def to_cpp_type_short(_type):
-    if _type in PLAIN2CPP_TYPES_MAP:
-        return PLAIN2CPP_TYPES_MAP[_type]
+def _indent(c):
+    spaces = "    "
+    if type(c) is str:
+        return spaces + c
+    elif type(c) is list:
+        r = []
+        for i in c:
+            r.append(spaces + i if i else "")
+        return r
     else:
-        return _type.split("/")[-1]
+        raise RuntimeError("Unsupported type for indent: %s" % type(c))
 
 
-def make_module_include(module, file):
-    return "#include <%s/%s.h>" % (module["namespace"], file)
+def _cpp_namespace(proto_name: str) -> str:
+    return proto_name.replace(SEPARATOR, "::")
 
 
-def make_include(file):
-    return "#include \"%s\"" % file
+class FieldsGroup:
+    def __init__(self):
+        self.fields: list = []
+        self.field_names: list = []
+        self.size: int = 0
 
+    def __repr__(self):
+        return str(self)
 
-def make_variable(name, var_type, array_size):
-    var = var_type + " " + name
-    if array_size > 0:
-        var += "[" + str(array_size) + "]"
-    var += ";"
-
-    return var
-
-
-def open_namespace(module_namespace):
-    code = []
-    namespaces = module_namespace.split("::")
-    for ns in namespaces:
-        code.append("namespace %s {" % ns)
-
-    return code
-
-
-def close_namespace(namespace):
-    code = []
-    namespaces = namespace.split("::")
-    for ns in reversed(namespaces):
-        code.append("} // %s" % ns)
-
-    code.append("")
-    return code
-
-
-def make_enum(name, basetype, fields):
-    enum = ["enum %s : %s {" % (name, basetype)]
-
-    for field in fields:
-        enum.append("\t%s = %s," % (str(field["name"]).upper(), field["value"]))
-    enum.append("};")
-
-    return enum
-
-
-def memcpy(dst, src, size):
-    return "memcpy(%s, %s, %s);" % (dst, src, size)
-
-
-def set_inc_var(name, value):
-    return "%s += %s;" % (name, value)
-
-
-def set_dec_var(name, value):
-    return "%s -= %s;" % (name, value)
-
-
-def set_var(name, value):
-    return "%s = %s;" % (name, value)
-
-
-def ptr(var):
-    return "&" + str(var)
-
-
-def ignore_variable(var):
-    return "(void)%s;" % var
-
-
-def simplify_type_namespace(typename, current_namespace):
-    typename_entries = typename.split("::")
-    ns_entries = current_namespace.split("::")
-
-    i = 0
-    while typename_entries[i] == ns_entries[i]:
-        i += 1
-
-    new_typename_entries = typename_entries[i:]
-    return "".join([entry for entry in new_typename_entries])
-
-
-def write_code_file(fpath, code):
-    with open(fpath, "w+") as f:
-        for line in code:
-            f.write(line + os.linesep)
-
-
-def generate_messages_file(includes):
-    file = [
-        "#pragma once",
-        "",
-        *includes,
-        ""
-    ]
-
-    return file
-
-
-def generate_constants_file(namespace, constants):
-    code = [
-        "#pragma once",
-        "",
-        "#include <messgen/bitmasks.h>",
-        "#include <cstdint>",
-        "",
-        *open_namespace(namespace),
-    ]
-
-    # Generate enums
-    for const in constants:
-        code.append("")
-        code.extend(make_enum(const["name"], to_cpp_type(const["basetype"]), const["fields"]))
-
-    code.extend(close_namespace(namespace))
-
-    # Enable bitmask operations for generated enums
-    code.extend(open_namespace("messgen"))
-    for const in constants:
-        if const.get("bitmask") is True:
-            full_type = namespace + "::" + const["name"]
-            code.append("ENABLE_BITMASK_OPERATORS(%s);" % full_type)
-    code.extend(close_namespace("messgen"))
-
-    return code
-
-
-def generate_proto_file(namespace, module, modules_map):
-    proto_id = module["proto_id"]
-    max_msg_size = module["max_datatype_size"]
-
-    struct = ["struct ProtoInfo {",
-              "    static constexpr %s ID = %d;" % (PROTO_ID_VAR_TYPE, proto_id),
-              "    static constexpr %s MAX_MESSAGE_SIZE = %d;" % (PROTO_MAX_MESSAGE_SIZE_TYPE, max_msg_size),
-              "    static constexpr const char* VERSION = \"%s\";" % (VersionProtocol(module).generate()),
-              "};"]
-
-    code = [
-        "#pragma once",
-        "",
-        *open_namespace(namespace),
-        "",
-        *struct,
-        "",
-        "static constexpr %s PROTO_ID = %d;" % (PROTO_ID_VAR_TYPE, proto_id),
-        "static constexpr %s PROTO_MAX_MESSAGE_SIZE = %d;" % (PROTO_MAX_MESSAGE_SIZE_TYPE, max_msg_size),
-        "static constexpr const char* PROTO_VERSION = \"%s\";" % (VersionProtocol(module).generate()),
-        "",
-        *close_namespace(namespace)
-    ]
-
-    return code
-
-
-def get_dyn_field_ptr(field):
-    return field["name"] + ".ptr"
-
-
-def get_dyn_field_size(field):
-    return field["name"] + ".size"
-
-
-def get_dyn_field_vars(field):
-    return get_dyn_field_ptr(field), get_dyn_field_size(field)
-
-
-def allocate_memory(dst, mem_type, size):
-    return ["%s = %s.alloc<%s>(%s);" % (dst, INPUT_ALLOC_NAME, mem_type, str(size)),
-            "if (%s == nullptr) {return -1;}" % dst]
-
-
-def get_dynamic_field_items_num():
-    size = ""
-    for i in range(DYN_FIELD_LEN_SIZE):
-        shift_str = "(ptr[%d] << (%dU*8U))" % (i, i)
-        size += " " + shift_str + " |"
-
-    return size[:-2]
-
-
-def get_mem_size(dynamic_field_len, dyn_type):
-    return "%s * sizeof(%s)" % (str(dynamic_field_len), dyn_type)
-
-
-def is_null(s):
-    return "%s == nullptr" % s
-
-
-def is_not_null(s):
-    return "%s != nullptr" % s
-
-
-def if_not_null(s):
-    return "if (%s)" % is_not_null(s)
-
-
-def if_null(s):
-    return "if (%s)" % is_null(s)
-
-
-def arr_item(arr, idx):
-    return "%s[%s]" % (arr, idx)
+    def __str__(self):
+        return "<FieldsGroup size=%s fields=%s>" % (self.size, self.field_names)
 
 
 class CppGenerator:
-    def __init__(self, modules_map, data_types_map, module_sep, variables):
-        self.MODULE_SEP = module_sep
-        self._modules_map = modules_map
-        self._data_types_map = data_types_map
-        self._variables = variables
+    _PREAMBLE_HEADER = ["#pragma once", ""]
+    _EXT_HEADER = ".h"
+    _CPP_TYPES_MAP = {
+        "bool": "bool",
+        "uint8": "uint8_t",
+        "int8": "int8_t",
+        "uint16": "uint16_t",
+        "int16": "int16_t",
+        "uint32": "uint32_t",
+        "int32": "int32_t",
+        "uint64": "uint64_t",
+        "int64": "int64_t",
+        "float32": "float",
+        "float64": "double",
+    }
 
-        self._indent_cnt = 0
-        self._indent = ""
-        self._code = []
-        self._metadata_json = (self._variables.get("metadata_json", "false").lower() == "true")
-        if self._metadata_json:
-            self._json_generator = JsonGenerator(modules_map, data_types_map, module_sep, variables)
+    def __init__(self, protos: Protocols, options: dict):
+        self._protocols: Protocols = protos
+        self._options: dict = options
+        self._includes: set = set()
+        self._ctx: dict = {}
 
-    def generate(self, out_dir):
-        for module_name, module in self._modules_map.items():
-            module_out_dir = out_dir + os.path.sep + module["namespace"].replace(self.MODULE_SEP, os.path.sep)
+    def generate(self, out_dir, proto_name, proto):
+        self._ctx["proto_name"] = proto_name
+        proto_out_dir = out_dir + os.path.sep + proto_name.replace(SEPARATOR, os.path.sep)
 
-            try:
-                os.makedirs(module_out_dir)
-            except:
+        try:
+            os.makedirs(proto_out_dir)
+        except:
+            pass
+
+        for type_name, type_def in proto["types"].items():
+            fn = os.path.join(proto_out_dir, type_name) + self._EXT_HEADER
+            write_file_if_diff(fn, self._generate_type_file(type_name, type_def))
+
+        proto_fn = proto_out_dir + self._EXT_HEADER
+        write_file_if_diff(proto_fn, self._generate_proto_file(proto_name))
+
+    def _get_mode(self):
+        return self._options.get("mode", "stl")
+
+    def _get_cpp_standard(self):
+        return int(self._options.get("cpp_standard", "11"))
+
+    def _reset_file(self):
+        self._includes.clear()
+
+    def _generate_type_file(self, type_name, type_def) -> list:
+        proto_name = self._ctx["proto_name"]
+        print("Generate type: %s/%s" % (proto_name, type_name))
+        namespace = _cpp_namespace(proto_name)
+
+        self._reset_file()
+        code = []
+
+        code.append("namespace %s {" % namespace)
+        code.append("")
+
+        if type_def["type_class"] == "enum":
+            code.extend(self._generate_type_enum(type_name, type_def))
+        elif type_def["type_class"] == "struct":
+            code.extend(self._generate_type_struct(type_name))
+
+        code.append("")
+        code.append("} // namespace %s" % namespace)
+
+        code = self._PREAMBLE_HEADER + self._generate_includes() + code
+
+        return code
+
+    def _generate_proto_file(self, proto_name):
+        print("Generate protocol file: %s" % proto_name)
+
+        namespace = _cpp_namespace(proto_name)
+
+        self._reset_file()
+        code = []
+
+        self._add_include("cstdint")
+        self._add_include("messgen/messgen.h")
+
+        code.append("namespace %s {" % namespace)
+        code.append("")
+
+        proto = self._protocols.proto_map[proto_name]
+
+        proto_id = proto["proto_id"]
+        if proto_id is not None:
+            code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+
+        code.append("")
+        code.append("} // namespace %s" % namespace)
+
+        code = self._PREAMBLE_HEADER + self._generate_includes() + code
+
+        return code
+
+    def _generate_comment_type(self, type_def):
+        if "comment" not in type_def:
+            return []
+        code = []
+        code.append("/**")
+        code.append(" * %s" % type_def["comment"])
+        code.append(" */")
+        return code
+
+    def _generate_type_enum(self, type_name, type_def):
+        code = []
+
+        code.extend(self._generate_comment_type(type_def))
+        code.append("enum class %s : %s {" % (type_name, self._cpp_type(type_def["base_type"])))
+        for item in type_def["values"]:
+            code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
+        code.append("};")
+
+        return code
+
+    def _get_alignment(self, type_def):
+        type_class = type_def["type_class"]
+        if type_class in ["scalar", "enum"]:
+            return type_def["size"]
+        elif type_class == "struct":
+            # Alignment of struct is equal to max of the field alignments
+            a_max = 0
+            for field in type_def["fields"]:
+                field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
+                a = self._get_alignment(field_type_def)
+                if a > a_max:
+                    a_max = a
+            return a_max
+        elif type_class == "array":
+            # Alignment of array is equal to alignment of element
+            el_type_def = self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"])
+            return self._get_alignment(el_type_def)
+        elif type_class == "vector":
+            # Alignment of array is equal to max of size field alignment and alignment of element
+            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
+            a_el = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"]))
+            return max(a_sz, a_el)
+        elif type_class == "map":
+            # Alignment of array is equal to max of size field alignment and alignment of element
+            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
+            a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
+            a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
+            return max(a_sz, a_key, a_value)
+        elif type_class in ["string", "bytes"]:
+            # Alignment of string is equal size field alignment
+            return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
+        else:
+            raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
+
+    def _check_alignment(self, type_def, offs):
+        align = self._get_alignment(type_def)
+        return offs % align == 0
+
+    def _generate_type_struct(self, type_name):
+        curr_proto_name = self._ctx["proto_name"]
+        type_def = self._protocols.get_type(curr_proto_name, type_name)
+
+        fields = type_def["fields"]
+
+        self._add_include("cstddef")
+        self._add_include("cstring")
+        self._add_include("messgen/messgen.h")
+
+        code = []
+        code.extend(self._generate_comment_type(type_def))
+        code.append("struct %s {" % type_name)
+
+        # Type ID, Proto ID
+        type_id = type_def.get("id")
+        if type_id is not None:
+            proto_id = self._protocols.proto_map[curr_proto_name]["proto_id"]
+            code.append("    static constexpr int TYPE_ID = %s;" % type_id)
+            code.append("    static constexpr int PROTO_ID = %s;" % proto_id)
+
+        groups = self._field_groups(fields)
+        if len(groups) > 1 and self._all_fields_scalar(fields):
+            print("Warn: padding in '%s' after '%s' causes extra memcpy call during serialization." % (
+                type_name, groups[0].fields[0]["name"]))
+
+        # IS_FLAT flag
+        is_flat_str = "false"
+        is_empty = len(groups) == 0
+        if is_empty or (len(groups) == 1 and groups[0].size is not None):
+            code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
+            is_flat_str = "true"
+        code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
+        code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
+        code.append("")
+
+        for field in type_def["fields"]:
+            field_c_type = self._cpp_type(field["type"])
+            code.append("    %s %s;%s" % (
+                field_c_type, field["name"], _inline_comment(field.get("comment", ""))))
+
+        # Serialize function
+        code_ser = []
+
+        code_ser.extend([
+            "size_t _size = 0;",
+            "[[maybe_unused]] size_t _field_size;",
+            "",
+        ])
+
+        for group in groups:
+            if len(group.fields) > 1:
+                # There is padding before current field
+                # Write together previous aligned fields, if any
+                code_ser.append("// %s" % ", ".join(group.field_names))
+                code_ser.extend(self._memcpy_to_buf(group.fields[0]["name"], group.size))
+            elif len(group.fields) == 1:
+                field = group.fields[0]
+                field_name = field["name"]
+                field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
+                code_ser.extend(self._serialize_field(field_name, field_type_def))
+            code_ser.append("")
+        code_ser.append("return _size;")
+
+        code_ser = ["",
+                    "size_t serialize(uint8_t *_buf) const {",
+                    ] + _indent(code_ser) + [
+                       "}"]
+        code.extend(_indent(code_ser))
+
+        # Deserialize function
+        code_deser = []
+
+        code_deser.extend([
+            "size_t _size = 0;",
+            "[[maybe_unused]] size_t _field_size;",
+            "",
+        ])
+
+        groups = self._field_groups(fields)
+        for group in groups:
+            if len(group.fields) > 1:
+                # There is padding before current field
+                # Write together previous aligned fields, if any
+                code_deser.append("// %s" % ", ".join(group.field_names))
+                code_deser.extend(self._memcpy_from_buf(group.fields[0]["name"], group.size))
+            elif len(group.fields) == 1:
+                field = group.fields[0]
+                field_name = field["name"]
+                field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
+                code_deser.extend(self._deserialize_field(field_name, field_type_def))
+            code_deser.append("")
+        code_deser.append("return _size;")
+
+        alloc = ""
+        if self._get_mode() == "nostl":
+            alloc = ", messgen::Allocator &_alloc"
+        code_deser = ["",
+                      "size_t deserialize(const uint8_t *_buf%s) {" % alloc,
+                      ] + _indent(code_deser) + [
+                         "}"]
+        code.extend(_indent(code_deser))
+
+        # Size function
+        code_ss = []
+
+        fixed_size = 0
+        fixed_fields = []
+        for field in fields:
+            field_name = field["name"]
+            field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
+            field_size = field_type_def.get("size")
+
+            if field_size is None:
+                code_ss.extend(self._serialized_size_field(field_name, field_type_def))
+                code_ss.append("")
+            else:
+                fixed_fields.append(field_name)
+                fixed_size += field_size
+
+        code_ss.append("return _size;")
+
+        code_ss = ["",
+                   "size_t serialized_size() const {",
+                   _indent("// %s" % ", ".join(fixed_fields)),
+                   _indent("size_t _size = %d;" % fixed_size),
+                   "",
+                   ] + _indent(code_ss) + [
+                      "}"]
+        code.extend(_indent(code_ss))
+
+        if self._get_cpp_standard() >= 20:
+            # Operator <=>
+            code.append("")
+            code.append(_indent("auto operator<=>(const %s&) const = default;" % type_name))
+
+        code.append("};")
+
+        if self._get_cpp_standard() < 20:
+            # Operator ==
+            code_eq = []
+            if len(fields) > 0:
+                field_name = fields[0]["name"]
+                code_eq.append("return l.%s == r.%s" % (field_name, field_name))
+                for field in fields[1:]:
+                    field_name = field["name"]
+                    code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
+            else:
+                code_eq.append("return true")
+            code_eq[-1] += ";"
+
+            code.extend([
+                            "",
+                            "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
+                        ] + _indent(code_eq) + [
+                            "}"
+                        ])
+
+        return code
+
+    def _add_include(self, inc, scope="global"):
+        self._includes.add((inc, scope))
+
+    def _generate_includes(self):
+        code = []
+        for inc in list(self._includes):
+            if inc[1] == "local":
+                code.append("#include \"%s\"" % inc[0])
+            else:
+                code.append("#include <%s>" % inc[0])
+        if len(code) > 0:
+            code.append("")
+        return code
+
+    def _cpp_type(self, type_name: str) -> str:
+        t = self._protocols.get_type(self._ctx["proto_name"], type_name)
+        mode = self._get_mode()
+        if t["type_class"] == "scalar":
+            self._add_include("cstdint")
+            return self._CPP_TYPES_MAP[type_name]
+        elif t["type_class"] == "array":
+            self._add_include("array")
+            el_type_name = _cpp_namespace(t["element_type"])
+            el_c_type = self._cpp_type(el_type_name)
+            return "std::array<%s, %d>" % (el_c_type, t["array_size"])
+        elif t["type_class"] == "vector":
+            el_type_name = t["element_type"]
+            el_c_type = self._cpp_type(el_type_name)
+            if mode == "stl":
+                self._add_include("vector")
+                return "std::vector<%s>" % el_c_type
+            elif mode == "nostl":
+                return "messgen::vector<%s>" % el_c_type
+            else:
+                raise RuntimeError("Unsupported mode for vector: %s" % mode)
+        elif t["type_class"] == "map":
+            key_c_type = self._cpp_type(t["key_type"])
+            value_c_type = self._cpp_type(t["value_type"])
+            if mode == "stl":
+                self._add_include("map")
+                return "std::map<%s, %s>" % (key_c_type, value_c_type)
+            elif mode == "nostl":
+                self._add_include("span")
+                return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
+            else:
+                raise RuntimeError("Unsupported mode for map: %s" % mode)
+        elif t["type_class"] == "string":
+            if mode == "stl":
+                self._add_include("string")
+                return "std::string"
+            elif mode == "nostl":
+                self._add_include("string_view")
+                return "std::string_view"
+            else:
+                raise RuntimeError("Unsupported mode for string: %s" % mode)
+        elif t["type_class"] == "bytes":
+            if mode == "stl":
+                self._add_include("vector")
+                return "std::vector<uint8_t>"
+            elif mode == "nostl":
+                return "messgen::vector<uint8_t>"
+            else:
+                raise RuntimeError("Unsupported mode for bytes: %s" % mode)
+        elif t["type_class"] in ["enum", "struct"]:
+            if SEPARATOR in type_name:
+                scope = "global"
+            else:
+                scope = "local"
+            self._add_include("%s.h" % type_name, scope)
+            return _cpp_namespace(type_name)
+        else:
+            raise RuntimeError("Can't get c++ type for %s" % type_name)
+
+    def _all_fields_scalar(self, fields):
+        for field in fields:
+            field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
+            if field_type_def["type_class"] != "scalar":
+                return False
+        return True
+
+    def _field_groups(self, fields):
+        groups = [FieldsGroup()] if len(fields) > 0 else []
+        for field in fields:
+            type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
+            align = self._get_alignment(type_def)
+            size = type_def.get("size")
+            # Check if there is padding before this field
+            if len(groups[-1].fields) > 0 and (
+                    (size is None) or
+                    (groups[-1].size is None) or
+                    (groups[-1].size % align != 0) or
+                    (size % align != 0)):
+                # Start next group
+                groups.append(FieldsGroup())
+
+            groups[-1].fields.append(field)
+            groups[-1].field_names.append(field["name"])
+            if groups[-1].size is not None:
+                if size is not None:
+                    groups[-1].size += size
+                else:
+                    groups[-1].size = None
+        return groups
+
+    def _serialize_field(self, field_name, field_type_def, level_n=0):
+        c = []
+
+        type_class = field_type_def["type_class"]
+
+        c.append("// %s" % field_name)
+        if type_class in ["scalar", "enum"]:
+            c_type = self._cpp_type(field_type_def["type"])
+            size = field_type_def.get("size")
+            c.append("*reinterpret_cast<%s *>(&_buf[_size]) = %s;" % (c_type, field_name))
+            c.append("_size += %s;" % size)
+
+        elif type_class == "struct":
+            c.append("_size += %s.serialize(&_buf[_size]);" % field_name)
+
+        elif type_class in ["array", "vector"]:
+            if type_class == "vector":
+                c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+                c.append("_size += sizeof(messgen::size_type);")
+            el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+            el_size = el_type_def.get("size")
+            el_align = self._get_alignment(el_type_def)
+            if el_size == 0:
                 pass
+            elif el_size is not None and el_size % el_align == 0:
+                # Vector of fixed size elements, optimize with single memcpy
+                c.append("_field_size = %d * %s.size();" % (el_size, field_name))
+                c.extend(self._memcpy_to_buf("%s[0]" % field_name, "_field_size"))
+            else:
+                # Vector of variable size elements
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(_indent(self._serialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
+                c.append("}")
 
-            namespace = module["namespace"].replace(self.MODULE_SEP, "::")
+        elif type_class == "map":
+            c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(messgen::size_type);")
+            key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
+            value_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
+            c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+            c.extend(
+                _indent(self._serialize_field("_i%d.first" % level_n, key_type_def, level_n + 1)))
+            c.extend(_indent(
+                self._serialize_field("_i%d.second" % level_n, value_type_def, level_n + 1)))
+            c.append("}")
 
-            proto_file = generate_proto_file(namespace, module, self._modules_map)
-            proto_fpath = module_out_dir + os.path.sep + "proto.h"
-            write_code_file(proto_fpath, proto_file)
+        elif type_class == "string":
+            c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
+            c.append("_size += %s.size();" % field_name)
 
-            all_includes = []
+        elif type_class == "bytes":
+            c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("std::copy(%s.begin(), %s.end(), &_buf[_size]);" % (field_name, field_name))
+            c.append("_size += %s.size();" % field_name)
 
-            source_fpath = module_out_dir + os.path.sep + "metadata.cpp"
-            source_includes = ["#include <messgen/Metadata.h>"]
-            source_file_data = []
+        else:
+            raise RuntimeError("Unsupported type_class in _serialize_field: %s" % type_class)
 
-            for message in module["messages"]:
-                header_file = self.__generate_message_header(namespace, message)
-                header_fpath = module_out_dir + os.path.sep + message["name"] + ".h"
-                write_code_file(header_fpath, header_file)
+        return c
 
-                source_includes += [make_include(message["name"] + ".h")]
-                source_file_data += self.generate_metadata(module, message)
-                source_file_data += [""]
+    def _deserialize_field(self, field_name, field_type_def, level_n=0):
+        c = []
 
-                cpp_include_path = make_module_include(module, message["name"])
-                all_includes.append(cpp_include_path)
+        type_class = field_type_def["type_class"]
+        mode = self._get_mode()
 
-            source = self.__generate_message_source(namespace,
-                                                    source_includes,
-                                                    source_file_data)
-            write_code_file(source_fpath, source)
+        c.append("// %s" % field_name)
+        if type_class in ["scalar", "enum"]:
+            c_type = self._cpp_type(field_type_def["type"])
+            size = field_type_def.get("size")
+            c.append("%s = *reinterpret_cast<const %s *>(&_buf[_size]);" % (field_name, c_type))
+            c.append("_size += %s;" % size)
 
-            all_includes.append(make_include("proto.h"))
-            all_includes.append(make_include("constants.h"))
+        elif type_class == "struct":
+            alloc = ""
+            if mode == "nostl":
+                alloc = ", _alloc"
+            c.append("_size += %s.deserialize(&_buf[_size]%s);" % (field_name, alloc))
 
-            # Messages.h
-            messages_file = generate_messages_file(all_includes)
-            messages_fpath = module_out_dir + os.path.sep + "messages.h"
-            write_code_file(messages_fpath, messages_file)
+        elif type_class == "array":
+            el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+            el_size = el_type_def.get("size")
+            el_align = self._get_alignment(el_type_def)
+            if el_size == 0:
+                pass
+            elif el_size is not None and el_size % el_align == 0:
+                # Vector or array of fixed size elements, optimize with single memcpy
+                c.append("_field_size = %d * %s.size();" % (el_size, field_name))
+                c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+            else:
+                # Vector or array of variable size elements
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
+                c.append("}")
 
-            constants = module.get("constants")
-            if constants is None:
-                constants = []
+        elif type_class == "vector":
+            if mode == "stl":
+                el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+                el_size = el_type_def.get("size")
+                el_align = self._get_alignment(el_type_def)
+                c.append("%s.resize(*reinterpret_cast<const messgen::size_type *>(&_buf[_size]));" % field_name)
+                c.append("_size += sizeof(messgen::size_type);")
+                if el_size == 0:
+                    pass
+                elif el_size is not None and el_size % el_align == 0:
+                    # Vector or array of fixed size elements, optimize with single memcpy
+                    c.append("_field_size = %d * %s.size();" % (el_size, field_name))
+                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                else:
+                    # Vector or array of variable size elements
+                    c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                    c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
+                    c.append("}")
+            elif mode == "nostl":
+                el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+                el_c_type = self._cpp_type(field_type_def["element_type"])
+                el_size = el_type_def.get("size")
+                el_align = self._get_alignment(el_type_def)
+                c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
+                c.append("%s = {_alloc.alloc<%s>(_field_size), _field_size};" % (field_name, el_c_type))
+                c.append("_size += sizeof(messgen::size_type);")
+                if el_size == 0:
+                    pass
+                elif el_size is not None and el_size % el_align == 0:
+                    # Vector or array of fixed size elements, optimize with single memcpy
+                    if el_size != 1:
+                        c.append("_field_size *= %d;" % el_size)
+                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                else:
+                    # Vector or array of variable size elements
+                    c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                    c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
+                    c.append("}")
 
-            constants_file = generate_constants_file(namespace, constants)
-            constants_fpath = module_out_dir + os.path.sep + "constants.h"
-            write_code_file(constants_fpath, constants_file)
+        elif type_class == "map":
+            c.append("{")
+            c.append(_indent("size_t _map_size%d = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);" % level_n))
+            c.append(_indent("_size += sizeof(messgen::size_type);"))
+            key_c_type = self._cpp_type(field_type_def["key_type"])
+            key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
+            value_c_type = self._cpp_type(field_type_def["value_type"])
+            value_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
+            c.append(
+                _indent(
+                    "for (size_t _i%d = 0; _i%d < _map_size%d; ++_i%d) {" % (level_n, level_n, level_n, level_n)))
+            c.append(_indent(_indent("%s _key%d;" % (key_c_type, level_n))))
+            c.append(_indent(_indent("%s _value%d;" % (value_c_type, level_n))))
+            c.append("")
+            c.extend(_indent(
+                _indent(
+                    self._deserialize_field("_key%d" % level_n, key_type_def, level_n + 1))))
+            c.extend(_indent(_indent(
+                self._deserialize_field("_value%d" % level_n, value_type_def, level_n + 1))))
+            c.append(_indent(_indent("%s[_key%d] = _value%d;" % (field_name, level_n, level_n))))
+            c.append(_indent("}"))
+            c.append("}")
 
-    def __generate_message_header(self, namespace, message):
-        self.reset()
-        msg_struct, msg_includes = self.generate_message(message)
-        msg_simple_detector = self.generate_detector(namespace, message)
+        elif type_class == "string":
+            c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
+            c.append("_size += _field_size;")
 
-        header = [
-            "#pragma once",
-            "",
-            *msg_includes,
-            "",
-            "",
-            *open_namespace(namespace),
-            "",
-            *msg_struct,
-            "",
-            *close_namespace(namespace),
-            "",
-            *msg_simple_detector
-        ]
+        elif type_class == "bytes":
+            c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("%s.assign(&_buf[_size], &_buf[_size + _field_size]);" % field_name)
+            c.append("_size += _field_size;")
 
-        return header
+        else:
+            raise RuntimeError("Unsupported type_class in _deserialize_field: %s" % type_class)
 
-    def __generate_message_source(self, namespace, includes, data):
-        self.reset()
+        c.append("")
 
-        source = includes + [
-            "",
-            *open_namespace(namespace),
-            ""
-        ] + data + [
-            "",
-            *close_namespace(namespace)
-        ]
+        return c
 
-        return source
+    def _serialized_size_field(self, field_name, field_type_def, level_n=0):
+        c = []
 
-    def generate_message(self, message_obj):
-        data_type = self._data_types_map[message_obj["typename"]]
+        type_class = field_type_def["type_class"]
 
-        message_id_const = "static constexpr %s TYPE = %d;" % \
-                           (MESSAGE_ID_C_TYPE, message_obj["id"])
+        c.append("// %s" % field_name)
+        if type_class == "scalar":
+            size = field_type_def.get("size")
+            c.append("_size += %d;" % size)
 
-        message_size_const = self.generate_static_size(data_type)
+        elif type_class == "struct":
+            c.append("_size += %s.serialized_size();" % field_name)
 
-        message_proto_id_const = "static constexpr %s PROTO = PROTO_ID;" % MESSAGE_PROTO_C_TYPE
+        elif type_class in ["array", "vector"]:
+            if field_type_def["type_class"] == "vector":
+                c.append("_size += sizeof(messgen::size_type);")
+            el_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
+            el_size = el_type.get("size")
+            if el_size is not None:
+                # Vector or array of fixed size elements
+                c.append("_size += %d * %s.size();" % (el_size, field_name))
+            else:
+                # Vector or array of variable size elements
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(_indent(self._serialized_size_field("_i%d" % level_n, el_type, level_n + 1)))
+                c.append("}")
 
-        message_has_dynamics = "static constexpr bool HAS_DYNAMICS = %s;" % str(data_type["has_dynamics"]).lower()
+        elif type_class == "map":
+            c.append("_size += sizeof(messgen::size_type);")
+            key_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
+            value_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
+            key_size = key_type.get("size")
+            value_size = value_type.get("size")
+            if key_size is not None and value_size is not None:
+                # Vector or array of fixed size elements
+                c.append("_size += %d * %s.size();" % (key_size + value_size, field_name))
+            else:
+                # Vector or array of variable size elements
+                c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
+                c.extend(_indent(self._serialized_size_field("_i%d.first" % level_n, key_type, level_n + 1)))
+                c.extend(_indent(self._serialized_size_field("_i%d.second" % level_n, value_type, level_n + 1)))
+                c.append("}")
 
-        if data_type["has_dynamics"]:
-            message_obj["deps"].append("messgen/Dynamic")
+        elif type_class in ["string", "bytes"]:
+            c.append("_size += sizeof(messgen::size_type);")
+            c.append("_size += %s.size();" % field_name)
 
-        self.start_block("struct " + message_obj["name"])
-        self.extend([
-            message_id_const,
-            message_size_const,
-            message_proto_id_const,
-            message_has_dynamics,
-            ""
-        ])
+        else:
+            raise RuntimeError("Unsupported type_class in _serialized_size_field: %s" % field_type_def["type_class"])
 
-        has_const, has_str = self.generate_data_fields(data_type["fields"])
-        self.append("")
+        return c
 
-        cpp_typename = message_obj["typename"].replace("/", "::")
-        self.generate_compare_operator(cpp_typename, data_type)
-        self.append("")
-
-        self.generate_serialize_method(message_obj)
-        self.append("")
-
-        self.generate_parse_method(message_obj)
-        self.append("")
-
-        self.generate_get_size_method()
-        self.append("")
-
-        self.generate_get_dynamic_size_method(message_obj)
-        self.append("")
-
-        self.append("static const messgen::Metadata METADATA;")
-        self.append("")
-
-        self.stop_block(";")
-
-        includes = ["#include <cstdint>",
-                    "#include <cstring>",
-                    ]
-
-        if has_str:
-            includes.append("#if (__cplusplus >= 201703L)")
-            includes.append("#    include <string_view>")
-            includes.append("#endif")
-
-        includes += ["#include <messgen/SimpleDetector.h>",
-                     "#include <messgen/MemoryAllocator.h>",
-                     "#include <messgen/Metadata.h>",
-                     "#include <messgen/Parser.h>",
-                     "#include <messgen/Serializer.h>",
-                     "#include \"proto.h\"",
-                     ]
-
-        if has_const:
-            includes.append("#include \"constants.h\"")
-
-        for dep in message_obj["deps"]:
-            inc = "#include <" + dep + ".h>"
-            includes.append(inc)
-
-        return list(self._code), includes
-
-    def generate_detector(self, namespace, message_obj):
-        declaration = ["struct SimpleDetector<%s::%s> {" % (namespace, message_obj["name"])]
-        using = ["    using suspect = %s::%s;" % (namespace, message_obj["name"])]
-        fields = ["        && SimpleDetector<decltype(suspect::%s)>::is_simple_enough" % field["name"] for field in
-                  message_obj["fields"]]
+    def _memcpy_to_buf(self, src: str, size) -> list:
         return [
-            *open_namespace("messgen"),
-            "",
-            "template<>",
-            *declaration,
-            *using,
-            "    static const bool is_simple_enough = sizeof(suspect) == suspect::STATIC_SIZE",
-            *fields,
-            "    ;",
-            "};",
-            "",
-            *close_namespace("messgen")
+            "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(&%s), %s);" % (src, size),
+            "_size += %s;" % size
         ]
 
-    def generate_get_size_method(self):
-        self.start_block("size_t get_size() const")
-        self.extend([
-            "return STATIC_SIZE + get_dynamic_size();"
-        ])
-        self.stop_block()
-
-    def generate_get_dynamic_size_method(self, message_obj):
-        self.start_block("size_t get_dynamic_size() const")
-        self.append("size_t size = 0;")
-
-        for field in message_obj["fields"]:
-            typeinfo = self._data_types_map[field["type"]]
-
-            if field["is_array"]:
-                if typeinfo["plain"] and field["is_dynamic"]:
-                    dyn_len_var = get_dyn_field_size(field)
-                    mem_size = dyn_len_var + "*" + str(typeinfo["static_size"])
-                    self.append(set_inc_var("size", mem_size))
-
-                elif not typeinfo["plain"]:
-                    if field["is_dynamic"]:
-                        size_limit = get_dyn_field_size(field)
-                        ptr = "%s.ptr" % field["name"]
-                        size_func = "get_size"
-                    else:
-                        size_limit = str(field["num"])
-                        ptr = field["name"]
-                        size_func = "get_dynamic_size"
-
-                    self.start_for_cycle(size_limit)
-                    self.append(set_inc_var("size", "%s[i].%s()" % (ptr, size_func)))
-                    self.stop_cycle()
-
-            elif not typeinfo["plain"]:
-                self.append(set_inc_var("size", "messgen::Serializer<decltype(%s)>::get_dynamic_size(%s)" % (
-                    field["name"], field["name"])))
-
-            elif field["type"] == "string":
-                self.append(set_inc_var("size", strlen(field["name"])))
-
-        self.append("return size;")
-        self.stop_block()
-
-    def generate_compare_operator(self, typename, datatype):
-        self.start_block("bool operator== (const " + typename + "& " + "other) const")
-
-        if len(datatype["fields"]) == 0:
-            self.append("(void)other;")
-            self.append("return true;")
-            self.stop_block()
-        else:
-            for field in datatype["fields"]:
-                typeinfo = self._data_types_map[field["type"]]
-
-                if not field["is_array"]:
-                    self.append("if (!(%s == other.%s)) {return false;}" % (field["name"], field["name"]))
-                else:
-                    if field["is_dynamic"]:
-                        self.append("if (%s.size != other.%s.size) {return false;}" % (field["name"], field["name"]))
-                        ptr, num = get_dyn_field_vars(field)
-                    else:
-                        ptr = field["name"]
-                        num = field["num"]
-
-                    if typeinfo["plain"]:
-                        memcmp = "memcmp(%s, other.%s, %s * %s)" % (ptr, ptr, typeinfo["static_size"], num)
-                        self.append("if (%s != 0) {return false;}" % memcmp)
-                    else:
-                        self.start_for_cycle(num)
-                        self.append("if (!(%s[i] == other.%s[i])) {return false;}" % (ptr, ptr))
-                        self.stop_cycle()
-
-                self.append("")
-
-            self.append("return true;")
-            self.stop_block()
-
-    def __get_plain_fields_size_and_last_field_position(self, fields):
-        fpos = 0
-        copy_size = 0
-
-        for field in fields:
-            typeinfo = self._data_types_map[field["type"]]
-
-            if (not typeinfo["plain"]) or (field["is_dynamic"]):
-                break
-
-            fpos += 1
-
-            if field["is_array"]:
-                num = field["num"]
-            else:
-                num = 1
-
-            copy_size += typeinfo["static_size"] * num
-
-        return copy_size, fpos
-
-    def generate_serialize_method(self, message):
-        self.start_block("size_t serialize_msg(uint8_t *%s) const" % INPUT_BUF_NAME)
-        self.extend([
-            "uint8_t * ptr = %s;" % INPUT_BUF_NAME,
-            "(void)ptr;",
-            "uint32_t dyn_field_len;",
-            "(void)dyn_field_len;",
-            ""
-        ])
-
-        # Process plain fields
-        copy_size, current_field_pos = self.__get_plain_fields_size_and_last_field_position(message["fields"])
-
-        if copy_size != 0:
-            self.__copy_struct_block("&" + message["fields"][0]["name"], copy_size)
-
-        # Process composite fields
-        for field in message["fields"][current_field_pos:]:
-            if field["is_dynamic"]:
-                break
-
-            current_field_pos += 1
-
-            if field["is_array"]:
-                self.__serialize_struct_array(field["name"], field["num"])
-            else:
-                serialize_call = "messgen::Serializer<decltype(%s)>::serialize(%s, %s)" % (
-                    field["name"], "ptr", field["name"])
-                self.append(set_inc_var("ptr", serialize_call))
-
-        self.append("")
-
-        # Process dynamic fields
-        for field in message["fields"][current_field_pos:]:
-            if field["type"] == "string":
-                if field["is_array"]:
-                    raise MessgenException("Array of strings is not supported in C++ generator")
-
-                self.append(set_var("dyn_field_len", strlen(field["name"])))
-                self.__serialize_dynamic_field_length("dyn_field_len")
-                self.extend([
-                    memcpy("ptr", field["name"] + ".data()", "dyn_field_len"),
-                    set_inc_var("ptr", "dyn_field_len"),
-                ])
-                self.append("")
-            else:
-                serialize_call = "%s.serialize_msg(%s)" % (field["name"], "ptr")
-                self.append(set_inc_var("ptr", serialize_call))
-
-        self.append("return ptr - %s;" % INPUT_BUF_NAME)
-        self.stop_block()
-
-        return list(self._code)
-
-    def generate_parse_method(self, message):
-        self.start_block("int parse_msg(const uint8_t *%s, uint32_t len, messgen::MemoryAllocator & %s)" %
-                         (INPUT_BUF_NAME, INPUT_ALLOC_NAME))
-
-        if not message["has_dynamics"]:
-            self.append(ignore_variable(INPUT_ALLOC_NAME))
-
-        if len(message["fields"]) == 0:
-            self.append("(void)len;")
-
-        self.extend([
-            "const uint8_t * ptr = %s;" % INPUT_BUF_NAME,
-            "(void)ptr;",
-            "char * string_tmp_buf;",
-            "(void) string_tmp_buf;",
-            "size_t dyn_parsed_len;",
-            "(void)dyn_parsed_len;",
-            "int parse_result;",
-            "(void)parse_result;",
-            ""
-        ])
-
-        # Process plain fields
-        copy_size, current_field_pos = self.__get_plain_fields_size_and_last_field_position(message["fields"])
-        if copy_size != 0:
-            self.extend([
-                "if (len < %d) {return -1;}" % copy_size,
-                memcpy(ptr(message["fields"][0]["name"]), "ptr", copy_size),
-                set_inc_var("ptr", copy_size),
-                set_dec_var("len", copy_size),
-                ""
-            ])
-
-        # Process composite fields
-        for field in message["fields"][current_field_pos:]:
-            if field["is_dynamic"]:
-                break
-
-            current_field_pos += 1
-
-            if field["is_array"]:
-                self.__parse_struct_array(field["name"], field["num"])
-            else:
-                parse_call = "parse_result = messgen::Parser<decltype(%s)>::parse(%s, len, %s, %s);" % (
-                    field["name"], "ptr", INPUT_ALLOC_NAME, field["name"])
-                self.extend([
-                    parse_call,
-                    "if (parse_result < 0) { return -1; }",
-                    set_inc_var("ptr", "parse_result"),
-                    set_dec_var("len", "parse_result")
-                ])
-
-        self.append("")
-
-        # Process dynamic fields
-        for field in message["fields"][current_field_pos:]:
-            if field["type"] == "string":
-                self.extend([
-                    "if (len < %d) {return -1;}" % DYN_FIELD_LEN_SIZE,
-                ])
-
-                dyn_field_items_num = get_dynamic_field_items_num()
-
-                self.extend([
-                    set_var("dyn_parsed_len", dyn_field_items_num),
-                    set_inc_var("ptr", DYN_FIELD_LEN_SIZE),
-                    set_dec_var("len", DYN_FIELD_LEN_SIZE)
-                ])
-
-                self.start_block("if (dyn_parsed_len > 0)")
-                self.extend([
-                    "if (len < dyn_parsed_len) {return -1;}",
-                    # Increase allocation size by 1 byte for null terminator
-                    *allocate_memory("string_tmp_buf", "char", "dyn_parsed_len + 1"),
-                    memcpy("string_tmp_buf", "ptr", "dyn_parsed_len"),
-                    "string_tmp_buf[dyn_parsed_len] = '\\0';",
-                    set_var(field["name"], "std::string_view{string_tmp_buf, dyn_parsed_len}"),
-                    set_inc_var("ptr", "dyn_parsed_len"),
-                    set_dec_var("len", "dyn_parsed_len"),
-                    ""
-                ])
-                self.continue_block("else")
-                self.append(set_var(field["name"], "\"\""))
-                self.stop_block()
-            else:
-                parse_call = "parse_result = %s.parse_msg(%s, len, %s);" % (field["name"], "ptr", INPUT_ALLOC_NAME)
-                self.extend([
-                    parse_call,
-                    "if (parse_result < 0) { return -1; }",
-                    set_inc_var("ptr", "parse_result"),
-                    set_dec_var("len", "parse_result"),
-                    ""
-                ])
-
-        self.append("return static_cast<int>(ptr - %s);" % INPUT_BUF_NAME)
-        self.stop_block()
-
-        return list(self._code)
-
-    def generate_static_size(self, data_type):
-        var = "static constexpr {} STATIC_SIZE = {}".format(MESSAGE_SIZE_C_TYPE, data_type["static_size"])
-        fields = data_type["fields"]
-        for field in fields:
-            typeinfo = self._data_types_map[field["type"]]
-            if not typeinfo["generated"] and not field["is_dynamic"]:
-                var += " + {}::STATIC_SIZE".format(to_cpp_type(field["type"]))
-        var += ";"
-        return var
-
-    def generate_data_fields(self, fields):
-        has_constant = False
-        has_string = False
-        for field in fields:
-            if field["type"] == "string":
-                var = make_variable(field["name"], "std::string_view", 0)
-                has_string = True
-            else:
-                has_constant |= is_type_constant(field["type"])
-                c_type = to_cpp_type(field["type"])
-                if field["is_dynamic"]:
-                    var = make_variable(field["name"], "messgen::Dynamic<" + c_type + ">", field["num"])
-                else:
-                    var = make_variable(field["name"], c_type, field["num"])
-
-            if field.get("descr") is not None:
-                var += " // " + str(field["descr"])
-
-            self.append(var)
-        return has_constant, has_string
-
-    def convert_constant_to_basetype(self, name, constants):
-        el = [x for x in constants if x['name'] == name]
-        if len(el) != 0:
-            return to_cpp_type_short(el[0]['basetype'])
-        return name
-    
-    def generate_metadata_fields_legacy(self, constants, message_obj):
-        descr = ['"']
-        for field in message_obj["fields"]:
-            t = self.convert_constant_to_basetype(to_cpp_type_short(field["type"]), constants)
-            descr.append(t)
-            if field["is_array"]:
-                if field["is_dynamic"]:
-                    descr.append("[]")
-                else:
-                    descr.append("[%d]" % field["num"])
-
-            descr.append(" " + field["name"] + ";")
-        descr.append('"')
-        return "".join(descr)
-
-    def generate_metadata_fields_json(self, message_obj):
-        return '"[' + ",".join(self._json_generator.generate_fields(message_obj)).replace('"', '\\"') + ']"'
-
-    def generate_metadata(self, module, message_obj):
-        self.reset()
-        if self._metadata_json:
-            fields_description = self.generate_metadata_fields_json(message_obj)
-        else:
-            constants = module.get("constants")
-            fields_description = self.generate_metadata_fields_legacy(constants, message_obj)
-
-        nested_structs_metadata = "{"
-        for field in message_obj["fields"]:
-            typeinfo = self._data_types_map[field["type"]]
-            if not typeinfo["plain"]:
-                nested_structs_metadata += "&" + to_cpp_type(field["type"]) + "::METADATA, "
-        nested_structs_metadata += "nullptr}"
-
-        self.append("static const messgen::Metadata *nested_msgs_%s[] = %s;" % (message_obj["name"], nested_structs_metadata))
-        self.start_block("const messgen::Metadata %s::METADATA = " % message_obj["name"])
-        self.extend([
-            "\"%s\"," % message_obj["name"],
-            fields_description + ",",
-            "nested_msgs_%s" % message_obj["name"]
-        ])
-        self.stop_block(term=";")
-
-        return list(self._code)
-
-    def append(self, v):
-        self._code.append(self._indent + v if v else "")
-
-    def extend(self, v):
-        for line in v:
-            self._code.append(self._indent + line if line else "")
-
-    def reset(self):
-        self._code = []
-        self._indent_cnt = 0
-        self._indent = ""
-
-    def start_block(self, decl):
-        self._code.append(self._indent + decl + " {")
-        self._indent_cnt += 1
-        self._indent = INDENT * self._indent_cnt
-
-    def stop_block(self, term=""):
-        self._indent_cnt -= 1
-        self._indent = INDENT * self._indent_cnt
-        self._code.append(self._indent + "}" + term)
-
-    def continue_block(self, decl, term=""):
-        indent = INDENT * (self._indent_cnt - 1)
-        self._code.append(indent + "}" + term)
-        self._code.append(indent + decl + " {")
-
-    def start_for_cycle(self, cycle_limit):
-        self.start_block("for (size_t i = 0; i < %s; ++i)" % cycle_limit)
-
-    def stop_cycle(self):
-        self.stop_block()
-
-    def __copy_struct_block(self, field_ptr, size):
-        self.extend([
-            memcpy("ptr", field_ptr, size),
-            set_inc_var("ptr", size),
-            ""
-        ])
-
-    def __serialize_struct_array(self, field_ptr, size):
-        serialize_call = "%s[i].serialize_msg(%s)" % (field_ptr, "ptr")
-
-        self.start_for_cycle(str(size))
-        self.append(set_inc_var("ptr", serialize_call))
-        self.stop_cycle()
-        self.append("")
-
-    def __parse_struct_array(self, field_ptr, size):
-        parse_call = "%s[i].parse_msg(%s, len, %s)" % (field_ptr, "ptr", INPUT_ALLOC_NAME)
-        self.start_for_cycle(str(size))
-        self.extend([
-            set_var("parse_result", parse_call),
-            "if (parse_result < 0) {return -1;}",
-            set_inc_var("ptr", "parse_result"),
-            set_dec_var("len", "parse_result"),
-        ])
-        self.stop_cycle()
-        self.append("")
-
-    def __serialize_dynamic_field_length(self, length):
-        for i in range(DYN_FIELD_LEN_SIZE):
-            shift_str = "((%s >> (%dU*8U)) & 0xFFU)" % (str(length), i)
-            self.append("ptr[%d] = %s;" % (i, shift_str))
-
-        self.append(set_inc_var("ptr", str(DYN_FIELD_LEN_SIZE)))
+    def _memcpy_from_buf(self, dst: str, size) -> list:
+        return [
+            "::memcpy(reinterpret_cast<uint8_t *>(&%s), &_buf[_size], %s);" % (dst, size),
+            "_size += %s;" % size
+        ]

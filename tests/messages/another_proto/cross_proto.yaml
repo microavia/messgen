@@ -1,0 +1,5 @@
+type_class: struct
+comment: "Struct that uses types from another protocol"
+fields:
+  - { name: "f0", type: "uint64", comment: "Some integer field" }
+  - { name: "cross0", type: "messgen/test_proto/simple_enum", comment: "Type from another protocol" }

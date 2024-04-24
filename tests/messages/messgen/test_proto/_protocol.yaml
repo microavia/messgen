@@ -1,0 +1,4 @@
+proto_id: 1
+types_map:
+  0: "simple_struct"
+  1: "complex_struct"

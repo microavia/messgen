@@ -1,5 +1,6 @@
-import {Buffer, Struct} from '../src/messgen.js';
 import { bench, describe } from 'vitest'
+import {Struct} from "../src/Struct.ts";
+import {Buffer} from "../src/Buffer.ts";
 
 let srcStruct = new Struct({
   id: 2,
