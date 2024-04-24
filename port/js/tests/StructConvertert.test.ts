@@ -285,13 +285,11 @@ describe('StructConverter', () => {
       field2: 3.14,
       field3: true
     })));
-    inputBuffer.dataView.setUint32(0, 4); // field1 length
-    inputBuffer.dataView.setUint8(4, 116); // field1 data t
-    inputBuffer.dataView.setUint8(5, 101); // field1 data e
-    inputBuffer.dataView.setUint8(6, 115); // field1 data s
-    inputBuffer.dataView.setUint8(7, 116); // field1 data t
-    inputBuffer.dataView.setFloat64(8, 3.14); // field2 data
-    inputBuffer.dataView.setUint8(16, 1); // field3 data
+    
+    converters.get("string")?.serialize("test", inputBuffer);
+    converters.get("float64")?.serialize(3.14, inputBuffer);
+    converters.get("bool")?.serialize(true, inputBuffer);
+    inputBuffer.offset = 0;
     
     // When
     const result = structConverter.deserialize(inputBuffer);
@@ -400,10 +398,9 @@ describe('StructConverter', () => {
       ],
     };
     const converters = Messgen.initializeBasicConverter();
-    const structConverter = new StructConverter("struct", schema, converters);
     
     // When
-    const serializeFn = () => structConverter.serialize({ [fieldName]: fieldValue }, new Buffer(new ArrayBuffer(10)));
+    const serializeFn = () => new StructConverter("struct", schema, converters);
     
     // Then
     expect(serializeFn).toThrowError(`Converter for type ${fieldType} is not found`);

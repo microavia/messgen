@@ -3,6 +3,9 @@ import { Buffer } from "../Buffer";
 import { IName, TypeClass, IType, IValue } from "../types";
 
 export class StructConverter extends Converter {
+  convertorsList: { converter: Converter, name: string }[] = [];
+  reservedWords: string[] = Object.getOwnPropertyNames(Object.prototype);
+  
   constructor(
     name: IName,
     private schema: TypeClass,
@@ -13,40 +16,42 @@ export class StructConverter extends Converter {
       if (schema.fields?.slice(index + 1).some((f) => f.name === field.name)) {
         throw new Error(`Field ${field.name} is duplicated in ${this.name}`);
       }
+      
+      if (this.reservedWords.includes(field.name)) {
+        throw new Error(`Field ${field.name} is a reserved word in JavaScript`);
+      }
+      
+      let converter = this.converters.get(field.type);
+      if (!converter) {
+        throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
+      }
+      
+      
+      this.convertorsList.push({ converter, name: field.name });
     })
   }
   
   serialize(value: IValue, buffer: Buffer) {
-    this.schema.fields?.forEach((field) => {
-      // TODO: move to constructor
-      let converter = this.converters.get(field.type);
-      if (!converter) {
-        throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
-      }
-      let data = value[field.name];
+    this.convertorsList.forEach(({ converter, name }) => {
+      let data = value[name];
       if (
-        data == null || data == undefined
+        data === null || data === undefined
       ) {
-        throw new Error(`Field ${field.name} is not found in ${this.name}`);
+        throw new Error(`Field ${name} is not found in ${this.name}`);
       }
-      
       converter.serialize(data, buffer);
     })
-    
   }
   
   size(value: IValue): number {
-    return this.schema.fields?.reduce((acc, field) => {
-      // TODO: move to constructor
-      let converter = this.converters.get(field.type);
-      if (!converter) {
-        throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
-      }
-      let data = value[field.name];
+    return this.convertorsList.reduce((acc, { converter, name }) => {
+      
+      
+      let data = value[name];
       if (
-        data == null || data == undefined
+        data === null || data === undefined
       ) {
-        throw new Error(`Field ${field.name} is not found in ${this.name}`);
+        throw new Error(`Field ${name} is not found in ${this.name}`);
       }
       
       return acc + converter.size(data);
@@ -54,13 +59,8 @@ export class StructConverter extends Converter {
   }
   
   deserialize(buffer: Buffer): IValue {
-    return this.schema.fields?.reduce((acc, field) => {
-      // TODO: move to constructor
-      let converter = this.converters.get(field.type);
-      if (!converter) {
-        throw new Error(`Converter for type ${field.type} is not found`);
-      }
-      acc[field.name] = converter.deserialize(buffer);
+    return this.convertorsList.reduce((acc, { converter, name }) => {
+      acc[name] = converter.deserialize(buffer);
       return acc;
     }, {} as Record<IName, IValue>) || {}
   }
