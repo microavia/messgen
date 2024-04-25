@@ -32,6 +32,7 @@ export interface Types {
 
 export interface ProtocolJSON {
   proto_id: number;
+  proto_name: string;
   types: Types;
   messages: Record<string, unknown>;
   types_map: Record<string, string>;

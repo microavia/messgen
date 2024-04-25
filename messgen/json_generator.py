@@ -26,6 +26,7 @@ class JsonGenerator:
             pass
 
         data = proto
+        data['proto_name'] = proto_name
         data["version"] = protocol_version.version_hash(proto)
 
         enc = json.JSONEncoder()
