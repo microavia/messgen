@@ -83,4 +83,112 @@ if __name__ == "__main__":
         f.write(b)
     print("Successfully generated serialized data to tests/serialized_data/bin/complex_struct_with_empty.bin")
 
+
+    # complex_struct_nostl
+
+    t = codec.get_type_by_name("messgen/test_proto", "complex_struct_nostl")
+    simple_struct = {
+        "f0": 0x1234567890abcdef,
+        "f1": 0x1234567890abcdef,
+        "f1_pad": 0x12,
+        "f2": 1.2345678901234567890,
+        "f3": 0x12345678,
+        "f4": 0x12345678,
+        "f5": 1.2345678901234567890,
+        "f6": 0x1234,
+        "f7": 0x12,
+        "f8": -0x12,
+        "f9": True,
+    }
+    msg1 = {
+        "f0": 0x1234567890abcdef,
+        "f1": 0x12345678,
+        "f2": 0x1234567890abcdef,
+        "s_arr": [ simple_struct for _ in range(2)],
+        "f1_arr": [0x1234567890abcdef for _ in range(4)],
+        "v_arr": [{"f0": 0x1234567890abcdef, "f1_vec": [0x1234567890abcdef, 5, 1], "str": "Hello messgen!"} for _ in
+                  range(2)],
+        "f2_vec": [1.2345678901234567890 for _ in range(3)],
+        "e_vec": ["one_value", "another_value"],
+        "s_vec": [ simple_struct for _ in range(3)],
+        "v_vec0": [[{"f0": 0x1234567890abcdef, "f1_vec": [0x1234567890abcdef, 5, 1], "str": "Hello messgen!"} for _ in
+                    range(2)] for _ in range(3)],  # replace 3 with desired outer list length
+        "v_vec1": [[{"f0": 0x1234567890abcdef, "f1_vec": [0x1234567890abcdef, 5, 1], "str": "Hello messgen!"} for _ in
+                    range(3)] for _ in range(4)],  # replace 3 with desired outer list length
+        "v_vec2": [[[0x1234 for _ in range(3)] for _ in range(4)] for _ in range(2)],
+        "str": "Example String",
+        "str_vec": ["string1", "string2", "string3"],
+    }
+    b = t.serialize(msg1)
+    with open('tests/serialized_data/bin/complex_struct_nostl.bin', 'wb') as f:
+        f.write(b)
+    print("Successfully generated serialized data to tests/serialized_data/bin/complex_struct_nostl.bin")
+
+
+    # complex_struct
+    t = codec.get_type_by_name("messgen/test_proto", "complex_struct")
+
+    simple_struct = {
+        "f0": 0x1234567890abcdef,
+        "f1": 0x1234567890abcdef,
+        "f1_pad": 0x12,
+        "f2": 1.2345678901234567890,
+        "f3": 0x12345678,
+        "f4": 0x12345678,
+        "f5": 1.2345678901234567890,
+        "f6": 0x1234,
+        "f7": 0x12,
+        "f8": -0x12,
+        "f9": True,
+    }
+    msg1 = {
+        "f0": 0x1234567890abcdef,
+        "f1": 0x12345678,
+        "f2": 0x1234567890abcdef,
+        "s_arr": [simple_struct for _ in range(2)],
+        "f1_arr": [0x1234567890abcdef for _ in range(4)],
+        "v_arr": [{"f0": 0x1234567890abcdef, "f1_vec": [0x1234567890abcdef, 5, 1], "str": "Hello messgen!"} for _ in
+                  range(2)],
+        "f2_vec": [1.2345678901234567890 for _ in range(3)],
+        "e_vec": ["one_value", "another_value"],
+        "s_vec": [simple_struct for _ in range(3)],
+        "v_vec0": [[{"f0": 0x1234567890abcdef, "f1_vec": [0x1234567890abcdef, 5, 1], "str": "Hello messgen!"} for _ in
+                    range(2)] for _ in range(3)],  # replace 3 with desired outer list length
+        "v_vec1": [[{"f0": 0x1234567890abcdef, "f1_vec": [0x1234567890abcdef, 5, 1], "str": "Hello messgen!"} for _ in
+                    range(3)] for _ in range(4)],  # replace 3 with desired outer list length
+        "v_vec2": [[[0x1234 for _ in range(3)] for _ in range(4)] for _ in range(2)],
+        "str": "Example String",
+        "bs": b"byte string",
+        "str_vec": ["string1", "string2", "string3"],
+        "map_str_by_int": {i: "string" + str(i) for i in range(3)},
+        "map_vec_by_str": {"key" + str(i): [0x1234 for _ in range(3)] for i in range(3)},
+    }
+    b = t.serialize(msg1)
+    with open('tests/serialized_data/bin/complex_struct.bin', 'wb') as f:
+        f.write(b)
+    print("Successfully generated serialized data to tests/serialized_data/bin/complex_struct.bin")
+
+
+    # flat_struct
+
+    t = codec.get_type_by_name("messgen/test_proto", "flat_struct")
+    msg1 = {
+        "f0": 0x1234567890abcdef,
+        "f1": 0x1234567890abcdef,
+        "f1_pad": 0x12,
+        "f2": 1.2345678901234567890,
+        "f3": 0x12345678,
+        "f4": 0x12345678,
+        "f5": 1.2345678901234567890,
+        "f6": 0x1234,
+        "f7": 0x12,
+        "f8": -0x12,
+        "f9": True,
+    }
+
+    b = t.serialize(msg1)
+    with open('tests/serialized_data/bin/flat_struct.bin', 'wb') as f:
+        f.write(b)
+    print("Successfully generated serialized data to tests/serialized_data/bin/flat_struct.bin")
+
     print("Successfully")

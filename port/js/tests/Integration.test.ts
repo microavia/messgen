@@ -7,6 +7,7 @@ import { Messgen } from "../src/Messgen";
 
 let protocolData: ProtocolJSON;
 let messgen: Messgen;
+let bigint = BigInt('0x1234567890abcdef');
 
 describe('integration', () => {
   
@@ -26,36 +27,8 @@ describe('integration', () => {
     expect(() => {
       return new Messgen(protocolData)
     }).not.toThrow()
-    
-  })
-  it('shut be parse flat_struct', () => {
-    const FlatStructJsonPath = path.resolve(__dirname, '../../../tests/serialized_data/json/flat_struct.json');
-    const rawData = fs.readFileSync(FlatStructJsonPath);
-    // @ts-ignore
-    const data = JSON.parse(rawData);
-    const FlatStructBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/flat_struct.bin');
-    const rawDataBit = fs.readFileSync(FlatStructBitPath);
-    
-    const buffer = messgen.serialize('flat_struct', data)
-    
-    expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
-      rawDataBit)))
-    
-    const result = messgen.deserialize('flat_struct', new Uint8Array(rawDataBit).buffer)
-    expect(result.f0.toString()).toEqual(data.f0.toString());
-    expect(result.f1.toString()).toEqual(data.f1.toString());
-    
-    expect(result.f2).toBeCloseTo(data.f2, 5);
-    expect(result.f5).toBeCloseTo(data.f5, 5);
-    
-    expect(result.f3).toEqual(data.f3);
-    expect(result.f4).toEqual(data.f4);
-    expect(result.f6).toEqual(data.f6);
-    expect(result.f7).toEqual(data.f7);
-    expect(result.f8).toEqual(data.f8);
   })
   
-  let bigint = BigInt('1311768467294899695'); // 0x1234567890abcdef
   
   it('shut be parse simple_struct.bin', () => {
     const rawData = {
@@ -178,6 +151,154 @@ describe('integration', () => {
     expect(buffer.size).toEqual(rawDataBit.length)
     expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
       rawDataBit)))
+  })
+  
+  it('shut be parse complex_struct_nostl', () => {
+    
+    const simpleStruct = {
+      "f0": bigint,
+      "f1": bigint,
+      "f1_pad": 0x12,
+      "f2": 1.2345678901234567890,
+      "f3": 0x12345678,
+      "f4": 0x12345678,
+      "f5": 1.2345678901234567890,
+      "f6": 0x1234,
+      "f7": 0x12,
+      "f8": -0x12,
+      "f9": true,
+    }
+    
+    const rawData = {
+      "f0": BigInt("0x1234567890abcdef"),
+      "f1": 0x12345678,
+      "f2": BigInt("0x1234567890abcdef"),
+      "s_arr": Array(2).fill(simpleStruct),
+      "f1_arr": Array(4).fill(BigInt("0x1234567890abcdef")),
+      "v_arr": Array(2).fill({
+        "f0": BigInt("0x1234567890abcdef"),
+        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "str": "Hello messgen!"
+      }),
+      "f2_vec": Array(3).fill(1.2345678901234567890),
+      "e_vec": [
+        "one_value",
+        "another_value"],
+      "s_vec": Array(3).fill(simpleStruct),
+      "v_vec0": Array(3).fill(Array(2).fill({
+        "f0": BigInt("0x1234567890abcdef"),
+        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "str": "Hello messgen!"
+      })),  // replace 3 with desired outer list length
+      "v_vec1": Array(4).fill(Array(3).fill({
+        "f0": BigInt("0x1234567890abcdef"),
+        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "str": "Hello messgen!"
+      })),  // replace 3 with desired outer list length
+      "v_vec2": Array(2).fill(Array(4).fill(Array(3).fill(0x1234))),  // replace 2 with desired outer list length
+      "str": "Example String",
+      "str_vec": ["string1", "string2", "string3"],
+    };
+    
+    const ComplexStructNostlBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/complex_struct_nostl.bin');
+    const rawDataBit = fs.readFileSync(ComplexStructNostlBitPath);
+    
+    const buffer = messgen.serialize('complex_struct_nostl', rawData)
+    const result = messgen.deserialize('complex_struct_nostl', new Uint8Array(rawDataBit).buffer)
+    
+    simpleStruct.f5 = expect.closeTo(simpleStruct.f5, 4)
+    expect(result).toEqual(rawData);
+    expect(buffer.size).toEqual(rawDataBit.length)
+    expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
+      rawDataBit)))
+    
+  })
+  it('shut be parse complex_struct', () => {
+    const simpleStruct = {
+      "f0": BigInt("0x1234567890abcdef"),
+      "f1": BigInt("0x1234567890abcdef"),
+      "f1_pad": 0x12,
+      "f2": 1.2345678901234567890,
+      "f3": 0x12345678,
+      "f4": 0x12345678,
+      "f5": 1.2345678901234567890,
+      "f6": 0x1234,
+      "f7": 0x12,
+      "f8": -0x12,
+      "f9": true,
+    };
+    
+    const rawData = {
+      "f0": BigInt("0x1234567890abcdef"),
+      "f1": 0x12345678,
+      "f2": BigInt("0x1234567890abcdef"),
+      "s_arr": Array(2).fill(simpleStruct),
+      "f1_arr": Array(4).fill(BigInt("0x1234567890abcdef")),
+      "v_arr": Array(2).fill({
+        "f0": BigInt("0x1234567890abcdef"),
+        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "str": "Hello messgen!"
+      }),
+      "f2_vec": Array(3).fill(1.2345678901234567890),
+      "e_vec": ["one_value", "another_value"],
+      "s_vec": Array(3).fill(simpleStruct),
+      "v_vec0": Array(3).fill(Array(2).fill({
+        "f0": BigInt("0x1234567890abcdef"),
+        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "str": "Hello messgen!"
+      })),
+      "v_vec1": Array(4).fill(Array(3).fill({
+        "f0": BigInt("0x1234567890abcdef"),
+        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "str": "Hello messgen!"
+      })),
+      "v_vec2": Array(2).fill(Array(4).fill(Array(3).fill(0x1234))),
+      "str": "Example String",
+      "bs": new Uint8Array([0x62, 0x79, 0x74, 0x65, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67]), // "byte string"
+      "str_vec": ["string1", "string2", "string3"],
+      "map_str_by_int": new Map(Array.from({ length: 3 }, (_, i) => [i, "string" + i])),
+      "map_vec_by_str": new Map(Array.from({ length: 3 }, (_, i) => ["key" + i, Array(3).fill(0x1234)])),
+    };
+    
+    const ComplexStructBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/complex_struct.bin');
+    const rawDataBit = fs.readFileSync(ComplexStructBitPath);
+    
+    const buffer = messgen.serialize('complex_struct', rawData)
+    const result = messgen.deserialize('complex_struct', new Uint8Array(rawDataBit).buffer)
+    
+    simpleStruct.f5 = expect.closeTo(simpleStruct.f5, 4)
+    expect(result).toEqual(rawData);
+    expect(buffer.size).toEqual(rawDataBit.length)
+    expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
+      rawDataBit)))
+  })
+  
+  it('shut be parse flat_struct', () => {
+    
+    const rawData = {
+      "f0": bigint,
+      "f1": bigint,
+      "f2": 1.2345678901234567890,
+      "f3": 0x12345678,
+      "f4": 0x12345678,
+      "f5": 1.2345678901234567890,
+      "f6": 0x1234,
+      "f7": 0x12,
+      "f8": -0x12,
+    }
+    
+    const FlatStructBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/flat_struct.bin');
+    const rawDataBit = fs.readFileSync(FlatStructBitPath);
+    
+    const buffer = messgen.serialize('flat_struct', rawData)
+    const result = messgen.deserialize('flat_struct', new Uint8Array(rawDataBit).buffer)
+    
+    rawData.f5 = expect.closeTo(rawData.f5, 5)
+    expect(result).toEqual(rawData);
+    expect(buffer.size).toEqual(rawDataBit.length)
+    expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
+      rawDataBit)))
+    
   })
   
 })
