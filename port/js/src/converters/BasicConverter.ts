@@ -25,6 +25,10 @@ export class BasicConverter extends Converter {
     return result;
   }
   
+  default(): IValue {
+    return this.config.default();
+  }
+  
   static fromGlobalConfigs(): [IBasicType, Converter][] {
     return basicTypes.reduce<[IBasicType, Converter][]>((acc, config) => {
       acc.push([config.name,
@@ -41,6 +45,7 @@ export type BasicTypesConfig = {
   size: (value: any) => number;
   read: (v: DataView, byteOffset: number) => IValue;
   write: (v: DataView, byteOffset: number, value: IValue) => number;
+  default: () => IValue;
 };
 
 
@@ -58,7 +63,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setInt8(s, a);
       return 1;
-    }
+    },
+    default: () => 0
   }, {
     name: "uint8",
     size: () => 1,
@@ -66,7 +72,9 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setUint8(s, a);
       return 1;
-    }
+    },
+    default: () => 0
+    
   }, {
     name: "int16",
     size: () => 2,
@@ -74,7 +82,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setInt16(s, a, IS_LITTLE_ENDIAN);
       return 2;
-    }
+    },
+    default: () => 0
   }, {
     name: "uint16",
     size: () => 2,
@@ -82,7 +91,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setUint16(s, a, IS_LITTLE_ENDIAN);
       return 2;
-    }
+    },
+    default: () => 0
   }, {
     name: "int32",
     size: () => 4,
@@ -90,7 +100,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setInt32(s, a, IS_LITTLE_ENDIAN);
       return 4;
-    }
+    },
+    default: () => 0
   }, {
     name: "uint32",
     size: () => 4,
@@ -98,7 +109,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setUint32(s, a, IS_LITTLE_ENDIAN);
       return 4;
-    }
+    },
+    default: () => 0
   }, {
     name: "int64",
     size: () => 8,
@@ -108,7 +120,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setBigInt64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
-    }
+    },
+    default: () => 0
   }, {
     name: "uint64",
     size: () => 8,
@@ -119,23 +132,17 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setBigUint64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
-    }
+    },
+    default: () => 0
   }, {
-    //   name: "float",
-    //   size: () => 4,
-    //   read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
-    //   write: (v, s, a) => {
-    //     v.setFloat32(s, a, IS_LITTLE_ENDIAN);
-    //     return 4;
-    //   }
-    // }, {
     name: "float32",
     size: () => 4,
     read: (v, s) => v.getFloat32(s, IS_LITTLE_ENDIAN),
     write: (v, s, a) => {
       v.setFloat32(s, a, IS_LITTLE_ENDIAN);
       return 4;
-    }
+    },
+    default: () => 0
   }, {
     name: "float64",
     size: () => 8,
@@ -143,7 +150,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setFloat64(s, a, IS_LITTLE_ENDIAN);
       return 8;
-    }
+    },
+    default: () => BigInt(0)
   }, {
     name: "char",
     size: () => 1,
@@ -151,7 +159,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setInt8(s, a ? a.toString().charCodeAt(0) : 0);
       return 1;
-    }
+    },
+    default: () => ''
   }, {
     name: "bool",
     size: () => 1,
@@ -159,7 +168,8 @@ export const basicTypes = [
     write: (v, s, a) => {
       v.setInt8(s, a ? 1 : 0);
       return 1;
-    }
+    },
+    default: () => false
   }, {
     name: "string",
     size: (value: string) => value.length + 4,
@@ -176,7 +186,8 @@ export const basicTypes = [
       uint8View.set(encode, s + 4);
       
       return size + 4;
-    }
+    },
+    default: () => ''
   }, {
     name: 'bytes',
     size: (value: Uint8Array) => value.length + 4,
@@ -191,6 +202,7 @@ export const basicTypes = [
       uint8View.set(a, s + 4);
       
       return size + 4;
-    }
+    },
+    default: () => new Uint8Array(0)
   }
 ] satisfies BasicTypesConfig[]

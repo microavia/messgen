@@ -19,4 +19,8 @@ export abstract class Converter {
   deserialize(buffer: Buffer): IValue {// modify buffer.offset.offset
     throw new Error(`Not implemented in abstract class ${this.name} `);
   }
+  
+  default(): IValue {
+    return null;
+  }
 }

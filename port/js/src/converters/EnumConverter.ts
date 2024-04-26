@@ -47,4 +47,8 @@ export class EnumConverter extends Converter {
   size(value: IValue) {
     return this.converter.size(value);
   }
+  
+  default() {
+    return this.enumsByValue[0];
+  }
 }

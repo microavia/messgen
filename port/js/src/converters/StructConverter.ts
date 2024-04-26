@@ -5,7 +5,7 @@ import { IName, TypeClass, IType, IValue } from "../types";
 export class StructConverter extends Converter {
   convertorsList: { converter: Converter, name: string }[] = [];
   reservedWords: string[] = Object.getOwnPropertyNames(Object.prototype);
-  
+  parentObject: Record<IName, IValue>
   
   constructor(
     name: IName,
@@ -27,10 +27,14 @@ export class StructConverter extends Converter {
         throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
       }
       
-      
       this.convertorsList.push({ converter, name: field.name });
     })
+    
+    this.parentObject = Object.fromEntries(
+      this.convertorsList.map(({ name, converter }) => [name, converter.default()])
+    )
   }
+  
   
   serialize(value: IValue, buffer: Buffer) {
     this.convertorsList.forEach(({ converter, name }) => {
@@ -52,7 +56,7 @@ export class StructConverter extends Converter {
       ) {
         throw new Error(`Field ${name} is not found in ${this.name}`);
       }
-      
+
       return acc + converter.size(data);
     }, 0)
   }
@@ -63,5 +67,9 @@ export class StructConverter extends Converter {
       return acc;
     }, {} as Record<IName, IValue>)
     
+  }
+  
+  default(): IValue {
+    return this.parentObject;
   }
 }
