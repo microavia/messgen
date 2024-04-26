@@ -1,6 +1,6 @@
 import {bench, describe} from 'vitest'
-import {Struct} from "../src/Old/Struct.ts";
-import {Buffer} from "../src/Old/Buffer.ts";
+import {Buffer, Struct} from "./deserialize-variant/messgen-old.js";
+
 
 let srcStruct = new Struct({
   id: 2,

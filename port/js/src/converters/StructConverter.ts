@@ -6,6 +6,7 @@ export class StructConverter extends Converter {
   convertorsList: { converter: Converter, name: string }[] = [];
   reservedWords: string[] = Object.getOwnPropertyNames(Object.prototype);
   
+  
   constructor(
     name: IName,
     private schema: TypeClass,
@@ -45,8 +46,6 @@ export class StructConverter extends Converter {
   
   size(value: IValue): number {
     return this.convertorsList.reduce((acc, { converter, name }) => {
-      
-      
       let data = value[name];
       if (
         data === null || data === undefined
@@ -55,13 +54,14 @@ export class StructConverter extends Converter {
       }
       
       return acc + converter.size(data);
-    }, 0) || 0
+    }, 0)
   }
   
   deserialize(buffer: Buffer): IValue {
     return this.convertorsList.reduce((acc, { converter, name }) => {
       acc[name] = converter.deserialize(buffer);
       return acc;
-    }, {} as Record<IName, IValue>) || {}
+    }, {} as Record<IName, IValue>)
+    
   }
 }
