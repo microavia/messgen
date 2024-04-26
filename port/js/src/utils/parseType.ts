@@ -7,6 +7,14 @@ export type ParseArrayType =
     length: number | undefined
   }
 
+export type ParseTypedArrayType =
+  {
+    variant: 'typed-array'
+    length: number | undefined
+    TypedArray: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
+    
+  }
+
 export type ParseMapType =
   {
     variant: 'map'
@@ -16,7 +24,7 @@ export type ParseMapType =
 export type ParseType =
   {
     converter: Converter
-    wrapper: Array<ParseArrayType | ParseMapType>
+    wrapper: Array<ParseArrayType | ParseMapType | ParseTypedArrayType>
   }
 
 /**
@@ -48,7 +56,7 @@ export type ParseType =
  * @param converters
  */
 export function parseType(typeStr: IType, converters: Map<IType, Converter>): ParseType {
-  let wrapper: Array<ParseArrayType | ParseMapType> = [];
+  let wrapper: Array<ParseArrayType | ParseMapType | ParseTypedArrayType> = [];
   let basisType: IBasicType | IName;
   let typeParts = typeStr.split(
     /[\[\{]/ig
@@ -57,13 +65,30 @@ export function parseType(typeStr: IType, converters: Map<IType, Converter>): Pa
   
   basisType = typeParts[0] as IBasicType | IName;
   
+  let converter = converters.get(basisType);
+  if (!converter) {
+    throw new Error(`Unknown type: ${basisType}, if is complex type you must define before the struct. `)
+  }
+  
   for (let i = 1; i < typeParts.length; i++) {
     let item = typeParts[i];
     let keyType: IBasicType | undefined;
     
     if (item.includes(']')) {
       let lengthStr = item.slice(0, -1);
-      wrapper.push({ variant: 'array', length: lengthStr ? parseInt(lengthStr) : undefined });
+      if (i === 1 && converter.typedArray) {
+        wrapper.push({
+          variant: 'typed-array',
+          length: lengthStr ? parseInt(lengthStr) : undefined,
+          TypedArray: converter.typedArray
+        });
+      } else {
+        wrapper.push({
+          variant: 'array',
+          length: lengthStr ? parseInt(lengthStr) : undefined
+        });
+      }
+      
     } else if (item.includes('}')) {
       keyType = item.slice(0, -1) as IBasicType;
       if (keyType === undefined) {
@@ -81,10 +106,6 @@ export function parseType(typeStr: IType, converters: Map<IType, Converter>): Pa
     }
   }
   
-  let converter = converters.get(basisType);
-  if (!converter) {
-    throw new Error(`Unknown type: ${basisType}, if is complex type you must define before the struct. `)
-  }
   return {
     converter: converter,
     wrapper: wrapper

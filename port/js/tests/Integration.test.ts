@@ -65,7 +65,7 @@ describe('integration', () => {
     
     const rawData = {
       "f0": bigint,
-      "f1_vec": [-bigint, BigInt(5), BigInt(1)],
+      "f1_vec": new BigInt64Array([-bigint, BigInt(5), BigInt(1)]),
       "str": "Hello messgen!",
     }
     
@@ -138,7 +138,7 @@ describe('integration', () => {
         ["key1", [{}]],
         ["key2", [{}]],
       ]),
-      "array_of_size_zero": [],
+      "array_of_size_zero": new Int32Array(0),
     }
     
     const ComplexStructWithEmptyBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/complex_struct_with_empty.bin');
@@ -174,28 +174,28 @@ describe('integration', () => {
       "f1": 0x12345678,
       "f2": BigInt("0x1234567890abcdef"),
       "s_arr": Array(2).fill(simpleStruct),
-      "f1_arr": Array(4).fill(BigInt("0x1234567890abcdef")),
+      "f1_arr": new BigInt64Array(4).fill(BigInt("0x1234567890abcdef")),
       "v_arr": Array(2).fill({
         "f0": BigInt("0x1234567890abcdef"),
-        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "f1_vec": new BigInt64Array([BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)]),
         "str": "Hello messgen!"
       }),
-      "f2_vec": Array(3).fill(1.2345678901234567890),
+      "f2_vec": new Float64Array(3).fill(1.2345678901234567890),
       "e_vec": [
         "one_value",
         "another_value"],
       "s_vec": Array(3).fill(simpleStruct),
       "v_vec0": Array(3).fill(Array(2).fill({
         "f0": BigInt("0x1234567890abcdef"),
-        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "f1_vec": new BigInt64Array([BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)]),
         "str": "Hello messgen!"
       })),  // replace 3 with desired outer list length
       "v_vec1": Array(4).fill(Array(3).fill({
         "f0": BigInt("0x1234567890abcdef"),
-        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "f1_vec": new BigInt64Array([BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)]),
         "str": "Hello messgen!"
       })),  // replace 3 with desired outer list length
-      "v_vec2": Array(2).fill(Array(4).fill(Array(3).fill(0x1234))),  // replace 2 with desired outer list length
+      "v_vec2": Array(2).fill(Array(4).fill(new Int16Array(3).fill(0x1234))),  // replace 2 with desired outer list length
       "str": "Example String",
       "str_vec": ["string1", "string2", "string3"],
     };
@@ -233,31 +233,32 @@ describe('integration', () => {
       "f1": 0x12345678,
       "f2": BigInt("0x1234567890abcdef"),
       "s_arr": Array(2).fill(simpleStruct),
-      "f1_arr": Array(4).fill(BigInt("0x1234567890abcdef")),
+      "f1_arr": new BigInt64Array(4).fill(BigInt("0x1234567890abcdef")),
       "v_arr": Array(2).fill({
         "f0": BigInt("0x1234567890abcdef"),
-        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "f1_vec": new BigInt64Array([BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)]),
         "str": "Hello messgen!"
       }),
-      "f2_vec": Array(3).fill(1.2345678901234567890),
+      "f2_vec": new Float64Array(3).fill(1.2345678901234567890),
       "e_vec": ["one_value", "another_value"],
       "s_vec": Array(3).fill(simpleStruct),
       "v_vec0": Array(3).fill(Array(2).fill({
         "f0": BigInt("0x1234567890abcdef"),
-        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "f1_vec": new BigInt64Array([BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)]),
         "str": "Hello messgen!"
       })),
       "v_vec1": Array(4).fill(Array(3).fill({
         "f0": BigInt("0x1234567890abcdef"),
-        "f1_vec": [BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)],
+        "f1_vec": new BigInt64Array([BigInt("0x1234567890abcdef"), BigInt(5), BigInt(1)]),
         "str": "Hello messgen!"
       })),
-      "v_vec2": Array(2).fill(Array(4).fill(Array(3).fill(0x1234))),
+      "v_vec2": Array(2).fill(Array(4).fill(new Int16Array(3).fill(0x1234))),
       "str": "Example String",
       "bs": new Uint8Array([0x62, 0x79, 0x74, 0x65, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67]), // "byte string"
       "str_vec": ["string1", "string2", "string3"],
       "map_str_by_int": new Map(Array.from({ length: 3 }, (_, i) => [i, "string" + i])),
-      "map_vec_by_str": new Map(Array.from({ length: 3 }, (_, i) => ["key" + i, Array(3).fill(0x1234)])),
+      "map_vec_by_str": new Map(Array.from({ length: 3 }, (_, i) => ["key" + i,
+        new Int32Array(3).fill(0x1234)])),
     };
     
     const ComplexStructBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/complex_struct.bin');

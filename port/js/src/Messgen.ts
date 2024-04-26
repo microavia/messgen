@@ -50,6 +50,8 @@ export class Messgen {
               ));
             }
           })
+          
+          
           res.converters.set(k as IType,
             new StructConverter(
               k,

@@ -32,8 +32,8 @@ describe('NestedConverter', () => {
     const name = 'int32[3]';
     const converters = Messgen.initializeBasicConverter();
     const converter = new NestedConverter(name, converters);
-    const value = [1, 2, 3];
-    const buffer = new Buffer(new ArrayBuffer(12));
+    const value = new Int32Array([1, 2, 3]);
+    const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
     
     // When
     converter.serialize(value, buffer);
@@ -84,7 +84,11 @@ describe('NestedConverter', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter(`int32[][]`, converters);
-    const value = [[1, 2, 3], [4, 5], [6, 7, 8, 9]];
+    const value = [
+      new Int32Array([1, 2, 3]),
+      new Int32Array([4, 5]),
+      new Int32Array([6, 7, 8, 9])
+    ];
     const size = nestedConverter.size(value);
     const buffer = new Buffer(new ArrayBuffer(size));
     
@@ -102,7 +106,7 @@ describe('NestedConverter', () => {
     // Given
     const converters = Messgen.initializeBasicConverter();
     const nestedConverter = new NestedConverter("int32[3][]", converters);
-    const value = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    const value = [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6]), new Int32Array([7, 8, 9])];
     const size = nestedConverter.size(value);
     const buffer = new Buffer(new ArrayBuffer(size));
     
@@ -231,7 +235,10 @@ describe('NestedConverter', () => {
     const converters = Messgen.initializeBasicConverter();
     
     const nestedConverter = new NestedConverter("int32[3][2]", converters);
-    const value = [[1, 2, 3], [4, 5, 6]];
+    const value = [
+      new Int32Array([1, 2, 3]),
+      new Int32Array([4, 5, 6])
+    ];
     const buffer = new Buffer(new ArrayBuffer(
       nestedConverter.size(value)
     ));
@@ -312,9 +319,9 @@ describe('NestedConverter', () => {
     
     const nestedConverter = new NestedConverter("int32[3][]{string}{string}", converters);
     
-    const value = new Map<string, Map<string, number[][]>>([
-      ["key1", new Map<string, number[][]>([
-        ["key2", [[1, 2, 3], [4, 5, 6]]]
+    const value = new Map<string, Map<string, Int32Array[]>>([
+      ["key1", new Map<string, Int32Array[]>([
+        ["key2", [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6])]]
       ])]
     ]);
     

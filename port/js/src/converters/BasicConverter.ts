@@ -5,9 +5,10 @@ import { decodeUTF8, encodeUTF8 } from "../utils/utf8";
 
 
 export class BasicConverter extends Converter {
+  typedArray?: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
   constructor(private config: BasicTypesConfig) {
     super(config.name);
-    
+    this.typedArray = config.typedArray;
   }
   
   serialize(value: IValue, buffer: Buffer) {
@@ -46,6 +47,7 @@ export type BasicTypesConfig = {
   read: (v: DataView, byteOffset: number) => IValue;
   write: (v: DataView, byteOffset: number, value: IValue) => number;
   default: () => IValue;
+  typedArray?: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
 };
 
 
@@ -64,7 +66,8 @@ export const basicTypes = [
       v.setInt8(s, a);
       return 1;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Int8Array
   }, {
     name: "uint8",
     size: () => 1,
@@ -73,7 +76,8 @@ export const basicTypes = [
       v.setUint8(s, a);
       return 1;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Uint8Array
     
   }, {
     name: "int16",
@@ -83,7 +87,8 @@ export const basicTypes = [
       v.setInt16(s, a, IS_LITTLE_ENDIAN);
       return 2;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Int16Array
   }, {
     name: "uint16",
     size: () => 2,
@@ -92,7 +97,8 @@ export const basicTypes = [
       v.setUint16(s, a, IS_LITTLE_ENDIAN);
       return 2;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Uint16Array
   }, {
     name: "int32",
     size: () => 4,
@@ -101,7 +107,8 @@ export const basicTypes = [
       v.setInt32(s, a, IS_LITTLE_ENDIAN);
       return 4;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Int32Array
   }, {
     name: "uint32",
     size: () => 4,
@@ -110,7 +117,8 @@ export const basicTypes = [
       v.setUint32(s, a, IS_LITTLE_ENDIAN);
       return 4;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Uint32Array
   }, {
     name: "int64",
     size: () => 8,
@@ -121,7 +129,8 @@ export const basicTypes = [
       v.setBigInt64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
     },
-    default: () => 0
+    default: () => BigInt(0),
+    typedArray: BigInt64Array
   }, {
     name: "uint64",
     size: () => 8,
@@ -133,7 +142,8 @@ export const basicTypes = [
       v.setBigUint64(s, BigInt(a), IS_LITTLE_ENDIAN);
       return 8;
     },
-    default: () => 0
+    default: () => BigInt(0),
+    typedArray: BigUint64Array
   }, {
     name: "float32",
     size: () => 4,
@@ -142,7 +152,8 @@ export const basicTypes = [
       v.setFloat32(s, a, IS_LITTLE_ENDIAN);
       return 4;
     },
-    default: () => 0
+    default: () => 0,
+    typedArray: Float32Array
   }, {
     name: "float64",
     size: () => 8,
@@ -151,7 +162,8 @@ export const basicTypes = [
       v.setFloat64(s, a, IS_LITTLE_ENDIAN);
       return 8;
     },
-    default: () => BigInt(0)
+    default: () => BigInt(0),
+    typedArray: Float64Array
   }, {
     name: "char",
     size: () => 1,

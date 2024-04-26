@@ -64,7 +64,7 @@ describe('calculate size', () => {
     // @ts-ignore
     Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
   }, { time: 1000 })
-  
+
   bench('v1', () => {
     structConverter.size(srcData);
   })

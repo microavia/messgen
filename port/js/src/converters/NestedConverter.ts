@@ -34,16 +34,44 @@ export class NestedConverter extends Converter {
     }
     
     let currentType = this.types.wrapper[offsetWrapper];
+    let arrayLength
+    
     switch (currentType.variant) {
-      case "array":
-        let arrayLength
-        
+      case "typed-array":
         if (currentType.length === undefined) {
           arrayLength = value.length;
           this.dynConverter.serialize(arrayLength, buffer);
         } else {
           arrayLength = currentType.length;
         }
+        const TypedArray = currentType.TypedArray
+        
+        if (value.buffer && buffer.offset % TypedArray.BYTES_PER_ELEMENT === 0) {
+          
+          let typedArray = new TypedArray(
+            buffer.dataView.buffer,
+            buffer.offset,
+            arrayLength
+          )
+          
+          typedArray.set(value)
+          
+          buffer.offset += typedArray.byteLength
+          
+        } else {
+          for (let i = 0; i < arrayLength; i++) {
+            this._serialize(value[i], buffer, offsetWrapper - 1);
+          }
+        }
+        break;
+      case "array":
+        if (currentType.length === undefined) {
+          arrayLength = value.length;
+          this.dynConverter.serialize(arrayLength, buffer);
+        } else {
+          arrayLength = currentType.length;
+        }
+        
         
         for (let i = 0; i < arrayLength; i++) {
           this._serialize(value[i], buffer, offsetWrapper - 1);
@@ -91,17 +119,32 @@ export class NestedConverter extends Converter {
     }
     
     let currentType = this.types.wrapper[offsetWrapper];
+    let arrayLength
+    let result
     switch (currentType.variant) {
+      case "typed-array":
+        if (currentType.length === undefined) {
+          arrayLength = this.dynConverter.deserialize(buffer);
+        } else {
+          arrayLength = currentType.length;
+        }
+        const TypedArray = currentType.TypedArray
+        
+        let typedArray = new TypedArray(buffer.dataView.buffer.slice(
+          buffer.offset,
+          buffer.offset + arrayLength * TypedArray.BYTES_PER_ELEMENT
+        ));
+        
+        buffer.offset += typedArray.byteLength
+        return typedArray
       case "array":
-        let arrayLength
-        // TODO: add support for TypedArray
         if (currentType.length === undefined) {
           arrayLength = this.dynConverter.deserialize(buffer);
         } else {
           arrayLength = currentType.length;
         }
         
-        let result = new Array(arrayLength);
+        result = new Array(arrayLength);
         for (let i = 0; i < arrayLength; i++) {
           result[i] = this._deserialize(buffer, offsetWrapper - 1);
         }
@@ -128,11 +171,24 @@ export class NestedConverter extends Converter {
     if (offsetWrapper < 0) {
       return this.types.converter.size(value);
     }
-    
+    let arrayLengthSize
     let currentType = this.types.wrapper[offsetWrapper];
     switch (currentType.variant) {
+      case "typed-array":
+        arrayLengthSize = 0
+        if (currentType.length === undefined) {
+          arrayLengthSize = this.dynConverter.size(value.length)
+        } else {
+          if (value.length !== currentType.length) {
+            throw new Error(`Array length mismatch: ${value.length} !== ${currentType.length}`)
+          }
+        }
+        if (ArrayBuffer.isView(value)) {
+          return arrayLengthSize + value.byteLength
+        }
+        return arrayLengthSize + value.length * this.types.converter.size(0);
       case "array":
-        let arrayLengthSize = 0
+        arrayLengthSize = 0
         
         if (currentType.length === undefined) {
           arrayLengthSize = this.dynConverter.size(value.length)

@@ -23,4 +23,6 @@ export abstract class Converter {
   default(): IValue {
     return null;
   }
+  
+  typedArray?: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
 }
