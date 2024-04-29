@@ -31,11 +31,11 @@ export interface Types {
 }
 
 export interface ProtocolJSON {
-  proto_id: number;
-  proto_name: string;
+  proto_id: IProtocolId;
+  proto_name: IProtocolName;
   types: Types;
   messages: Record<string, unknown>;
-  types_map: Record<string, string>;
+  types_map?: Record<ITypeId, IName>;
   version: string;
 }
 
@@ -43,12 +43,11 @@ export type SchemaObj = TypeClass
 
 
 export type Messages = {
-  typesMap: Map<number, Converter>
+  typesMap: Map<ITypeId, Converter>
+  typesNameToId: Record<IName, ITypeId>
   converters: Map<IType, Converter>
+  protocol: ProtocolJSON
 }
-
-
-export type Obj = Record<string, any>;
 
 
 /*
@@ -68,8 +67,11 @@ export type Nominal<NAME extends string | number, Type = string> = Type & { [Nom
 
 
 export type IName = string
+export type ITypeId = Nominal<'TypeId', number>
 export type IValue = Nominal<'Value', any>
-export type IId = Nominal<'Id', number>
+export type IProtocolId = Nominal<'ProtocolId', number>
+export type IProtocolName = Nominal<'IProtocolName', string>
+
 
 export type INumberType =
   "uint8" |
@@ -82,6 +84,7 @@ export type INumberType =
   "int64" |
   "float32" |
   "float64"
+
 export type IBasicType =
   INumberType |
   "string" |

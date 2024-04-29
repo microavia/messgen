@@ -58,7 +58,8 @@ describe('parseType', () => {
         converter: converters.get('int32'),
         wrapper: [
           {
-            variant: 'array',
+            variant: "typed-array",
+            TypedArray: Int32Array,
             length: 5
           }
         ]
@@ -75,7 +76,8 @@ describe('parseType', () => {
         converter: converters.get('int32'),
         wrapper: [
           {
-            variant: 'array',
+            variant: "typed-array",
+            TypedArray: Int32Array,
             length: 5
           },
           {
@@ -137,7 +139,8 @@ describe('parseType', () => {
       converter: converters.get('int8'),
       wrapper: [
         {
-          variant: 'array',
+          variant: 'typed-array',
+          TypedArray: Int8Array,
           length: 0
         }
       ]
@@ -158,7 +161,8 @@ describe('parseType', () => {
       
       wrapper: [
         {
-          variant: 'array',
+          variant: 'typed-array',
+          TypedArray: Int8Array,
           length: 1
         }
       ]
@@ -290,7 +294,8 @@ describe('parseType', () => {
         converter: converters.get('int32'),
         wrapper: [
           {
-            variant: 'array',
+            variant: 'typed-array',
+            TypedArray: Int32Array,
             length: 5
           },
           {

@@ -122,6 +122,7 @@ describe('StructConverter', () => {
       serialize: vi.fn(),
       serializeSize: vi.fn(),
       deserialize: vi.fn(),
+      default: vi.fn(),
     };
     converters.set(fieldType, converterMock);
     const bufferMock = new Buffer(new ArrayBuffer(10));

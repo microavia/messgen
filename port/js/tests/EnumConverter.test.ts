@@ -25,7 +25,7 @@ describe('EnumConverter', () => {
     enumConverter.serialize(value, buffer);
     buffer.offset = 0;
     const result = enumConverter.deserialize(buffer);
-    
+    console.log(`:: result =`, result);
     // Then
     expect(result).toBe(value);
   });

@@ -41,7 +41,7 @@ export class EnumConverter extends Converter {
   }
   
   deserialize(buffer: Buffer) {
-    return this.enumsByValue[this.converter.deserialize(buffer)]; //TODO: is return string it is correct?
+    return this.converter.deserialize(buffer)
   }
   
   size(value: IValue) {

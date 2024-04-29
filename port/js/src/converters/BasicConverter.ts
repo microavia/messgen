@@ -218,3 +218,5 @@ export const basicTypes = [
     default: () => new Uint8Array(0)
   }
 ] satisfies BasicTypesConfig[]
+
+export const GlobalBasicConverters = BasicConverter.fromGlobalConfigs();
