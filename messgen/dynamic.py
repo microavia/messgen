@@ -155,6 +155,7 @@ class VectorType(Type):
     def serialize(self, data):
         out = []
         out.append(self.size_type.serialize(len(data)))
+
         for item in data:
             out.append(self.element_type.serialize(item))
         return b"".join(out)

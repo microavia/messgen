@@ -5,6 +5,7 @@ sys.path.append(str(path_root))
 from messgen.dynamic import Codec
 
 if __name__ == "__main__":
+    print(Codec)
     codec = Codec()
     codec.load(["tests/messages"], ["messgen/test_proto"])
 
