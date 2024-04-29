@@ -9,7 +9,6 @@ import { Converter } from "../src/converters/Converter";
 import { GlobalBasicConverters } from "../src/converters/BasicConverter";
 import { IHeaderConverter, IHeader } from "../src/HEADER_STRUCT";
 import { Buffer } from "../src/Buffer";
-import * as Buffer from "node:buffer";
 
 let testProtoData: ProtocolJSON;
 let anotherProtoData: ProtocolJSON;
