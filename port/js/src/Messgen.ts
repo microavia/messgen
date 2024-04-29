@@ -44,7 +44,7 @@ export class Messgen {
   }
   
   // TODO: rename to enum?
-  serializeMessage(protocolName: IProtocolName, type: IName, obj: Record<string, any>): ArrayBufferLike {
+  serializeMessage(protocolName: IProtocolName, type: IName, obj: IValue, headerObj: Record<string, any> = {}): ArrayBufferLike {
     let protocolMessages = this.includeMessages.get(this.protocolNameToId[protocolName]);
     if (!protocolMessages) {
       throw new Error(`Protocol ${protocolName} is not found `);
@@ -60,7 +60,8 @@ export class Messgen {
     let headObj = {
       message_id: protocolMessages.typesNameToId[type],
       protocol_id: this.protocolNameToId[protocolName],
-      size: messageSize
+      size: messageSize,
+      ...headerObj
     }
     let size = messageSize + this.headerConvertor.size(headObj)
     let buffer = new Buffer(
