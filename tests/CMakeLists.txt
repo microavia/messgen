@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(messgen)
 
 set(MESSGEN_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}/messages")
+get_filename_component(MESSGEN_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR} DIRECTORY)
 
 add_executable(test_cpp "cpp_stl/main.cpp")
 messgen_add_library(msgs_test_proto "${MESSGEN_BASE_DIR}" "messgen/test_proto;another_proto" "stl" "cpp_standard=20")
@@ -11,6 +12,10 @@ target_link_libraries(test_cpp gtest msgs_test_proto)
 add_executable(test_cpp_nostl "cpp_nostl/main.cpp")
 messgen_add_library(msgs_test_proto_nostl "${MESSGEN_BASE_DIR}" "messgen/test_proto" "nostl" "cpp_standard=20")
 target_link_libraries(test_cpp_nostl gtest msgs_test_proto_nostl)
+
+add_executable(test_cpp_dynamic "cpp_dynamic/main.cpp")
+target_include_directories(test_cpp_dynamic PUBLIC "${MESSGEN_ROOT_DIR}/port/cpp_dynamic")
+target_link_libraries(test_cpp_dynamic PUBLIC messgen_dynamic)
 
 # Make executables form the same source files but without "cpp_standard=20" option (messgen may work differently)
 

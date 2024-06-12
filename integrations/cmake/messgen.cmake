@@ -99,3 +99,18 @@ function(messgen_add_library LIBRARY_NAME BASE_DIRS PROTOCOLS MODE)
     target_sources(${LIBRARY_NAME} INTERFACE ${MESSGEN_OUT_FILES})
     target_include_directories(${LIBRARY_NAME} INTERFACE "${MESSAGES_OUT_DIR}" "${MESSGEN_DIR}/port/cpp_${MODE}")
 endfunction()
+
+include(FetchContent)
+FetchContent_Declare(
+        yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG yaml-cpp-0.7.0
+)
+FetchContent_GetProperties(yaml-cpp)
+if(NOT yaml-cpp_POPULATED)
+    message(STATUS "Fetching yaml-cpp...")
+    FetchContent_Populate(yaml-cpp)
+    add_subdirectory(${yaml-cpp_SOURCE_DIR} ${yaml-cpp_BINARY_DIR})
+endif()
+add_library("messgen_dynamic" "/home/ton/microavia/messgen/port/cpp_dynamic/messgen_dynamic/MessgenDynamic.cpp")
+target_link_libraries("messgen_dynamic" yaml-cpp::yaml-cpp)
