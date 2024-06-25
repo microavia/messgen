@@ -132,6 +132,16 @@ const basicTypes = [
         typedArray: Float64Array
     },
     {
+        name: 'Float64',
+        size: 8,
+        read: (v, s) => v.getFloat64(s, IS_LITTLE_ENDIAN),
+        write: (v, s, a) => {
+            v.setFloat64(s, a, IS_LITTLE_ENDIAN)
+            return 8
+        },
+        typedArray: Float64Array
+    },
+    {
         name: 'String',
         size: 4,
         read: (v, s) => decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN))),
