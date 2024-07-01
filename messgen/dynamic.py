@@ -111,7 +111,7 @@ class StructType(Type):
     def default_value(self):
         out = {}
         for field_name, field_type in self.fields:
-            out[field_name] = field_type.def_value()
+            out[field_name] = field_type.default_value()
         return out
 
 
@@ -141,7 +141,7 @@ class ArrayType(Type):
     def default_value(self):
         out = []
         for i in range(self.array_size):
-            out.append(self.element_type.def_value())
+            out.append(self.element_type.default_value())
         return out
 
 
