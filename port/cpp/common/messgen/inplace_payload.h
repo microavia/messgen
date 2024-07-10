@@ -23,7 +23,7 @@ struct inplace_payload {
     messgen::size_type _size = 0;
 
     inplace_payload() = default;
-    ~inplace_payload() = default;
+    ~inplace_payload() = delete; // prevent stack allocation
 
     inplace_payload(inplace_payload &&other) = delete;
     inplace_payload(const inplace_payload &other) = delete;

@@ -27,7 +27,7 @@ TEST_F(InplacePayloadTest, AssignPayload) {
     auto mem = contents<sizeof(SOME_TEXT)>{};
     auto expected = std::string{SOME_TEXT};
 
-    auto &actual = *(new (&mem) messgen::inplace_payload{});
+    auto &actual = *(new ((void *)&mem) messgen::inplace_payload{});
     actual.assign((uint8_t *)expected.data(), (uint8_t *)expected.data() + expected.size());
 
     EXPECT_EQ(expected.size(), actual.size());

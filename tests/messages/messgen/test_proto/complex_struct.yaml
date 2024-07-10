@@ -18,4 +18,3 @@ fields:
   - { name: "str_vec", type: "string[]" }
   - { name: "map_str_by_int", type: "string{int32}" }
   - { name: "map_vec_by_str", type: "int32[]{string}" }
-  - { name: "pl", type: "payload" }
