@@ -21,9 +21,12 @@ struct inplace_payload {
     using reverse_iterator = value_type *;
     using const_reverse_iterator = const value_type *;
 
-    messgen::size_type _size = 0;
-
     inplace_payload() = default;
+
+    inplace_payload(messgen::size_type size)
+        : _size(size) {
+    }
+
     ~inplace_payload() = delete; // prevent stack allocation
 
     inplace_payload(inplace_payload &&other) = delete;
@@ -34,11 +37,13 @@ struct inplace_payload {
         return *this;
     }
 
-    void *operator new(size_t) = delete; // prevent non-placement new
-
     void *operator new(size_t, void *mem) {
         return ::new (mem) inplace_payload();
     }
+
+    void *operator new(size_t) = delete; // prevent non-placement new
+
+    void operator delete(void *ptr) noexcept = delete;
 
     bool operator==(const inplace_payload &other) const {
         return _size == other._size && std::memcmp(data(), other.data(), _size) == 0;
@@ -81,6 +86,9 @@ struct inplace_payload {
         _size = end - begin;
         std::memcpy(data(), begin, _size);
     }
+
+private:
+    messgen::size_type _size = 0;
 };
 
 } // namespace messgen
