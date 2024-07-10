@@ -231,7 +231,7 @@ class StringType(Type):
 class BytesType(Type):
     def __init__(self, protos, curr_proto_name, type_name):
         super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "bytes"
+        assert self.type_class in ["bytes", "payload"]
         self.size_type = get_type(protos, curr_proto_name, "uint32")
         self.struct_fmt = "<%is"
 
@@ -266,7 +266,7 @@ def get_type(protocols, curr_proto_name, type_name):
         t = MapType(protocols, curr_proto_name, type_name)
     elif type_class == "string":
         t = StringType(protocols, curr_proto_name, type_name)
-    elif type_class == "bytes":
+    elif type_class in ["bytes", "payload"]:
         t = BytesType(protocols, curr_proto_name, type_name)
     else:
         raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_name))

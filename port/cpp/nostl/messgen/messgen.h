@@ -2,13 +2,16 @@
 
 #include "Allocator.h"
 
+#include <messgen/messgen_def.h>
+#include <messgen/inplace_payload.h>
+
+#include <cstring>
+#include <cassert>
 #include <vector>
 
 namespace messgen {
 
-using size_type = uint32_t;
-
-template<class T>
+template <class T>
 struct vector {
     T *_ptr = nullptr;
     size_t _size = 0;
@@ -20,20 +23,31 @@ struct vector {
         _size = other._size;
     }
 
-    vector(T *ptr, size_t size) : _ptr(ptr), _size(size) {}
+    vector(T *ptr, size_t size)
+        : _ptr(ptr),
+          _size(size) {
+    }
 
-    vector(const T *ptr, size_t size) : _ptr(const_cast<T *>(ptr)), _size(size) {}
+    vector(const T *ptr, size_t size)
+        : _ptr(const_cast<T *>(ptr)),
+          _size(size) {
+    }
 
-    vector(std::vector<T> &v) : _ptr(v.begin().base()), _size(v.size()) {}
+    vector(std::vector<T> &v)
+        : _ptr(v.begin().base()),
+          _size(v.size()) {
+    }
 
-    vector(const std::vector<T> &v) : _ptr(const_cast<T *>(v.begin().base())), _size(v.size()) {}
+    vector(const std::vector<T> &v)
+        : _ptr(const_cast<T *>(v.begin().base())),
+          _size(v.size()) {
+    }
 
     vector<T> &operator=(const vector<T> &other) {
         _ptr = other._ptr;
         _size = other._size;
         return *this;
     }
-
 
     size_t size() const {
         return _size;
@@ -78,4 +92,4 @@ struct vector {
     }
 };
 
-}
+} // namespace messgen

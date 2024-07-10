@@ -4,6 +4,8 @@
 # Build files
 *.pyc
 *.pyd
+build
+.cache
 
 # Log files
 dump.txt
