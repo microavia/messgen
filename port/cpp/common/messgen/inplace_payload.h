@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <new>
 
 namespace messgen {
 
@@ -31,6 +32,12 @@ struct inplace_payload {
     inplace_payload &operator=(const inplace_payload &other) {
         this->assign(other.begin(), other.end());
         return *this;
+    }
+
+    void *operator new(size_t sz) = delete; // prevent non-placement new
+
+    void *operator new(size_t sz, void *mem) {
+        return ::new (mem) inplace_payload();
     }
 
     bool operator==(const inplace_payload &other) const {
