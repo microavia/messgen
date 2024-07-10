@@ -34,9 +34,9 @@ struct inplace_payload {
         return *this;
     }
 
-    void *operator new(size_t sz) = delete; // prevent non-placement new
+    void *operator new(size_t) = delete; // prevent non-placement new
 
-    void *operator new(size_t sz, void *mem) {
+    void *operator new(size_t, void *mem) {
         return ::new (mem) inplace_payload();
     }
 
