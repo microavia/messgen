@@ -26,12 +26,7 @@ struct inplace_payload {
     ~inplace_payload() = default;
 
     inplace_payload(inplace_payload &&other) = delete;
-    inplace_payload &operator=(inplace_payload &&other) = delete;
-
-    inplace_payload(const inplace_payload &other)
-        : _size(other._size) {
-        memcpy(data(), other.data(), _size);
-    }
+    inplace_payload(const inplace_payload &other) = delete;
 
     inplace_payload &operator=(const inplace_payload &other) {
         this->assign(other.begin(), other.end());
@@ -67,11 +62,11 @@ struct inplace_payload {
     }
 
     uint8_t *end() {
-        return data() + _size + 1;
+        return data() + _size;
     }
 
     const uint8_t *end() const {
-        return data() + _size + 1;
+        return data() + _size;
     }
 
     void assign(const uint8_t *begin, const uint8_t *end) {
