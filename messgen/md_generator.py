@@ -12,6 +12,7 @@ def to_kebabcase(str):
 
 ts_types_map = {
     "bytes": "uint8[]",
+    "payload": "uint8[]",
     "char": "string",
     "int8": "number",
     "uint8": "number",

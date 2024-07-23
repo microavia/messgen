@@ -223,7 +223,7 @@ class CppGenerator:
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
-        elif type_class in ["string", "bytes"]:
+        elif type_class in ["string", "bytes", "payload"]:
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
         else:
@@ -454,6 +454,11 @@ class CppGenerator:
                 return "messgen::vector<uint8_t>"
             else:
                 raise RuntimeError("Unsupported mode for bytes: %s" % mode)
+
+        elif t["type_class"] == "payload":
+            self._add_include("algorithm")
+            return "messgen::inplace_payload"
+
         elif t["type_class"] in ["enum", "struct"]:
             if SEPARATOR in type_name:
                 scope = "global"
@@ -538,7 +543,7 @@ class CppGenerator:
             c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
             c.append("_size += %s.size();" % field_name)
 
-        elif type_class == "bytes":
+        elif type_class in ["bytes", "payload"]:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             c.append("std::copy(%s.begin(), %s.end(), &_buf[_size]);" % (field_name, field_name))
@@ -646,7 +651,7 @@ class CppGenerator:
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
 
-        elif type_class == "bytes":
+        elif type_class in ["bytes", "payload"]:
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.assign(&_buf[_size], &_buf[_size + _field_size]);" % field_name)
@@ -702,7 +707,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d.second" % level_n, value_type, level_n + 1)))
                 c.append("}")
 
-        elif type_class in ["string", "bytes"]:
+        elif type_class in ["string", "bytes", "payload"]:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("_size += %s.size();" % field_name)
 

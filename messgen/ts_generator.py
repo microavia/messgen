@@ -2,6 +2,7 @@ import os
 
 ts_types_map = {
     "bytes": "uint8[]",
+    "payload": "uint8[]",
     "char": "string",
     "int8": "number",
     "uint8": "number",
@@ -40,7 +41,7 @@ class TsGenerator:
         self.MODULE_SEP = module_sep
         self._modules_map = modules_map
         self._data_types_map = data_types_map
-        
+
 
     def generate(self, out_dir):
         imports = []

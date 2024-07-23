@@ -61,7 +61,7 @@ Example for JS messages generation:
 ```
 python3 messgen.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang json --outdir out/json
 ```
-This command will generate json schema containing full protocol description. 
+This command will generate json schema containing full protocol description.
 
 ### Basic Concepts
 
@@ -104,6 +104,7 @@ The lowest level of hierarchy is **type**. It can be:
 - Map: ordered map `value_type{key_type}`, e.g. `string{int32}`, `my_struct{int32}{string}`
 - String: vector of `uint8`, representing string, `string`
 - Bytes: vector of `uint8`, representing bytes buffer, `bytes`
+- Payload: inplace sequence of `uint8`, representing trailing message payloads, `payload`
 - Struct: list of fields, described in yaml file
 - External: user-defined types, user must provide serialization/deserialization methods for each port that is used (TODO)
 - Alias: reference to another existing type (e.g. from another protocol) (TODO)
