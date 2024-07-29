@@ -54,7 +54,7 @@ function(messgen_generate_messages BASE_DIRS PROTOCOLS OUTDIR OUTFILES_VAR OPTIO
                 )
 
                 list(APPEND OUTFILES
-                        ${MESSAGES_OUTDIR}/proto.h
+                        ${MESSAGES_OUTDIR}.h
                 )
             endif ()
         endforeach ()
