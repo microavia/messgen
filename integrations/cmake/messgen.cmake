@@ -53,8 +53,10 @@ function(messgen_generate_messages BASE_DIRS PROTOCOLS OUTDIR OUTFILES_VAR OPTIO
                         ${MESSAGES_PATH}/_protocol.yaml
                 )
 
+                get_filename_component(PROTOCOL_BASE ${MESSAGES_OUTDIR} DIRECTORY)
+                get_filename_component(PROTOCOL_NAME ${PROTOCOL} NAME)
                 list(APPEND OUTFILES
-                        ${MESSAGES_OUTDIR}.h
+                        ${PROTOCOL_BASE}/${PROTOCOL_NAME}.h
                 )
             endif ()
         endforeach ()
