@@ -130,7 +130,8 @@ class CppGenerator:
 
         proto_id = proto["proto_id"]
         if proto_id is not None:
-            code.append("static constexpr int PROTO_ID = %s;\n" % proto_id)
+            code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+            code.append()
 
         for type_name in proto.get("types"):
             type_def = self._protocols.get_type(proto_name, type_name)
