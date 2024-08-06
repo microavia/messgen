@@ -130,7 +130,7 @@ class CppGenerator:
 
         proto_id = proto["proto_id"]
         if proto_id is not None:
-            code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+            code.append("static constexpr int PROTO_ID = %s;\n" % proto_id)
 
         for type_name in proto.get("types"):
             type_def = self._protocols.get_type(proto_name, type_name)
@@ -147,7 +147,7 @@ class CppGenerator:
             type_id = type_def.get("id")
             if type_id is not None:
                 code.append(_indent("        case %s::TYPE_ID:" % type_name))
-                code.append(_indent("            if constexpr (requires { handler(%s()); }) {" % type_name))
+                code.append(_indent("            if constexpr (requires(%s msg) { handler(msg); }) {" % type_name))
                 if type_def["is_flat"]:
                     code.append(_indent("                auto &msg = *reinterpret_cast<const %s *>(payload);" % type_name))
                 else:
