@@ -442,16 +442,20 @@ class GoGenerator:
             if type_info["is_dynamic"]:
                 if type_info["element_size"] == 1:
                     code.append("\t{")
+                    code.append("\t\tif len(buf[ptr:]) < 4 {return fmt.Errorf(\"buffer too small to read %s length\")}" % field_name)
                     code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
                     code.append("\t\tptr += 4")
+                    code.append("\t\tif len(buf[ptr:]) < n {return fmt.Errorf(\"buffer too small to read %s data\")}" % field_name)
                     code.append("\t\tv.%s = make([]%s, n)" % (field_name, type_info["element_type"]))
                     code.append("\t\tcopy(v.%s, buf[ptr : ptr+n])" % field_name)
                     code.append("\t\tptr += len(v.%s)" % field_name)
                     code.append("\t}")
                 else:
                     code.append("\t{")
+                    code.append("\t\tif len(buf[ptr:]) < 4 {return fmt.Errorf(\"buffer too small to read %s length\")}" % field_name)
                     code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
                     code.append("\t\tptr += 4")
+                    code.append("\t\tif len(buf[ptr:]) < n {return fmt.Errorf(\"buffer too small to read %s data\")}" % field_name)
                     code.append("\t\tv.%s = make([]%s, n)" % (field_name, type_info["element_type"]))
                     code.append("\t\tfor i := 0; i < n; i++ {")
                     code.append(type_info["parse"](field_name + "[i]", type_info))
