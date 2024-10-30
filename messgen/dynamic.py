@@ -248,7 +248,6 @@ class BytesType(Type):
     def default_value(self):
         return b""
 
-
 def get_type(protocols, curr_proto_name, type_name):
     type_def = protocols.get_type(curr_proto_name, type_name)
     type_class = type_def["type_class"]

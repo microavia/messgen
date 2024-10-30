@@ -1,0 +1,4 @@
+type_class: not_a_struct_nor_enum
+comment: "type_class is not a struct nor enum"
+fields:
+  - { name: "a", type: "int8" }

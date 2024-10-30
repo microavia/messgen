@@ -1,9 +1,11 @@
 # IntelliJ project files
 .idea
+.run
 
 # Build files
 *.pyc
 *.pyd
+cmake-build-*/
 
 # Log files
 dump.txt
@@ -13,6 +15,3 @@ dump.txt
 tests/cpp/messgen
 .done.*
 
-tests/js/tmp
-tests/js/coverage
-tests/js/messgen

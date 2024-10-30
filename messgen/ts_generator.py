@@ -14,13 +14,27 @@ ts_types_map = {
     "float32": "number",
     "float64": "bigint",
     "string": "string",
-
 }
+
+ts_types_array = {
+    "int8": "Int8Array",
+    "uint8": "Uint8Array",
+    "int16": "Int16Array",
+    "uint16": "Uint16Array",
+    "int32": "Int32Array",
+    "uint32": "Uint32Array",
+    "int64": "BigInt64Array",
+    "uint64": "BigUint64Array",
+    "float32": "Float32Array",
+    "float64": "Float64Array",
+}
+
 
 def to_camelcase(str):
     return ''.join(x for x in str.title().replace('_', '') if not x.isspace())
 
-def format_type(f):
+
+def format_type(f, use_typed_arrays=False):
     t = ts_types_map.get(f["type"], f["type"])
     f_type = t[0].lower() + t[1:]
 
@@ -29,9 +43,14 @@ def format_type(f):
         f_type = din_type + "Message"
 
     if (f["is_array"]):
-        f_type += "[]"
+        tArray = ts_types_array.get(f["type"])
+        if (tArray is not None and use_typed_arrays):
+            f_type = tArray
+        else:
+            f_type = f_type + "[]"
 
     return f_type
+
 
 class TsGenerator:
     PROTO_TYPE_VAR_TYPE = "uint8"
@@ -40,7 +59,7 @@ class TsGenerator:
         self.MODULE_SEP = module_sep
         self._modules_map = modules_map
         self._data_types_map = data_types_map
-        
+        self._variables = variables
 
     def generate(self, out_dir):
         imports = []
@@ -80,7 +99,7 @@ class TsGenerator:
         fields_p = []
         for f in msg["fields"]:
             f_name = f["name"]
-            f_type = format_type(f)
+            f_type = format_type(f, self._variables.get('typed_arrays','false') == 'true')
             if f.get("descr") is not None:
                 fields_p.append('    /** %s */' % str(f.get("descr")))
             fields_p.append('    %s: %s' % (f_name, f_type))

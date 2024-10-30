@@ -1,6 +1,7 @@
 import os
 import yaml
 from .common import SEPARATOR
+from .validation import is_valid_name, validate_yaml_item
 
 # Protocols map structure:
 # {
@@ -48,9 +49,7 @@ from .common import SEPARATOR
 #       ...
 #     },
 #     ...
-#   ]
-# }
-#
+
 # Field type structure:
 # - scalar:
 #   e.g. "uint8"
@@ -119,6 +118,8 @@ class Protocols:
                 p = type_name[:-1].split("[")
                 el_type = "[".join(p[:-1])
                 array_size = int(p[-1])
+                if array_size > 0x10000:
+                    print("Warn: %s array size is too large and may cause SIGSEGV on init" % type_name)
                 res = {
                     "type": type_name,
                     "type_class": "array",
@@ -166,32 +167,44 @@ class Protocols:
             proto = self.proto_map[curr_proto_name]
             t = proto["types"].get(type_name)
 
-        if t:
-            t["type"] = type_name
-            if t["type_class"] == "enum":
-                t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
-            elif t["type_class"] == "struct":
-                sz = 0
-                fixed_size = True
-                for i in t["fields"]:
-                    it = self.get_type(curr_proto_name, i["type"])
-                    isz = it.get("size")
-                    if isz is not None:
-                        sz += isz
-                    else:
-                        fixed_size = False
-                        break
-                if fixed_size:
-                    t["size"] = sz
+        if not t:
+            raise RuntimeError("Type not found: %s, current protocol: %s" % (type_name, curr_proto_name))
 
-                # Type ID
-                for t_id, t_name in proto.get("types_map", {}).items():
-                    if t_name == type_name:
-                        t["id"] = t_id
-                        break
-            return t
+        t["type"] = type_name
+        type_class = t.get("type_class", "")
+        if type_class == "enum":
+            t["size"] = self.get_type(curr_proto_name, t["base_type"])["size"]
+        elif type_class == "struct":
+            sz = 0
+            fixed_size = True
+            t["fields"] = t.get("fields") if isinstance(t.get("fields"), list) else []
+            seen_names = set()
+            for i in t["fields"]:
+                field_name = i.get("name", "")
+                if not is_valid_name(field_name):
+                    raise RuntimeError("Invalid field '%s' in %s (%s)" % (field_name, type_name, curr_proto_name))
+                if field_name in seen_names:
+                    raise RuntimeError("Duplicate field name '%s' in %s" % (field_name, type_name))
+                seen_names.add(field_name)
 
-        raise RuntimeError("Type not found: %s, current protocol: %s" % (type_name, curr_proto_name))
+                it = self.get_type(curr_proto_name, i.get("type", ""))
+                isz = it.get("size")
+                if isz is not None:
+                    sz += isz
+                else:
+                    fixed_size = False
+                    break
+            if fixed_size:
+                t["size"] = sz
+
+            # Type ID
+            for t_id, t_name in proto.get("types_map", {}).items():
+                if t_name == type_name:
+                    t["id"] = t_id
+                    break
+        else:
+            raise RuntimeError("Invalid type class in %s: %s" % (curr_proto_name, type_class))
+        return t
 
     def _load_protocol(self, proto_path: str) -> dict:
         proto = {
@@ -209,5 +222,6 @@ class Protocols:
                 if item_name == PROTOCOL_ITEM:
                     proto.update(item)
                 else:
+                    validate_yaml_item(item_name, item)
                     proto["types"][item_name] = item
         return proto

@@ -4,25 +4,14 @@
 #include <messgen/test_proto/complex_struct_nostl.h>
 #include <messgen/test_proto/struct_with_enum.h>
 #include <messgen/test_proto/var_size_struct.h>
+#include <messgen/test_proto/empty_struct.h>
 
 #include <gtest/gtest.h>
 
 class CppNostlTest : public ::testing::Test {
-public:
-    CppNostlTest() {
-    }
-
 protected:
     std::vector<uint8_t> _buf;
     messgen::StaticAllocator<1024 * 1024> _alloc;
-
-    void SetUp() final {
-        using namespace messgen::test_proto;
-        _buf.clear();
-    }
-
-    void TearDown() final {
-    }
 
     template<class T>
     void test_serialization(const T &msg) {
@@ -95,4 +84,12 @@ TEST_F(CppNostlTest, ComplexStructNpstl) {
     msg.v_vec0 = v_vec0;
 
     test_serialization(msg);
+}
+
+TEST_F(CppNostlTest, EmptyStruct) {
+    messgen::test_proto::empty_struct e{};
+    ASSERT_TRUE(e.IS_FLAT);
+    ASSERT_EQ(e.FLAT_SIZE, 0);
+    ASSERT_EQ(e.serialized_size(), 0);
+    test_serialization(e);
 }
