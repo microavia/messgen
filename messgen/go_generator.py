@@ -37,23 +37,31 @@ def parse_int8(var, t_info):
 
 
 def fmt_int(var, t_info):
-    et = t_info["element_type"]
+    et = t_info["base_type"]
     if et.startswith("u"):
-        return "binary.LittleEndian.Put%s(buf[ptr:], v.%s)\n" \
-               "ptr += %s" % (to_camelcase(et), var, t_info["element_size"])
+        if t_info["element_type"] == t_info["base_type"]:
+            return "binary.LittleEndian.Put%s(buf[ptr:], v.%s)\n" \
+                   "ptr += %s" % (to_camelcase(et), var, t_info["element_size"])
+        else:
+            return "binary.LittleEndian.Put%s(buf[ptr:], %s(v.%s))\n" \
+                   "ptr += %s" % (to_camelcase(et), et, var, t_info["element_size"])
     else:
         return "binary.LittleEndian.PutU%s(buf[ptr:], u%s(v.%s))\n" \
                "ptr += %s" % (et, et, var, t_info["element_size"])
 
 
 def parse_int(var, t_info):
-    et = t_info["element_type"]
+    et = t_info["base_type"]
     if et.startswith("u"):
-        return "v.%s = binary.LittleEndian.%s(buf[ptr:])\n" \
-               "ptr += %s" % (var, to_camelcase(et), t_info["element_size"])
+        if t_info["element_type"] == t_info["base_type"]:
+            return "v.%s = binary.LittleEndian.%s(buf[ptr:])\n" \
+                   "ptr += %s" % (var, to_camelcase(et), t_info["element_size"])
+        else:
+            return "v.%s = %s(binary.LittleEndian.%s(buf[ptr:]))\n" \
+                   "ptr += %s" % (var, t_info["element_type"], to_camelcase(et), t_info["element_size"])
     else:
         return "v.%s = %s(binary.LittleEndian.U%s(buf[ptr:]))\n" \
-               "ptr += %s" % (var, et, et, t_info["element_size"])
+               "ptr += %s" % (var, t_info["element_type"], et, t_info["element_size"])
 
 
 def fmt_float(var, t_info):
@@ -488,6 +496,7 @@ class GoGenerator:
 
         if type_info["plain"]:
             # Plain type
+            type_info["base_type"] = resolve_const_base_type_name(t, constants)
             mt = messgen_types_go.get(resolve_const_base_type_name(t, constants))
             if mt is None:
                 raise Exception("Unknown type for Go generator: " + t)
