@@ -120,9 +120,12 @@ def fmt_string(var, t_info):
 
 
 def parse_string(var, t_info):
-    return "v.%s = messgen.ReadString(buf[ptr:])\n" \
-           "ptr += 4 + len(v.%s)" % (var, var)
-
+    return "{str, err := messgen.ReadString(buf[ptr:])\n" \
+           "if (err != nil) { \n" \
+           "return fmt.Errorf(\"buffer too small to read %s data in %s message\")\n" \
+           "}\n" \
+           "v.%s = str\n" \
+           "ptr += 4 + len(v.%s)}" % (var, to_camelcase(t_info["msg_name"]), var, var)
 
 messgen_types_go = {
     "char": {"fmt": fmt_int8, "parse": parse_int8, "element_type": "byte"},
@@ -450,10 +453,10 @@ class GoGenerator:
             if type_info["is_dynamic"]:
                 if type_info["element_size"] == 1:
                     code.append("\t{")
-                    code.append("\t\tif len(buf[ptr:]) < 4 {return fmt.Errorf(\"buffer too small to read %s length\")}" % field_name)
+                    code.append("\t\tif len(buf[ptr:]) < 4 {return fmt.Errorf(\"buffer too small to read %s length in %s message\")}" % (field_name, msg_name))
                     code.append("\t\tn := int(binary.LittleEndian.Uint32(buf[ptr:]))")
                     code.append("\t\tptr += 4")
-                    code.append("\t\tif len(buf[ptr:]) < n {return fmt.Errorf(\"buffer too small to read %s data\")}" % field_name)
+                    code.append("\t\tif len(buf[ptr:]) < n {return fmt.Errorf(\"buffer too small to read %s data in %s message\")}" % (field_name, msg_name))
                     code.append("\t\tv.%s = make([]%s, n)" % (field_name, type_info["element_type"]))
                     code.append("\t\tcopy(v.%s, buf[ptr : ptr+n])" % field_name)
                     code.append("\t\tptr += len(v.%s)" % field_name)
@@ -497,6 +500,7 @@ class GoGenerator:
         if type_info["plain"]:
             # Plain type
             type_info["base_type"] = resolve_const_base_type_name(t, constants)
+            type_info["msg_name"] = parent_msg["name"]
             mt = messgen_types_go.get(resolve_const_base_type_name(t, constants))
             if mt is None:
                 raise Exception("Unknown type for Go generator: " + t)

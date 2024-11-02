@@ -69,14 +69,24 @@ func Parse(buf []byte) (*MessageInfo, int) {
 	return &info, serMsgSize
 }
 
-func ReadString(b []byte) string {
+func ReadString(b []byte) (string, error) {
+	if len(b) < 4 {
+		return "", errors.New("buffer too small")
+	}
 	n := int(binary.LittleEndian.Uint32(b))
-	return string(b[4 : 4+n])
+	if len(b) < 4+n {
+		return "", errors.New("buffer too small")
+	}
+	return string(b[4 : 4+n]), nil
 }
 
-func WriteString(b []byte, v string) {
+func WriteString(b []byte, v string) error {
+	if len(b) < 4+len(v) {
+		return errors.New("buffer too small")
+	}
 	binary.LittleEndian.PutUint32(b, uint32(len(v)))
 	copy(b[4:], []byte(v))
+	return nil
 }
 
 func ReadBytes(b []byte) []byte {
