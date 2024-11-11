@@ -61,13 +61,7 @@ class TypeScriptGenerator:
 
         # Append imports from the different protocols
         if self.imports:
-            for import_proto_name, import_type_name in sorted(self.imports):
-                import_path = os.path.relpath(
-                    os.path.join(out_dir, import_proto_name.replace(SEPARATOR, os.sep)),
-                    output_path
-                ).replace('\\', '/')
-                code += f'import {{ {self.to_camel_case(import_type_name)} }} from "./{import_path}/{import_type_name}";\n'
-            code += '\n'
+            code += self.generate_imports(out_dir, output_path)
 
         # Append generated code to the file
         code += '\n'.join(self.code_lines)
@@ -75,6 +69,20 @@ class TypeScriptGenerator:
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(code)
 
+
+    def generate_imports(self, out_dir, output_path):
+        imports = ''
+
+        for proto_name, type_name in sorted(self.imports):
+            import_path = os.path.relpath(
+                os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep), proto_name.split(SEPARATOR)[-1]),
+                output_path
+            ).replace('\\', '/')
+
+            imports += f'import {{ {self.to_camel_case(type_name)} }} from "{import_path}";\n'
+        return imports + '\n'
+    
+    
     def generate_type(self, proto_name, type_name, types):
         if (proto_name, type_name) in self.generated_types:
             return
@@ -117,12 +125,12 @@ class TypeScriptGenerator:
             self.code_lines.append(f"export enum {interface_name} {{")
             values = type_def.get("values", [])
             for value in values:
-                value_name = value["name"]
+                name = value["name"]
                 value_value = value["value"]
                 value_comment = value.get("comment", "")
                 if value_comment:
                     self.code_lines.append(f"  /** {value_comment} */")
-                self.code_lines.append(f"  {value_name} = {value_value},")
+                self.code_lines.append(f"  {name} = {value_value},")
             self.code_lines.append("}\n")
         else:
             pass  
@@ -134,13 +142,11 @@ class TypeScriptGenerator:
             ts_base_type = self.get_ts_type(base_type, current_proto_name)
             return f"{ts_base_type}[]"
         elif '[' in field_type and field_type.endswith(']'):
-            # Массив фиксированного размера
             index = field_type.find('[')
             base_type = field_type[:index]
             ts_base_type = self.get_ts_type(base_type, current_proto_name)
             return f"{ts_base_type}[]"
         elif '{' in field_type and field_type.endswith('}'):
-            # Карта
             index = field_type.find('{')
             base_type = field_type[:index]
             key_type = field_type[index+1:-1]
@@ -150,7 +156,7 @@ class TypeScriptGenerator:
         else:
             base_type = field_type
             if base_type in ts_types_map:
-                return ts_types_map[base_type]
+                return ts_types_map[field_type]
             elif self.is_builtin_type(base_type):
                 return base_type
             else:
@@ -161,28 +167,10 @@ class TypeScriptGenerator:
             parts = type_name.split(SEPARATOR)
             other_proto_name = SEPARATOR.join(parts[:-1])
             other_type_name = parts[-1]
-            other_proto = self.protos.proto_map.get(other_proto_name)
-            if other_proto:
-                other_types = other_proto.get("types", {})
-                if other_type_name in other_types:
-                    # Добавляем импорт
-                    self.imports.add((other_proto_name, other_type_name))
-                    # Генерируем тип из другого протокола
-                    self.generate_type(other_proto_name, other_type_name, other_types)
-                    return self.to_camel_case(other_type_name)
-                else:
-                    raise Exception(f"Type {other_type_name} not found in protocol {other_proto_name}")
-            else:
-                raise Exception(f"Protocol {other_proto_name} not found")
+            self.imports.add((other_proto_name, other_type_name))
+            return self.to_camel_case(other_type_name)
         else:
-            # Тип в текущем протоколе
-            proto = self.protos.proto_map[current_proto_name]
-            types = proto.get("types", {})
-            if type_name in types:
-                self.generate_type(current_proto_name, type_name, types)
-                return self.to_camel_case(type_name)
-            else:
-                raise Exception(f"Type {type_name} not found in protocol {current_proto_name}")
+            return self.to_camel_case(type_name)
 
     def get_base_type(self, field_type):
         if '[' in field_type:
