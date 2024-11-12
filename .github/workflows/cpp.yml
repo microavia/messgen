@@ -14,8 +14,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install gtest manually
+    - name: Install gtest
       run: sudo apt-get install libgtest-dev cmake
 
-    - name: Run tests
-      run: cd tests && make all
+    - name: Build & run tests
+      run: mkdir -p build && cmake -Bbuild -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
