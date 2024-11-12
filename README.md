@@ -33,6 +33,10 @@ On Windows 10:
 2. Execute `python3 get_pip.py`
 3. Execute `pip3 install pyyaml`
 
+### Build dependencies
+
+- libgtest-dev (for testing)
+
 ## Generate messages
 
 Each protocol should be placed in directory `base_dir/protocol`.

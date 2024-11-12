@@ -130,6 +130,37 @@ class CppGenerator:
         proto_id = proto["proto_id"]
         if proto_id is not None:
             code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+            code.append("")
+
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+
+        code.append("struct dispatcher {")
+        code.append(_indent("template <class T>"))
+        code.append(_indent("static bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {"))
+        code.append(_indent("    switch (msg_id) {"))
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                code.append(_indent("        case %s::TYPE_ID:" % type_name))
+                code.append(_indent("            if constexpr (requires(%s msg) { handler(msg); }) {" % type_name))
+                if type_def["is_flat"]:
+                    code.append(_indent("                auto &msg = *reinterpret_cast<const %s *>(payload);" % type_name))
+                else:
+                    code.append(_indent("                %s msg;" % type_name))
+                    code.append(_indent("                msg.deserialize(payload);"))
+                code.append(_indent("                handler(msg);"))
+                code.append(_indent("            }"))
+                code.append(_indent("            return true;"))
+        code.append(_indent("        default:"))
+        code.append(_indent("            return false;"))
+        code.append(_indent("    }"))
+        code.append(_indent("}"))
+        code.append("};")
 
         for type_name in proto.get("types"):
             type_def = self._protocols.get_type(proto_name, type_name)
@@ -231,7 +262,9 @@ class CppGenerator:
         # IS_FLAT flag
         is_flat_str = "false"
         is_empty = len(groups) == 0
-        if is_empty or (len(groups) == 1 and groups[0].size is not None):
+        is_flat = is_empty or (len(groups) == 1 and groups[0].size is not None)
+        type_def["is_flat"] = is_flat
+        if is_flat:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
