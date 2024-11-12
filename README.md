@@ -14,8 +14,8 @@ Features:
 - Maps
 - Nested messages
 - Messages metadata
-- Supported output formats: C++, JSON
-- Supported output formats TODO: Go, TypeScript, Markdown (documentation)
+- Supported output formats: C++, JSON, TypeScript
+- Supported output formats TODO: Go, Markdown (documentation)
 
 ## Dependencies
 
