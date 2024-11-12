@@ -1,12 +1,9 @@
 #pragma once
 
-#include <array>
-#include <concepts>
-#include <cstdint>
-#include <map>
-#include <string>
-#include <utility>
+#include "Allocator.h"
+
 #include <vector>
+#include <string>
 
 namespace messgen {
 
@@ -108,21 +105,9 @@ constexpr const char *name_of(reflect_t<std::string>) {
     return "string";
 }
 
-template <class T, auto N>
-constexpr const char *name_of(reflect_t<std::array<T, N>>) {
-    static auto name = "array<" + std::string(name_of(reflect_type<T>)) + ", " + std::to_string(N) + ">";
-    return name.c_str();
-}
-
 template <class T>
-constexpr const char *name_of(reflect_t<std::vector<T>>) {
+const char *name_of(reflect_t<std::vector<T>>) {
     static auto name = "vector<" + std::string(name_of(reflect_type<T>)) + ">";
-    return name.c_str();
-}
-
-template <class K, class V>
-constexpr const char *name_of(reflect_t<std::map<K, V>>) {
-    static auto name = "map<" + std::string(name_of(reflect_type<K>)) + "," + std::string(name_of(reflect_type<V>)) + ">";
     return name.c_str();
 }
 

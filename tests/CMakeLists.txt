@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 
 project(messgen)
 
+include(GoogleTest)
+
 set(MESSGEN_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}/messages")
 
 add_executable(test_cpp "cpp_stl/main.cpp")
