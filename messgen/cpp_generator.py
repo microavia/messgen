@@ -103,6 +103,7 @@ class CppGenerator:
             code.extend(self._generate_type_enum(type_name, type_def))
         elif type_def["type_class"] == "struct":
             code.extend(self._generate_type_struct(type_name))
+            code.extend(self._generate_members_of(type_name))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
@@ -138,11 +139,29 @@ class CppGenerator:
             if type_id is not None:
                 self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
 
+        code.extend(self._generate_dispatcher(proto_name, proto))
+        code.append("")
+        code.extend(self._generate_reflect_type(proto_name, proto))
+
+        for type_name in proto.get("types"):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+
+        code.append("")
+        code.append("} // namespace %s" % namespace)
+
+        code = self._PREAMBLE_HEADER + self._generate_includes() + code
+        return code
+
+    def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
+        code: list[str] = []
         code.append("struct dispatcher {")
         code.append(_indent("template <class T>"))
         code.append(_indent("static bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {"))
         code.append(_indent("    switch (msg_id) {"))
-        for type_name in proto.get("types"):
+        for type_name in proto.get("types", []):
             type_def = self._protocols.get_type(proto_name, type_name)
             type_id = type_def.get("id")
             if type_id is not None:
@@ -161,18 +180,20 @@ class CppGenerator:
         code.append(_indent("    }"))
         code.append(_indent("}"))
         code.append("};")
+        return code
 
-        for type_name in proto.get("types"):
+    def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
+        code: list[str] = []
+        code.append("template<typename Fn>")
+        code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
+        code.append("    switch(type_id) {")
+        for type_name in proto.get("types", []):
             type_def = self._protocols.get_type(proto_name, type_name)
             type_id = type_def.get("id")
             if type_id is not None:
-                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
-
-        code.append("")
-        code.append("} // namespace %s" % namespace)
-
-        code = self._PREAMBLE_HEADER + self._generate_includes() + code
-
+                code.append(f"        case {type_name}::TYPE_ID: std::forward<Fn>(fn)(::messgen::reflect_type<{type_name}>); return;")
+        code.append("    }")
+        code.append("}")
         return code
 
     def _generate_comment_type(self, type_def):
@@ -197,8 +218,10 @@ class CppGenerator:
 
     def _get_alignment(self, type_def):
         type_class = type_def["type_class"]
+
         if type_class in ["scalar", "enum"]:
             return type_def["size"]
+
         elif type_class == "struct":
             # Alignment of struct is equal to max of the field alignments
             a_max = 0
@@ -208,24 +231,29 @@ class CppGenerator:
                 if a > a_max:
                     a_max = a
             return a_max
+
         elif type_class == "array":
             # Alignment of array is equal to alignment of element
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"])
             return self._get_alignment(el_type_def)
+
         elif type_class == "vector":
             # Alignment of array is equal to max of size field alignment and alignment of element
             a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
             a_el = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"]))
             return max(a_sz, a_el)
+
         elif type_class == "map":
             # Alignment of array is equal to max of size field alignment and alignment of element
             a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
+
         elif type_class in ["string", "bytes"]:
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
+
         else:
             raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
 
@@ -233,7 +261,7 @@ class CppGenerator:
         align = self._get_alignment(type_def)
         return offs % align == 0
 
-    def _generate_type_struct(self, type_name):
+    def _generate_type_struct(self, type_name: str):
         curr_proto_name = self._ctx["proto_name"]
         type_def = self._protocols.get_type(curr_proto_name, type_name)
 
@@ -400,13 +428,29 @@ class CppGenerator:
 
     def _generate_includes(self):
         code = []
-        for inc in list(self._includes):
+        for inc in sorted(list(self._includes)):
             if inc[1] == "local":
                 code.append("#include \"%s\"" % inc[0])
             else:
                 code.append("#include <%s>" % inc[0])
         if len(code) > 0:
             code.append("")
+        return code
+
+    def _generate_members_of(self, type_name: str):
+        curr_proto_name = self._ctx["proto_name"]
+        type_def = self._protocols.get_type(curr_proto_name, type_name)
+        fields = type_def["fields"]
+
+        code: list[str] = []
+        code.append("")
+        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{type_name}>) {{")
+        code.append("    return std::tuple{")
+        for field in fields:
+            field_name = field["name"]
+            code.append(f"        ::messgen::member{{\"{field_name}\", &{type_name}::{field_name}}},")
+        code.append("    };")
+        code.append("}")
         return code
 
     def _cpp_type(self, type_name: str) -> str:
