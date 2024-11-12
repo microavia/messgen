@@ -3,6 +3,7 @@ import yaml
 from .common import SEPARATOR
 from .validation import is_valid_name, validate_yaml_item
 
+
 # Protocols map structure:
 # {
 #   proto_name: {
@@ -28,11 +29,11 @@ from .validation import is_valid_name, validate_yaml_item
 #   // - enum
 #   base_type: <base_type>,   // scalar integer type, e.g. uint8, uint32
 #   values: {
-#     <item_0>: {
-#       value: <value_0>,
-#       comment: <comment_0>,   // optional
+#     <item_0> : {
+#       value : <value_0>,
+#       comment : <comment_0>,   // optional
 #     },
-#     <item_1>: {
+#     <item_1> : {
 #       ...
 #     },
 #     ...
@@ -41,15 +42,16 @@ from .validation import is_valid_name, validate_yaml_item
 #   // - struct
 #   fields: [
 #     {
-#       name: <name_0>,
-#       type: <type_0>,
-#       comment: <comment_0>,   // optional
+#       name : <name_0>,
+#       type : <type_0>,
+#       comment : <comment_0>,   // optional
 #     },
 #     {
 #       ...
 #     },
 #     ...
-
+#   ]
+#
 # Field type structure:
 # - scalar:
 #   e.g. "uint8"
@@ -59,6 +61,7 @@ from .validation import is_valid_name, validate_yaml_item
 #   e.g. "uint8[4]"
 # - vector:
 #   e.g. "uint8[]"
+
 
 CONFIG_EXT = ".yaml"
 PROTOCOL_ITEM = "_protocol"

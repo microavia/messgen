@@ -3,6 +3,7 @@ import os
 from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
 from .protocols import Protocols
 
+
 def _inline_comment(comment):
     if comment:
         return "  ///< %s" % comment
