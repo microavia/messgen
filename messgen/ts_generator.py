@@ -1,161 +1,227 @@
 import os
-
-ts_types_map = {
-    "bytes": "uint8[]",
-    "char": "string",
-    "int8": "number",
-    "uint8": "number",
-    "int16": "number",
-    "uint16": "number",
-    "int32": "number",
-    "uint32": "number",
-    "int64": "bigint",
-    "uint64": "bigint",
-    "float32": "number",
-    "float64": "bigint",
-    "string": "string",
-}
-
-ts_types_array = {
-    "int8": "Int8Array",
-    "uint8": "Uint8Array",
-    "int16": "Int16Array",
-    "uint16": "Uint16Array",
-    "int32": "Int32Array",
-    "uint32": "Uint32Array",
-    "int64": "BigInt64Array",
-    "uint64": "BigUint64Array",
-    "float32": "Float32Array",
-    "float64": "Float64Array",
-}
+from typing import Dict, Set, List
+from .protocols import Protocols
+from .common import SEPARATOR
 
 
-def to_camelcase(str):
-    return ''.join(x for x in str.title().replace('_', '') if not x.isspace())
+class TypeScriptTypes:
+    TYPE_MAP = {
+        "bool": "boolean",
+        "char": "string",
+        "int8": "number",
+        "uint8": "number",
+        "int16": "number",
+        "uint16": "number",
+        "int32": "number",
+        "uint32": "number",
+        "int64": "bigint",
+        "uint64": "bigint",
+        "float32": "number",
+        "float64": "number",
+        "string": "string", 
+        "bytes": "Uint8Array",
+    }
 
+    @classmethod
+    def get_type(cls, type_name):
+        return cls.TYPE_MAP.get(type_name, type_name)
 
-def format_type(f, use_typed_arrays=False):
-    t = ts_types_map.get(f["type"], f["type"])
-    f_type = t[0].lower() + t[1:]
+class TypeScriptGenerator:
+    _protocols: Protocols
+    _options: dict
 
-    if ('/' in f["type"]):
-        din_type = to_camelcase(f_type.split('/').pop())
-        f_type = din_type + "Message"
+    def __init__(self, protos, options):
+        self._protocols = protos
+        self._reset_state()
+        self._options = options
 
-    if (f["is_array"]):
-        tArray = ts_types_array.get(f["type"])
-        if (tArray is not None and use_typed_arrays):
-            f_type = tArray
-        else:
-            f_type = f_type + "[]"
+    def _reset_state(self) -> None:
+        self.generated_types: Dict[tuple, bool] = {}
+        self.imports: Set[tuple] = set()
+        self.code_lines: List[str] = []
 
-    return f_type
+    def generate(self, out_dir, proto_name, proto) -> None:
+        self._reset_state()
+        
+        types = proto.get("types", {})
+        proto_id = proto.get("proto_id")
+        proto_comment = proto.get("comment", "")
+        proto_version = proto.get("version", "")
 
+        output_path = self._create_output_dirs(out_dir, proto_name)
+        
+        for type_name in types:
+            self._generate_type(proto_name, type_name, types)
 
-class TsGenerator:
-    PROTO_TYPE_VAR_TYPE = "uint8"
+        code = self._generate_file_content(
+            proto_name=proto_name,
+            proto_comment=proto_comment,
+            proto_version=proto_version,
+            out_dir=out_dir,
+            output_path=output_path
+        )
 
-    def __init__(self, modules_map, data_types_map, module_sep, variables):
-        self.MODULE_SEP = module_sep
-        self._modules_map = modules_map
-        self._data_types_map = data_types_map
-        self._variables = variables
+        self._write_output_file(output_path, proto_name, code)
 
-    def generate(self, out_dir):
-        imports = []
-        for module_name, module in self._modules_map.items():
-            module_out_dir = out_dir + os.path.sep + module_name.replace(self.MODULE_SEP, os.path.sep)
-            spl = module_name.split(self.MODULE_SEP)
-            class_path = '%s/%s' % (spl[0], to_camelcase(spl[1]))
-            prefix = '// === AUTO GENERATED CODE ===\n'
-            imports.append(prefix)
-            imports.append('import { MessageName, MessageData, ClearSystemInfo } from  "./%s"' % spl[1])
-            imports.append('import { Messages, Struct } from "messgen"; // TODO: add alias in project or crate npm module\n')
+    def _create_output_dirs(self, out_dir, proto_name):
+        output_path = os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep))
+        os.makedirs(output_path, exist_ok=True)
+        return output_path
 
-            dts = []
-            methods = []
-            mes_names = []
+    def _generate_file_content(self, proto_name, proto_comment, proto_version, out_dir, output_path):
+        self.code_lines.append('// === AUTO GENERATED CODE ===')
+        
+        if proto_comment:
+            self.code_lines.append(f'// {proto_comment}')
+        self.code_lines.append(f'// Protocol: {proto_name}')
+        
+        if proto_version:
+            self.code_lines.append(f'// Version: {proto_version}')
+        self.code_lines.append("")
 
-            for msg in module["messages"]:
-                dts += self.generate_interface(msg)
-                mes_names.append(msg["name"])
-                methods.append(self.generate_send(msg["name"]))
-                methods.append(self.generate_on(msg["name"], msg["id"]))
-            dts = dts + self.generate_names(mes_names)
-            dts = dts + self.generate_datas(mes_names)
-            dts += ["export type ClearSystemInfo<T extends MessageData> = Omit<T, '__type__'> \n"]
-            self.__write_file( out_dir + os.path.sep + module_name + ".ts", [prefix] + dts)
-            self.__write_file(out_dir + os.path.sep + "%sHelper.ts" % class_path, imports + self.generate_class(methods, to_camelcase(spl[1])))
+        if self.imports:
+            self.code_lines.extend(self._generate_imports(out_dir, output_path))
+            self.code_lines.append("")
 
-    def generate_interface(self, msg):
-        msg_name = msg["name"]
+        return '\n'.join(self.code_lines)
 
-        out = []
-        if msg.get("descr") is not  None:
-            out.append("/**\n * %s" % msg["descr"])
-            out.append(" */")
-        out.append('export interface %sMessage {' % to_camelcase(msg_name))
-        out.append('    __type__?: "%s"' % msg_name)
-        fields_p = []
-        for f in msg["fields"]:
-            f_name = f["name"]
-            f_type = format_type(f, self._variables.get('typed_arrays','false') == 'true')
-            if f.get("descr") is not None:
-                fields_p.append('    /** %s */' % str(f.get("descr")))
-            fields_p.append('    %s: %s' % (f_name, f_type))
-        out.append("\n".join(fields_p))
-        out.append("}")
-        return out
+    def _generate_type(self, proto_name, type_name, types) -> None:
+        if (proto_name, type_name) in self.generated_types:
+            return
+        self.generated_types[(proto_name, type_name)] = True
 
+        type_def = types[type_name]
+        type_class = type_def.get("type_class")
+        comment = type_def.get("comment", "")
+        interface_name = self._to_camel_case(type_name)
 
-    def generate_import(self, module_name, msg_name):
-        return  'import { %sMessage } from "./%s/%s"\n' % (msg_name, module_name, msg_name)
+        self._handle_type_dependencies(type_def, type_class)
+        self._generate_type_definition(
+            type_class=type_class,
+            interface_name=interface_name,
+            type_def=type_def,
+            comment=comment
+        )
 
-    def generate_send(self, name):
-        msg_name = to_camelcase(name)
-        return  '''
-    send_%s(data: ClearSystemInfo<MessageData<"%s">>, callback?: (data: ClearSystemInfo<MessageData<"%s">>) => void): any {
-        return this.send(this.messages.MSG_%s, data, callback);
-    }''' % (msg_name,name, name, name.upper())
+    def _handle_type_dependencies(self, type_def, type_class):
+        if type_class == "struct":
+            for field in type_def.get("fields", []):
+                field_type = field["type"]
+                base_type = self._get_base_type(field_type)
+                if not self._is_builtin_type(base_type):
+                    self._handle_custom_type(base_type)
 
-    def generate_on(self, name, id):
-        msg_name = to_camelcase(name)
-        return  '''
-    on_%s(callback: (data: MessageData<"%s">) => any) {
-        this.onmessage[%s] = callback;
-    }''' % (msg_name, name,  id)
+    def _generate_type_definition(self, type_class, interface_name, type_def, comment):
+        if comment:
+            self.code_lines.append(f"/** {comment} */")
 
-    def generate_class(self, methods, name_file):
-        out = []
-        out.append('export default class %sHelper {' % (name_file))
-        out.append("    send(struct: Struct, data: ClearSystemInfo<MessageData>, callback?: (...args: any) => any) {}")
-        out.append("    protected onmessage: {(args?: any): void}[] = []")
-        out.append("    protected messages!: Messages<MessageName>")
-        out.append("\n".join(methods))
-        out.append("}")
-        return out
+        if type_class == "struct":
+            self._generate_interface(interface_name, type_def)
+        elif type_class == "enum":
+            self._generate_enum(interface_name, type_def)
 
-    def generate_names(self, names):
-        out = []
-        out.append("export type MessageName =")
-        for name in iter(names):
-            out.append('| "%s"' % name)
-        out.append('\n')
-        return out
+    def _generate_interface(self, interface_name, type_def):
+        self.code_lines.append(f"export interface {interface_name} {{")
+        
+        for field in type_def.get("fields", []):
+            if field.get("comment"):
+                self.code_lines.append(f"  /** {field['comment']} */")
+            
+            field_name = field["name"]
+            field_type = self._get_ts_type(field["type"], type_def.get("proto_name", ""))
+            self.code_lines.append(f"  {field_name}: {field_type};")
+            
+        self.code_lines.append("}")
+        self.code_lines.append("")
 
-    def generate_datas(self, names):
-        out = []
-        out.append("export type MessageData<TMessageName extends MessageName = MessageName>  =")
-        for name in iter(names):
-            out.append('    TMessageName extends "%s" ? ' % name)
-            out.append('    %sMessage :' % to_camelcase(name))
-        for name in iter(names):
-            out.append('        | %sMessage ' % to_camelcase(name))
-        out.append('\n')
-        return out
+    def _generate_enum(self, enum_name, type_def):
+        self.code_lines.append(f"export enum {enum_name} {{")
+        
+        for value in type_def.get("values", []):
+            if value.get("comment"):
+                self.code_lines.append(f"  /** {value['comment']} */")
+            self.code_lines.append(f"  {value['name'].capitalize()} = {value['value']},")
+            
+        self.code_lines.append("}")
+        self.code_lines.append("")
+
+    def _write_output_file(self, output_path, proto_name, content):
+        output_file = os.path.join(
+            output_path, 
+            f"{proto_name.split(SEPARATOR)[-1]}.ts"
+        )
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+    def _generate_imports(self, out_dir, output_path):
+        import_lines = []
+        
+        for proto_name, type_name in sorted(self.imports):
+            import_path = self._calculate_import_path(
+                out_dir, output_path, proto_name
+            )
+            import_lines.append(
+                f'import {{ {self._to_camel_case(type_name)} }} from "{import_path}";'
+            )
+            
+        return import_lines
+
+    def _calculate_import_path(self, out_dir, output_path, proto_name):
+        return os.path.relpath(
+            os.path.join(
+                out_dir,
+                proto_name.replace(SEPARATOR, os.sep),
+                proto_name.split(SEPARATOR)[-1]
+            ),
+            output_path
+        ).replace('\\', '/')
+
+    def _get_ts_type(self, field_type, current_proto_name):
+        if field_type.endswith('[]'):
+            base_type = field_type[:-2]
+            ts_base_type = self._get_ts_type(base_type, current_proto_name)
+            return f"{ts_base_type}[]"
+            
+        if '[' in field_type and field_type.endswith(']'):
+            base_type = field_type[:field_type.find('[')]
+            ts_base_type = self._get_ts_type(base_type, current_proto_name)
+            return f"{ts_base_type}[]"
+            
+        if '{' in field_type and field_type.endswith('}'):
+            base_type = field_type[:field_type.find('{')]
+            key_type = field_type[field_type.find('{')+1:-1]
+            ts_base_type = self._get_ts_type(base_type, current_proto_name)
+            ts_key_type = self._get_ts_type(key_type, current_proto_name)
+            return f"{{ [key: {ts_key_type}]: {ts_base_type} }}"
+            
+        if field_type in TypeScriptTypes.TYPE_MAP:
+            return TypeScriptTypes.get_type(field_type)
+            
+        return self._handle_custom_type(field_type)
+
+    def _handle_custom_type(self, type_name):
+        if SEPARATOR in type_name:
+            parts = type_name.split(SEPARATOR)
+            proto_name = SEPARATOR.join(parts[:-1])
+            imported_type_name = parts[-1]
+            self.imports.add((proto_name, imported_type_name))
+            return self._to_camel_case(imported_type_name)
+        return self._to_camel_case(type_name)
 
     @staticmethod
-    def __write_file(fpath, code):
-        with open(fpath, "w") as f:
-            for line in code:
-                f.write("%s\n" % line)
+    def _to_camel_case(s):
+        return ''.join(word.capitalize() for word in s.split('_'))
+
+    @staticmethod
+    def _get_base_type(field_type):
+        if '[' in field_type:
+            return field_type.split('[')[0]
+        if '{' in field_type:
+            return field_type.split('{')[0]
+        if field_type.endswith('[]'):
+            return field_type[:-2]
+        return field_type
+
+    @staticmethod
+    def _is_builtin_type(type_name):
+        return type_name in TypeScriptTypes.TYPE_MAP
