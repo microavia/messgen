@@ -1,6 +1,6 @@
 from .json_generator import JsonGenerator
 from .cpp_generator import CppGenerator
-from .ts_generator_v2 import TypeScriptGenerator
+from .ts_generator import TypeScriptGenerator
 
 
 def get_generator(lang: str, protos, options):
