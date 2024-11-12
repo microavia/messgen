@@ -10,30 +10,30 @@ export class BasicConverter extends Converter {
     super(config.name);
     this.typedArray = config.typedArray;
   }
-  
+
   serialize(value: IValue, buffer: Buffer) {
     const size = this.config.write(buffer.dataView, buffer.offset, value);
     buffer.offset += size;
   }
-  
+
   size(value: IValue): number {
     return this.config.size(value)
   }
-  
+
   deserialize(buffer: Buffer): IValue {
     let result = this.config.read(buffer.dataView, buffer.offset);
     buffer.offset += this.config.size(result);
     return result;
   }
-  
+
   default(): IValue {
     return this.config.default();
   }
-  
+
   static fromGlobalConfigs(): [IBasicType, Converter][] {
     return basicTypes.reduce<[IBasicType, Converter][]>((acc, config) => {
       acc.push([config.name,
-        new BasicConverter(config)
+      new BasicConverter(config)
       ]);
       return acc;
     }, [])
@@ -78,7 +78,7 @@ export const basicTypes = [
     },
     default: () => 0,
     typedArray: Uint8Array
-    
+
   }, {
     name: "int16",
     size: () => 2,
@@ -135,7 +135,7 @@ export const basicTypes = [
     name: "uint64",
     size: () => 8,
     read: (v, s) => {
-      
+
       return v.getBigUint64(s, IS_LITTLE_ENDIAN);
     },
     write: (v, s, a) => {
@@ -191,12 +191,12 @@ export const basicTypes = [
     write: (v, s, a: string) => {
       let size = a.length;
       v.setUint32(s, size, IS_LITTLE_ENDIAN);
-      
+
       let uint8View = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
       const encode = encodeUTF8(a)
-      
+
       uint8View.set(encode, s + 4);
-      
+
       return size + 4;
     },
     default: () => ''
@@ -209,10 +209,10 @@ export const basicTypes = [
     write: (v, s, a: Uint8Array) => {
       let size = a.length;
       v.setUint32(s, size, IS_LITTLE_ENDIAN);
-      
+
       let uint8View = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
       uint8View.set(a, s + 4);
-      
+
       return size + 4;
     },
     default: () => new Uint8Array(0)

@@ -1,41 +1,29 @@
-import {
-  ProtocolJSON,
-  IType,
-  IProtocolName,
-  IName,
-  IValue,
-} from "./types";
 import { GlobalBasicConverters } from "./converters/BasicConverter";
+import { ProtocolManager } from "./protocol/ProtocolManager";
 import { Converter } from "./converters/Converter";
 import { Buffer } from "./Buffer";
 import { commonHeaderConverter, IHeaderConverter } from "./HEADER_STRUCT";
-import { ProtocolManager } from "./protocol/ProtocolManager";
+import { ProtocolJSON, IType, IValue, GetProtocolPayload } from "./types";
 
-
-interface MessageResult extends IValue {
-  __HEADER__: Record<string, number>;
-}
-
-export class Messgen {
+export class Messgen<ProtocolMap extends Record<string, any>> {
   private readonly protocolManager: ProtocolManager;
 
   constructor(schema: ProtocolJSON[], private headerConverter: IHeaderConverter = commonHeaderConverter) {
     this.protocolManager = new ProtocolManager(schema);
-
   }
 
-  public serializeMessage(
-    protocolName: IProtocolName,
-    type: IName,
-    data: IValue,
+  public serializeMessage<Name extends keyof ProtocolMap, Type extends keyof ProtocolMap[Name]>(
+    protocolName: Name,
+    type: Type,
+    data: GetProtocolPayload<ProtocolMap, Name, Type>,
     headerData: Record<string, any> = {}
   ): ArrayBuffer {
-    const protocol = this.protocolManager.getProtocolByName(protocolName);
-    const converter = this.protocolManager.getConverterFromProtocol(protocol, type);
+    const protocol = this.protocolManager.getProtocolByName(protocolName as string);
+    const converter = this.protocolManager.getConverterFromProtocol(protocol, type as string);
 
     const messageSize = converter.size(data);
     const headerObject = {
-      message_id: protocol.typesNameToId[type],
+      message_id: protocol.typesNameToId[type as string],
       protocol_id: protocol.protocol.proto_id,
       size: messageSize,
       ...headerData
@@ -67,22 +55,35 @@ export class Messgen {
     return results;
   }
 
-  public serialize(protocolName: IProtocolName, type: IName, data: Record<string, any>): Buffer {
-    const converter = this.protocolManager.getConverter(protocolName, type);
+  public serialize<Name extends keyof ProtocolMap, Type extends keyof ProtocolMap[Name]>(
+    protocolName: Name,
+    type: Type,
+    data: GetProtocolPayload<ProtocolMap, Name, Type>
+  ): Buffer {
+    const converter = this.protocolManager.getConverter(protocolName as string, type as string);
     const buffer = new Buffer(new ArrayBuffer(converter.size(data)));
     converter.serialize(data, buffer);
 
     return buffer;
   }
 
-  public deserialize(protocolName: IProtocolName, type: IName, arrayBuffer: ArrayBufferLike): unknown {
-    const converter = this.protocolManager.getConverter(protocolName, type);
-    return converter.deserialize(new Buffer(arrayBuffer));
+  public deserialize<Name extends keyof ProtocolMap, Type extends keyof ProtocolMap[Name]>(
+    protocolName: Name,
+    type: Type,
+    arrayBuffer: ArrayBufferLike
+  ): GetProtocolPayload<ProtocolMap, Name, Type> {
+    const converter = this.protocolManager.getConverter(protocolName as string, type as string);
+    return converter.deserialize(new Buffer(arrayBuffer)) as GetProtocolPayload<ProtocolMap, Name, Type>;
   }
 
   static initializeBasicConverter() {
     return new Map<IType, Converter>(
       GlobalBasicConverters
-    )
+    );
   }
+}
+
+
+interface MessageResult extends IValue {
+  __HEADER__: Record<string, number>;
 }

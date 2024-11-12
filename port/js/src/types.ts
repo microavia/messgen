@@ -101,3 +101,9 @@ type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
 
 export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 
+export type GetProtocolPayload<
+  ProtocolMap extends Record<string, Record<string, any>>,
+  Name extends keyof ProtocolMap,
+  Type extends keyof ProtocolMap[Name]
+> = ProtocolMap[Name][Type];
+

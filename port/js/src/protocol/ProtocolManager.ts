@@ -86,10 +86,9 @@ export class ProtocolManager {
     }
 
     private createTypesNameToIdMap(schema: ProtocolJSON): Record<string, number> {
-        return Object.fromEntries(
-            Object.entries<IType>(schema.types_map ?? {})
-                .map(([id, type]) => [type.trim(), Number(id)])
-        );
+        const { types_map = {} } = schema;
+        return Object.fromEntries(Object.entries<IType>(types_map)
+            .map(([id, type]) => [type.trim(), Number(id)]));
     }
 
     private initializeConverters(schema: ProtocolJSON, protocolData: Protocol): void {
@@ -114,17 +113,11 @@ export class ProtocolManager {
             }
         });
 
-        protocolData.converters.set(
-            typeName,
-            new StructConverter(typeName, typeInfo, protocolData.converters)
-        );
+        protocolData.converters.set(typeName, new StructConverter(typeName, typeInfo, protocolData.converters));
     }
 
     private initializeEnumConverter(typeName: IType, typeInfo: EnumTypeClass, protocolData: Protocol): void {
-        protocolData.converters.set(
-            typeName,
-            new EnumConverter(typeName, typeInfo, protocolData.converters)
-        );
+        protocolData.converters.set(typeName, new EnumConverter(typeName, typeInfo, protocolData.converters));
     }
 
     private isCrossProtocolType(type: string): boolean {
@@ -142,10 +135,7 @@ export class ProtocolManager {
     }
 
     private initializeNestedConverter(type: string, protocolData: Protocol): void {
-        protocolData.converters.set(
-            type,
-            new NestedConverter(type, protocolData.converters)
-        );
+        protocolData.converters.set(type, new NestedConverter(type, protocolData.converters));
     }
 
     private parseCrossProtocolType(type: string): [IProtocolName, IName] {
