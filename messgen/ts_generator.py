@@ -3,7 +3,6 @@ from typing import Dict, Set, List
 from .protocols import Protocols
 from .common import SEPARATOR
 
-
 class TypeScriptTypes:
     TYPE_MAP = {
         "bool": "boolean",
@@ -44,15 +43,17 @@ class TypeScriptGenerator:
         self._reset_state()
         
         types = proto.get("types", {})
-        proto_id = proto.get("proto_id")
         proto_comment = proto.get("comment", "")
         proto_version = proto.get("version", "")
+        proto_name = proto.get("proto_name", proto_name)
 
         output_path = self._create_output_dirs(out_dir, proto_name)
         
         for type_name in types:
             self._generate_type(proto_name, type_name, types)
 
+        self._generate_types_map(proto_name, types)
+        
         code = self._generate_file_content(
             proto_name=proto_name,
             proto_comment=proto_comment,
@@ -69,19 +70,19 @@ class TypeScriptGenerator:
         return output_path
 
     def _generate_file_content(self, proto_name, proto_comment, proto_version, out_dir, output_path):
-        self.code_lines.append('// === AUTO GENERATED CODE ===')
+        self.code_lines.insert(0, '// === AUTO GENERATED CODE ===')
         
         if proto_comment:
-            self.code_lines.append(f'// {proto_comment}')
-        self.code_lines.append(f'// Protocol: {proto_name}')
+            self.code_lines.insert(1, f'// {proto_comment}')
+        self.code_lines.insert(2, f'// Protocol: {proto_name}')
         
         if proto_version:
-            self.code_lines.append(f'// Version: {proto_version}')
-        self.code_lines.append("")
+            self.code_lines.insert(3, f'// Version: {proto_version}')
+        self.code_lines.insert(4, "")
 
         if self.imports:
-            self.code_lines.extend(self._generate_imports(out_dir, output_path))
-            self.code_lines.append("")
+            import_lines = self._generate_imports(out_dir, output_path)
+            self.code_lines = self.code_lines[:5] + import_lines + [""] + self.code_lines[5:]
 
         return '\n'.join(self.code_lines)
 
@@ -161,20 +162,20 @@ class TypeScriptGenerator:
                 out_dir, output_path, proto_name
             )
             import_lines.append(
-                f'import {{ {self._to_camel_case(type_name)} }} from "{import_path}";'
+                f'import {{ {self._to_camel_case(type_name)} }} from "{import_path}/{proto_name.split(SEPARATOR)[-1]}";'
             )
             
         return import_lines
 
     def _calculate_import_path(self, out_dir, output_path, proto_name):
-        return os.path.relpath(
+        import_path = os.path.relpath(
             os.path.join(
                 out_dir,
-                proto_name.replace(SEPARATOR, os.sep),
-                proto_name.split(SEPARATOR)[-1]
+                proto_name.replace(SEPARATOR, os.sep)
             ),
             output_path
         ).replace('\\', '/')
+        return import_path
 
     def _get_ts_type(self, field_type, current_proto_name):
         if field_type.endswith('[]'):
@@ -206,8 +207,9 @@ class TypeScriptGenerator:
             imported_type_name = parts[-1]
             self.imports.add((proto_name, imported_type_name))
             return self._to_camel_case(imported_type_name)
-        return self._to_camel_case(type_name)
-
+        else:
+            return self._to_camel_case(type_name)
+    
     @staticmethod
     def _to_camel_case(s):
         return ''.join(word.capitalize() for word in s.split('_'))
@@ -225,3 +227,33 @@ class TypeScriptGenerator:
     @staticmethod
     def _is_builtin_type(type_name):
         return type_name in TypeScriptTypes.TYPE_MAP
+
+    def _generate_types_map(self, proto_name, types):
+        interface_name = self._to_camel_case(proto_name.replace('/', '_') + '_types_map')
+        self.code_lines.append(f"export interface {interface_name} {{")
+        self.code_lines.append(f'  "{proto_name}": {{')
+        for type_name in sorted(types.keys()):
+            ts_type_name = self._to_camel_case(type_name)
+            self.code_lines.append(f'    {type_name}: {ts_type_name};')
+        self.code_lines.append('  };')
+        self.code_lines.append('}')
+        self.code_lines.append('')
+
+    def generate_root_types_file(self, out_dir, proto_files):
+        root_file_path = os.path.join(out_dir, 'types.ts')
+        import_lines = []
+        interface_names = []
+
+        for proto in proto_files:
+            proto_name = proto.get('proto_name')
+            module_path = proto_name.replace(SEPARATOR, '/')
+            interface_name = self._to_camel_case(proto_name.replace('/', '_') + '_types_map')
+            import_path = f'./{module_path}/{proto_name.split(SEPARATOR)[-1]}'
+            import_lines.append(f'import {{ {interface_name} }} from "{import_path}";')
+            interface_names.append(interface_name)
+
+        with open(root_file_path, 'w', encoding='utf-8') as f:
+            f.write('// === AUTO GENERATED CODE ===\n')
+            f.write(import_lines.join('\n'))
+            f.write('\n')
+            f.write(f"type CommonProtocolTypeMap = {' & '.join(interface_names)};\n")
