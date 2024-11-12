@@ -4,9 +4,12 @@
 .run
 
 # Build files
+.cache
 *.pyc
 *.pyd
 cmake-build-*/
+build
+Testing
 
 # Log files
 dump.txt
