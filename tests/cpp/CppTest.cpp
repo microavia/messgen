@@ -1,5 +1,3 @@
-#pragma once
-
 #include <messgen/messgen.h>
 #include <messgen/test_proto/complex_struct.h>
 #include <messgen/test_proto/struct_with_enum.h>
@@ -14,7 +12,7 @@ class CppTest : public ::testing::Test {
 protected:
     std::vector<uint8_t> _buf;
 
-    template<class T>
+    template <class T>
     void test_serialization(const T &msg) {
         size_t sz_check = msg.serialized_size();
 
@@ -29,7 +27,7 @@ protected:
         EXPECT_EQ(msg, msg1);
     }
 
-    template<class T>
+    template <class T>
     void test_zerocopy(const T &msg) {
         size_t sz_check = msg.serialized_size();
 

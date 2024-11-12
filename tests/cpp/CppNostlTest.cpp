@@ -1,5 +1,3 @@
-#pragma once
-
 #include <messgen/messgen.h>
 #include <messgen/test_proto/complex_struct_nostl.h>
 #include <messgen/test_proto/struct_with_enum.h>
@@ -13,7 +11,7 @@ protected:
     std::vector<uint8_t> _buf;
     messgen::StaticAllocator<1024 * 1024> _alloc;
 
-    template<class T>
+    template <class T>
     void test_serialization(const T &msg) {
         size_t sz_check = msg.serialized_size();
 
