@@ -18,4 +18,7 @@ jobs:
       run: sudo apt-get install libgtest-dev cmake ninja-build gcc g++
 
     - name: Build & run tests
-      run: mkdir -p build && cmake -Bbuild -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
+      run: |
+        mkdir -p build
+        cmake -Bbuild -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
+        cmake --build build
