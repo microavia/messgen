@@ -25,11 +25,10 @@ export interface IHeader {
 
 export interface IHeaderConverter extends StructConverter {
   deserialize(buffer: Buffer): Record<string, any> & IHeader;
-  
   serialize(value: Record<string, any> & IHeader, buffer: Buffer): void;
 }
 
-export const headerConverter: IHeaderConverter = new StructConverter(
+export const commonHeaderConverter: IHeaderConverter = new StructConverter(
   'head',
   HEADER_STRUCT,
   new Map<IType, Converter>(GlobalBasicConverters)

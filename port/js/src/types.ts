@@ -42,7 +42,7 @@ export interface ProtocolJSON {
 export type SchemaObj = TypeClass
 
 
-export type Messages = {
+export type Protocol = {
   typesMap: Map<ITypeId, Converter>
   typesNameToId: Record<IName, ITypeId>
   converters: Map<IType, Converter>
