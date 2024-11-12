@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install gtest
+    - name: Install dependencies
       run: sudo apt-get install libgtest-dev cmake ninja-build gcc g++
 
     - name: Build & run tests
