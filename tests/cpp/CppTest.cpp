@@ -85,6 +85,7 @@ TEST_F(CppTest, VarSizeStruct) {
 
 TEST_F(CppTest, ComplexStruct) {
     messgen::test_proto::complex_struct msg{};
+
     msg.f0 = 255;
     msg.f2_vec.push_back(45.787);
     msg.e_vec.push_back(messgen::test_proto::simple_enum::another_value);

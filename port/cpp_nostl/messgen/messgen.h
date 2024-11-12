@@ -192,6 +192,14 @@ struct vector {
     const T &operator[](size_t idx) const {
         return _ptr[idx];
     }
+
+    T *data() {
+        return _ptr;
+    }
+
+    const T *data() const {
+        return _ptr;
+    }
 };
 
 } // namespace messgen

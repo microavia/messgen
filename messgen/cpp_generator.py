@@ -318,7 +318,7 @@ class CppGenerator:
                 # There is padding before current field
                 # Write together previous aligned fields, if any
                 code_ser.append("// %s" % ", ".join(group.field_names))
-                code_ser.extend(self._memcpy_to_buf(group.fields[0]["name"], group.size))
+                code_ser.extend(self._memcpy_to_buf("&" + group.fields[0]["name"], group.size))
             elif len(group.fields) == 1:
                 field = group.fields[0]
                 field_name = field["name"]
@@ -348,7 +348,7 @@ class CppGenerator:
                 # There is padding before current field
                 # Write together previous aligned fields, if any
                 code_deser.append("// %s" % ", ".join(group.field_names))
-                code_deser.extend(self._memcpy_from_buf(group.fields[0]["name"], group.size))
+                code_deser.extend(self._memcpy_from_buf("&" + group.fields[0]["name"], group.size))
             elif len(group.fields) == 1:
                 field = group.fields[0]
                 field_name = field["name"]
@@ -456,14 +456,17 @@ class CppGenerator:
     def _cpp_type(self, type_name: str) -> str:
         t = self._protocols.get_type(self._ctx["proto_name"], type_name)
         mode = self._get_mode()
+
         if t["type_class"] == "scalar":
             self._add_include("cstdint")
             return self._CPP_TYPES_MAP[type_name]
+
         elif t["type_class"] == "array":
             self._add_include("array")
             el_type_name = _cpp_namespace(t["element_type"])
             el_c_type = self._cpp_type(el_type_name)
             return "std::array<%s, %d>" % (el_c_type, t["array_size"])
+
         elif t["type_class"] == "vector":
             el_type_name = t["element_type"]
             el_c_type = self._cpp_type(el_type_name)
@@ -474,6 +477,7 @@ class CppGenerator:
                 return "messgen::vector<%s>" % el_c_type
             else:
                 raise RuntimeError("Unsupported mode for vector: %s" % mode)
+
         elif t["type_class"] == "map":
             key_c_type = self._cpp_type(t["key_type"])
             value_c_type = self._cpp_type(t["value_type"])
@@ -485,6 +489,7 @@ class CppGenerator:
                 return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
+
         elif t["type_class"] == "string":
             if mode == "stl":
                 self._add_include("string")
@@ -494,6 +499,7 @@ class CppGenerator:
                 return "std::string_view"
             else:
                 raise RuntimeError("Unsupported mode for string: %s" % mode)
+
         elif t["type_class"] == "bytes":
             if mode == "stl":
                 self._add_include("vector")
@@ -502,6 +508,7 @@ class CppGenerator:
                 return "messgen::vector<uint8_t>"
             else:
                 raise RuntimeError("Unsupported mode for bytes: %s" % mode)
+
         elif t["type_class"] in ["enum", "struct"]:
             if SEPARATOR in type_name:
                 scope = "global"
@@ -509,6 +516,7 @@ class CppGenerator:
                 scope = "local"
             self._add_include("%s.h" % type_name, scope)
             return _cpp_namespace(type_name)
+
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
@@ -565,12 +573,15 @@ class CppGenerator:
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
+
+            print("***** ", el_type_def, el_size)
+
             if el_size == 0:
                 pass
             elif el_size is not None and el_size % el_align == 0:
                 # Vector of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (el_size, field_name))
-                c.extend(self._memcpy_to_buf("%s[0]" % field_name, "_field_size"))
+                c.extend(self._memcpy_to_buf("%s.data()" % field_name, "_field_size"))
             else:
                 # Vector of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -634,7 +645,7 @@ class CppGenerator:
             elif el_size is not None and el_size % el_align == 0:
                 # Vector or array of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (el_size, field_name))
-                c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                c.extend(self._memcpy_from_buf("%s.data()" % field_name, "_field_size"))
             else:
                 # Vector or array of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -653,7 +664,7 @@ class CppGenerator:
                 elif el_size is not None and el_size % el_align == 0:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     c.append("_field_size = %d * %s.size();" % (el_size, field_name))
-                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                    c.extend(self._memcpy_from_buf("%s.data()" % field_name, "_field_size"))
                 else:
                     # Vector or array of variable size elements
                     c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -673,7 +684,7 @@ class CppGenerator:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     if el_size != 1:
                         c.append("_field_size *= %d;" % el_size)
-                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                    c.extend(self._memcpy_from_buf("%s.data()" % field_name, "_field_size"))
                 else:
                     # Vector or array of variable size elements
                     c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -776,12 +787,12 @@ class CppGenerator:
 
     def _memcpy_to_buf(self, src: str, size) -> list:
         return [
-            "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(&%s), %s);" % (src, size),
+            "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(%s), %s);" % (src, size),
             "_size += %s;" % size
         ]
 
     def _memcpy_from_buf(self, dst: str, size) -> list:
         return [
-            "::memcpy(reinterpret_cast<uint8_t *>(&%s), &_buf[_size], %s);" % (dst, size),
+            "::memcpy(reinterpret_cast<uint8_t *>(%s), &_buf[_size], %s);" % (dst, size),
             "_size += %s;" % size
         ]
