@@ -25,4 +25,4 @@ jobs:
         mkdir -p build
         cmake -Bbuild -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
         cmake --build build
-        ctest --test-dir build/tests/
+        ctest --test-dir build/tests/ --output-on-failure
