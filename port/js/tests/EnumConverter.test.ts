@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Messgen } from "../src/Messgen";
 import { EnumConverter } from "../src/converters/EnumConverter";
 import { EnumTypeClass } from "../src/types";
 import { Buffer } from "../src/Buffer";
 import { Converter } from "../src/converters/Converter";
+import { initializeBasicConverter } from './utils';
 
 const jest = vi
 
@@ -15,7 +15,7 @@ describe('EnumConverter', () => {
     const name = 'TestEnum';
     const baseType = 'int8';
     const types: EnumTypeClass = { type_class: 'enum', base_type: baseType, values: [{ name: 'Value1', value: 1 }] };
-    const converters = Messgen.initializeBasicConverter();
+    const converters = initializeBasicConverter();
 
     const enumConverter = new EnumConverter(name, types, converters);
     const value = 1;
@@ -88,7 +88,7 @@ describe('EnumConverter', () => {
       base_type: baseType,
       values: []
     };
-    const converters = Messgen.initializeBasicConverter();
+    const converters = initializeBasicConverter();
     const baseTypeConverter: Converter = {
       name: baseType,
       serialize: jest.fn(),
@@ -122,7 +122,7 @@ describe('EnumConverter', () => {
       base_type: baseType,
       values: values
     };
-    const converters = Messgen.initializeBasicConverter();
+    const converters = initializeBasicConverter();
     const converterMock: Converter = {
       name: baseType,
       serialize: jest.fn(),

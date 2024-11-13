@@ -1,11 +1,9 @@
-import { GlobalBasicConverters } from "./converters/BasicConverter";
 import { ProtocolManager } from "./protocol/ProtocolManager";
-import { Converter } from "./converters/Converter";
 import { Buffer } from "./Buffer";
 import { commonHeaderConverter, IHeaderConverter } from "./HEADER_STRUCT";
-import { ProtocolJSON, IType, IValue, GetProtocolPayload } from "./types";
+import { ProtocolJSON, IValue, GetProtocolPayload, BaseProtocolMap } from "./types";
 
-export class Messgen<ProtocolMap extends Record<string, any>> {
+export class Messgen<ProtocolMap extends BaseProtocolMap = BaseProtocolMap> {
   private readonly protocolManager: ProtocolManager;
 
   constructor(schema: ProtocolJSON[], private headerConverter: IHeaderConverter = commonHeaderConverter) {
@@ -74,12 +72,6 @@ export class Messgen<ProtocolMap extends Record<string, any>> {
   ): GetProtocolPayload<ProtocolMap, Name, Type> {
     const converter = this.protocolManager.getConverter(protocolName as string, type as string);
     return converter.deserialize(new Buffer(arrayBuffer)) as GetProtocolPayload<ProtocolMap, Name, Type>;
-  }
-
-  static initializeBasicConverter() {
-    return new Map<IType, Converter>(
-      GlobalBasicConverters
-    );
   }
 }
 

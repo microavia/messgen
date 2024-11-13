@@ -107,3 +107,4 @@ export type GetProtocolPayload<
   Type extends keyof ProtocolMap[Name]
 > = ProtocolMap[Name][Type];
 
+export type BaseProtocolMap = Record<string, any>

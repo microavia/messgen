@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { Messgen } from "../src/Messgen";
-import { Types, ProtocolJSON, IType, IValue } from "../src/types";
 import { execSync } from "child_process";
 import path from "path";
 import fs from "fs";
+import { Messgen } from "../src/Messgen";
+import { ProtocolJSON, IType, IValue } from "../src/types";
 import { StructConverter } from "../src/converters/StructConverter";
 import { Converter } from "../src/converters/Converter";
 import { GlobalBasicConverters } from "../src/converters/BasicConverter";
