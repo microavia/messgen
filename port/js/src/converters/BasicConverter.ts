@@ -32,9 +32,7 @@ export class BasicConverter extends Converter {
 
   static fromGlobalConfigs(): [IBasicType, Converter][] {
     return basicTypes.reduce<[IBasicType, Converter][]>((acc, config) => {
-      acc.push([config.name,
-      new BasicConverter(config)
-      ]);
+      acc.push([config.name, new BasicConverter(config)]);
       return acc;
     }, [])
   }

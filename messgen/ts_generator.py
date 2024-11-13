@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Tuple
 from .protocols import Protocols
 from .common import SEPARATOR
 
@@ -21,9 +21,26 @@ class TypeScriptTypes:
         "bytes": "Uint8Array",
     }
 
+    TYPED_ARRAY_MAP = {
+        "int8": "Int8Array",
+        "uint8": "Uint8Array",
+        "int16": "Int16Array",
+        "uint16": "Uint16Array",
+        "int32": "Int32Array",
+        "uint32": "Uint32Array",
+        "int64": "BigInt64Array",
+        "uint64": "BigUint64Array",
+        "float32": "Float32Array",
+        "float64": "Float64Array",
+    }
+
     @classmethod
     def get_type(cls, type_name):
         return cls.TYPE_MAP.get(type_name, type_name)
+
+    @classmethod
+    def get_typed_array(cls, type_name):
+        return cls.TYPED_ARRAY_MAP.get(type_name, None)
 
 class TypeScriptGenerator:
     _protocols: Protocols
@@ -35,8 +52,8 @@ class TypeScriptGenerator:
         self._options = options
 
     def _reset_state(self) -> None:
-        self.generated_types: Dict[tuple, bool] = {}
-        self.imports: Set[tuple] = set()
+        self.generated_types: Dict[Tuple[str, str], bool] = {}
+        self.imports: Set[Tuple[str, str]] = set()
         self.code_lines: List[str] = []
 
     def generate(self, out_dir, proto_name, proto) -> None:
@@ -108,14 +125,14 @@ class TypeScriptGenerator:
         if type_class == "struct":
             for field in type_def.get("fields", []):
                 field_type = field["type"]
-                base_type = self._get_base_type(field_type)
-                if not self._is_builtin_type(base_type):
-                    self._handle_custom_type(base_type)
+                base_types = self._extract_all_base_types(field_type)
+                for base_type in base_types:
+                    if not self._is_builtin_type(base_type):
+                        self._handle_custom_type(base_type)
 
     def _generate_type_definition(self, type_class, interface_name, type_def, comment):
         if comment:
             self.code_lines.append(f"/** {comment} */")
-
         if type_class == "struct":
             self._generate_interface(interface_name, type_def)
         elif type_class == "enum":
@@ -141,7 +158,8 @@ class TypeScriptGenerator:
         for value in type_def.get("values", []):
             if value.get("comment"):
                 self.code_lines.append(f"  /** {value['comment']} */")
-            self.code_lines.append(f"  {value['name'].capitalize()} = {value['value']},")
+            value_name = self._to_camel_case(value['name'])
+            self.code_lines.append(f"  {value_name} = {value['value']},")
             
         self.code_lines.append("}")
         self.code_lines.append("")
@@ -156,7 +174,6 @@ class TypeScriptGenerator:
 
     def _generate_imports(self, out_dir, output_path):
         import_lines = []
-        
         for proto_name, type_name in sorted(self.imports):
             import_path = self._calculate_import_path(
                 out_dir, output_path, proto_name
@@ -164,40 +181,38 @@ class TypeScriptGenerator:
             import_lines.append(
                 f'import {{ {self._to_camel_case(type_name)} }} from "{import_path}/{proto_name.split(SEPARATOR)[-1]}";'
             )
-            
         return import_lines
 
     def _calculate_import_path(self, out_dir, output_path, proto_name):
-        import_path = os.path.relpath(
-            os.path.join(
-                out_dir,
-                proto_name.replace(SEPARATOR, os.sep)
-            ),
+        return os.path.relpath(
+            os.path.join(out_dir,proto_name.replace(SEPARATOR, os.sep)),
             output_path
         ).replace('\\', '/')
-        return import_path
 
     def _get_ts_type(self, field_type, current_proto_name):
+        typed_array_type = self._is_typed_array(field_type)
+        if typed_array_type:
+            return typed_array_type
+
         if field_type.endswith('[]'):
             base_type = field_type[:-2]
             ts_base_type = self._get_ts_type(base_type, current_proto_name)
             return f"{ts_base_type}[]"
-            
         if '[' in field_type and field_type.endswith(']'):
             base_type = field_type[:field_type.find('[')]
             ts_base_type = self._get_ts_type(base_type, current_proto_name)
             return f"{ts_base_type}[]"
-            
+
         if '{' in field_type and field_type.endswith('}'):
             base_type = field_type[:field_type.find('{')]
             key_type = field_type[field_type.find('{')+1:-1]
-            ts_base_type = self._get_ts_type(base_type, current_proto_name)
+            ts_value_type = self._get_ts_type(base_type, current_proto_name)
             ts_key_type = self._get_ts_type(key_type, current_proto_name)
-            return f"{{ [key: {ts_key_type}]: {ts_base_type} }}"
-            
+            return f"Map<{ts_key_type}, {ts_value_type}>"
+
         if field_type in TypeScriptTypes.TYPE_MAP:
             return TypeScriptTypes.get_type(field_type)
-            
+
         return self._handle_custom_type(field_type)
 
     def _handle_custom_type(self, type_name):
@@ -209,33 +224,53 @@ class TypeScriptGenerator:
             return self._to_camel_case(imported_type_name)
         else:
             return self._to_camel_case(type_name)
-    
+
+    def _extract_all_base_types(self, field_type) -> List[str]:
+        base_types = []
+        stack = [field_type]
+        while stack:
+            current_type = stack.pop()
+            if current_type.endswith('[]'):
+                base_type = current_type[:-2]
+                stack.append(base_type)
+            elif '[' in current_type and current_type.endswith(']'):
+                base_type = current_type[:current_type.find('[')]
+                stack.append(base_type)
+            elif '{' in current_type and current_type.endswith('}'):
+                value_type = current_type[:current_type.find('{')]
+                key_type = current_type[current_type.find('{')+1:-1]
+                stack.append(value_type)
+                stack.append(key_type)
+            else:
+                base_types.append(current_type)
+        return base_types
+
+    def _is_builtin_type(self, type_name):
+        return type_name in TypeScriptTypes.TYPE_MAP or type_name in TypeScriptTypes.TYPED_ARRAY_MAP
+
+    def _is_typed_array(self, field_type):
+        if field_type.endswith('[]'):
+            base_type = field_type[:-2]
+            typed_array = TypeScriptTypes.get_typed_array(base_type)
+            if typed_array:
+                return typed_array
+        if '[' in field_type and field_type.endswith(']'):
+            base_type = field_type[:field_type.find('[')]
+            typed_array = TypeScriptTypes.get_typed_array(base_type)
+            if typed_array:
+                return typed_array
+        return None
+
     @staticmethod
     def _to_camel_case(s):
         return ''.join(word.capitalize() for word in s.split('_'))
 
-    @staticmethod
-    def _get_base_type(field_type):
-        if '[' in field_type:
-            return field_type.split('[')[0]
-        if '{' in field_type:
-            return field_type.split('{')[0]
-        if field_type.endswith('[]'):
-            return field_type[:-2]
-        return field_type
-
-    @staticmethod
-    def _is_builtin_type(type_name):
-        return type_name in TypeScriptTypes.TYPE_MAP
-
     def _generate_types_map(self, proto_name, types):
-        interface_name = self._to_camel_case(proto_name.replace('/', '_') + '_types_map')
+        interface_name = self._to_camel_case(proto_name.replace(SEPARATOR, '_') + '_types_map')
         self.code_lines.append(f"export interface {interface_name} {{")
-        self.code_lines.append(f'  "{proto_name}": {{')
         for type_name in sorted(types.keys()):
             ts_type_name = self._to_camel_case(type_name)
-            self.code_lines.append(f'    {type_name}: {ts_type_name};')
-        self.code_lines.append('  };')
+            self.code_lines.append(f'  {type_name}: {ts_type_name};')
         self.code_lines.append('}')
         self.code_lines.append('')
 
@@ -254,6 +289,6 @@ class TypeScriptGenerator:
 
         with open(root_file_path, 'w', encoding='utf-8') as f:
             f.write('// === AUTO GENERATED CODE ===\n')
-            f.write(import_lines.join('\n'))
-            f.write('\n')
+            f.write('\n'.join(import_lines))
+            f.write('\n\n')
             f.write(f"type CommonProtocolTypeMap = {' & '.join(interface_names)};\n")
