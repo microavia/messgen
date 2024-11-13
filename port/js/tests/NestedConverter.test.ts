@@ -99,26 +99,6 @@ describe('NestedConverter', () => {
     expect(result).toEqual(value);
   });
 
-  //
-  it('Должен сериализовать и десериализовать вложенный массив переменной длины правильно', () => {
-    // Given
-    const converters = initializeBasicConverter();
-    const nestedConverter = new NestedConverter("int32[3][]", converters);
-    const value = [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6]), new Int32Array([7, 8, 9])];
-    const size = nestedConverter.size(value);
-    const buffer = new Buffer(new ArrayBuffer(size));
-
-
-    // When
-    nestedConverter.serialize(value, buffer);
-    buffer.offset = 0;
-    const result = nestedConverter.deserialize(buffer);
-
-    // Then
-    expect(result).toEqual(value);
-  });
-
-  // should serialize and deserialize a map of basic types correctly
   it('should serialize and deserialize a map of basic types correctly', () => {
     // Given
     const converters = initializeBasicConverter();

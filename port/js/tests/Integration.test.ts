@@ -61,7 +61,6 @@ describe('integration', () => {
   })
 
   it('shut be parse var_size_struct.bin', () => {
-
     const rawData = {
       "f0": bigint,
       "f1_vec": new BigInt64Array([-bigint, BigInt(5), BigInt(1)]),
@@ -83,7 +82,6 @@ describe('integration', () => {
   })
 
   it('shut be parse struct_with_enum.bin', () => {
-
     const rawData = {
       "f0": bigint,
       "f1": bigint,
@@ -103,7 +101,6 @@ describe('integration', () => {
   })
 
   it('shut be parse empty_struct', () => {
-
     const rawData = {}
 
     const EmptyStructBitPath = path.resolve(__dirname, '../../../tests/serialized_data/bin/empty_struct.bin');
@@ -153,7 +150,6 @@ describe('integration', () => {
   })
 
   it('shut be parse complex_struct_nostl', () => {
-
     const simpleStruct = {
       "f0": bigint,
       "f1": bigint,
@@ -274,7 +270,6 @@ describe('integration', () => {
   })
 
   it('shut be parse flat_struct', () => {
-
     const rawData = {
       "f0": bigint,
       "f1": bigint,
@@ -299,5 +294,4 @@ describe('integration', () => {
     expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
       rawDataBit)))
   })
-
 })

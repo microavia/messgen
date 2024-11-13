@@ -19,13 +19,10 @@ describe('ProtocolManager', () => {
     const anotherRawData = fs.readFileSync(anotherProtocolPath);
     // @ts-ignore
     anotherProtoData = JSON.parse(anotherRawData);
-
-
   })
 
   describe('sortingTypesByDependency', () => {
-
-    it('Returns a sorted array of entries based on their dependencies.', () => {
+    it('shopuld sort array of entries based on their dependencies', () => {
       // Given
       const json: Types = {
         type1: {
@@ -67,7 +64,7 @@ describe('ProtocolManager', () => {
       ]);
     });
 
-    it('Returns an empty array when the input is an empty object.', () => {
+    it('should return empty array when the input is an empty object', () => {
       // Given
       const json: Types = {};
 
@@ -78,7 +75,7 @@ describe('ProtocolManager', () => {
       expect(result).toEqual([]);
     });
 
-    it.skip('Throws an error when the input has circular dependencies.', () => {
+    it.skip('should throw an error if object has circular depth', () => {
       // Given
       const json: Types = {
         type1: {
@@ -106,7 +103,7 @@ describe('ProtocolManager', () => {
     });
 
 
-    it('Returns an array with entries sorted by their dependencies, when some entries have dependencies that are not defined in the input.', () => {
+    it('should filter out objects without dependencies', () => {
       // Given
       const json: Types = {
         type1: {
@@ -181,6 +178,7 @@ describe('ProtocolManager', () => {
       ]);
     });
   });
+
   it('should add tests for fields of EnumTypeClass', () => {
     // Given
     const json: Types = {
