@@ -207,13 +207,19 @@ class CppGenerator:
         return code
 
     def _generate_type_enum(self, type_name, type_def):
-        code = []
+        self._add_include("messgen/messgen.h")
 
+        code = []
         code.extend(self._generate_comment_type(type_def))
         code.append("enum class %s : %s {" % (type_name, self._cpp_type(type_def["base_type"])))
         for item in type_def["values"]:
             code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
         code.append("};")
+
+        code.append("")
+        code.append(f"[[nodiscard]] inline constexpr std::string_view name_of(::messgen::reflect_t<{type_name}>) noexcept {{")
+        code.append("    return \"%s\";" % type_name)
+        code.append("}")
 
         return code
 
