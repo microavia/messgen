@@ -20,7 +20,6 @@ jobs:
         packages: libgtest-dev cmake ninja-build gcc g++
         version: 1.0
 
-
     - name: Build & run tests
       run: |
         mkdir -p build
