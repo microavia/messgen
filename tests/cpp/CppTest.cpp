@@ -190,3 +190,60 @@ TEST_F(CppTest, ComplexStructWithEmpty) {
     messgen::test_proto::complex_struct_with_empty e{};
     test_serialization(e);
 }
+
+template <class Func, class... T>
+constexpr void for_each(std::tuple<T...> &&obj, Func &&func) {
+    std::apply([&]<class... M>(M &&...members) { (func(members), ...); }, obj);
+}
+
+TEST_F(CppTest, MessageReflectionFieldNames) {
+    using namespace messgen;
+
+    auto message = test_proto::complex_struct{};
+
+    auto names = std::vector<std::string_view>{};
+    for_each(members_of(reflect_object(message)), [&](auto &&param) { names.push_back(name_of(param)); });
+    EXPECT_EQ(names.size(), 17);
+
+    auto expected_names = std::vector<std::string_view>{
+        "f0",     "f1",     "f2",     "s_arr", "f1_arr", "v_arr",   "f2_vec",         "e_vec",          "s_vec",
+        "v_vec0", "v_vec1", "v_vec2", "str",   "bs",     "str_vec", "map_str_by_int", "map_vec_by_str",
+    };
+    EXPECT_EQ(expected_names, names);
+}
+
+TEST_F(CppTest, MessageReflectionFieldTypes) {
+    using namespace messgen;
+
+    auto message = test_proto::complex_struct{};
+
+    auto types = std::vector<std::string_view>{};
+    for_each(members_of(reflect_object(message)), [&](auto &&param) { types.push_back(name_of(type_of(param))); });
+    EXPECT_EQ(types.size(), 17);
+
+    auto expected_types = std::vector<std::string_view>{
+        "uint64_t",
+        "uint32_t",
+        "uint64_t",
+        "array<simple_struct, 2>",
+        "array<int64_t, 4>",
+        "array<var_size_struct, 2>",
+        "vector<double>",
+        "vector<simple_enum>",
+        "vector<simple_struct>",
+        "vector<vector<var_size_struct>>",
+        "array<vector<var_size_struct>, 4>",
+        "vector<array<vector<int16_t>, 4>>",
+        "string",
+        "vector<uint8_t>",
+        "vector<string>",
+        "map<int32_t, string>",
+        "map<string, vector<int32_t>>",
+    };
+    EXPECT_EQ(expected_types, types);
+}
+
+TEST_F(CppTest, EnumReflection) {
+    auto enum_name = messgen::name_of(messgen::reflect_type<messgen::test_proto::simple_enum>);
+    EXPECT_STREQ(enum_name.data(), "simple_enum");
+}

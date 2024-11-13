@@ -453,7 +453,7 @@ class CppGenerator:
 
         code: list[str] = []
         code.append("")
-        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{type_name}>) {{")
+        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{type_name}>) noexcept {{")
         code.append("    return std::tuple{")
         for field in fields:
             field_name = field["name"]

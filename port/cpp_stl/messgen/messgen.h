@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <string_view>
 
 namespace messgen {
 
@@ -27,28 +28,28 @@ struct member {
     using class_type = C;
     using member_type = std::remove_cvref_t<M>;
 
-    const char *name;
+    std::string_view name;
     M C::*ptr;
 };
 
 template <class S, class C, class M>
     requires std::same_as<std::remove_cvref_t<S>, std::remove_cvref_t<C>>
-constexpr decltype(auto) value_of(S &&obj, const member<C, M> &m) {
+[[nodiscard]] constexpr decltype(auto) value_of(S &&obj, const member<C, M> &m) noexcept {
     return std::forward<S>(obj).*m.ptr;
 }
 
 template <class C, class M>
-constexpr auto parent_of(const member<C, M> &) {
+[[nodiscard]] constexpr auto parent_of(const member<C, M> &) noexcept {
     return reflect_type<typename member<C, M>::class_type>;
 }
 
 template <class C, class M>
-constexpr auto type_of(const member<C, M> &) {
+[[nodiscard]] constexpr auto type_of(const member<C, M> &) noexcept {
     return reflect_type<typename member<C, M>::member_type>;
 }
 
 template <class C, class M>
-constexpr const char *name_of(const member<C, M> &m) {
+[[nodiscard]] constexpr std::string_view name_of(const member<C, M> &m) noexcept {
     return m.name;
 }
 
@@ -56,73 +57,85 @@ template <class T>
     requires requires(T &&t) {
         { t.NAME };
     }
-constexpr const char *name_of(reflect_t<T>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<T>) noexcept {
     return T::NAME;
 }
 
-constexpr const char *name_of(reflect_t<bool>) {
+template <class T>
+    requires std::is_enum_v<T>
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<T> r) noexcept {
+    return name_of(r);
+}
+
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<bool>) noexcept {
     return "bool";
 }
 
-constexpr const char *name_of(reflect_t<uint8_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<uint8_t>) noexcept {
     return "uint8_t";
 }
 
-constexpr const char *name_of(reflect_t<int8_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<int8_t>) noexcept {
     return "int8_t";
 }
 
-constexpr const char *name_of(reflect_t<uint16_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<uint16_t>) noexcept {
     return "uint16_t";
 }
 
-constexpr const char *name_of(reflect_t<int16_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<int16_t>) noexcept {
     return "int16_t";
 }
 
-constexpr const char *name_of(reflect_t<uint32_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<uint32_t>) noexcept {
     return "uint32_t";
 }
 
-constexpr const char *name_of(reflect_t<int32_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<int32_t>) noexcept {
     return "int32_t";
 }
 
-constexpr const char *name_of(reflect_t<uint64_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<uint64_t>) noexcept {
     return "uint64_t";
 }
 
-constexpr const char *name_of(reflect_t<int64_t>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<int64_t>) noexcept {
     return "int64_t";
 }
 
-constexpr const char *name_of(reflect_t<float>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<float>) noexcept {
     return "float";
 }
 
-constexpr const char *name_of(reflect_t<double>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<double>) noexcept {
     return "double";
 }
 
-constexpr const char *name_of(reflect_t<std::string>) {
+[[nodiscard]] constexpr std::string_view name_of(reflect_t<std::string>) noexcept {
     return "string";
 }
 
+template <class T>
+[[nodiscard]] std::string_view name_of(reflect_t<std::vector<T>>);
+
+template <class K, class V>
+[[nodiscard]] std::string_view name_of(reflect_t<std::map<K, V>>);
+
 template <class T, auto N>
-const char *name_of(reflect_t<std::array<T, N>>) {
+[[nodiscard]] std::string_view name_of(reflect_t<std::array<T, N>>) {
     static auto name = "array<" + std::string(name_of(reflect_type<T>)) + ", " + std::to_string(N) + ">";
     return name.c_str();
 }
 
 template <class T>
-const char *name_of(reflect_t<std::vector<T>>) {
+[[nodiscard]] std::string_view name_of(reflect_t<std::vector<T>>) {
     static auto name = "vector<" + std::string(name_of(reflect_type<T>)) + ">";
     return name.c_str();
 }
 
 template <class K, class V>
-const char *name_of(reflect_t<std::map<K, V>>) {
-    static auto name = "map<" + std::string(name_of(reflect_type<K>)) + "," + std::string(name_of(reflect_type<V>)) + ">";
+[[nodiscard]] std::string_view name_of(reflect_t<std::map<K, V>>) {
+    static auto name = "map<" + std::string(name_of(reflect_type<K>)) + ", " + std::string(name_of(reflect_type<V>)) + ">";
     return name.c_str();
 }
 
