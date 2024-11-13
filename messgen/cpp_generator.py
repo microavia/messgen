@@ -443,6 +443,8 @@ class CppGenerator:
         type_def = self._protocols.get_type(curr_proto_name, type_name)
         fields = type_def["fields"]
 
+        self._add_include("tuple")
+
         code: list[str] = []
         code.append("")
         code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{type_name}>) {{")
@@ -574,8 +576,6 @@ class CppGenerator:
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
-
-            print("***** ", el_type_def, el_size)
 
             if el_size == 0:
                 pass
