@@ -33,7 +33,7 @@ export class ProtocolManager {
 
     public getProtocolByName(protocolName: IProtocolName): Protocol {
         const protocolId = this.protocolNameToId.get(protocolName);
-        if (!protocolId) {
+        if (protocolId === undefined) {
             throw new Error(`Protocol not found: ${protocolName}`);
         }
         return this.getProtocolById(protocolId);
@@ -41,7 +41,7 @@ export class ProtocolManager {
 
     public getProtocolById(protocolId: IProtocolId): Protocol {
         const protocol = this.protocols.get(protocolId);
-        if (!protocol) {
+        if (protocol === undefined) {
             throw new Error(`Protocol not found with ID: ${protocolId}`);
         }
         return protocol;
