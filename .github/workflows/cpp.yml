@@ -12,10 +12,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: sudo apt-get install libgtest-dev cmake ninja-build gcc g++
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libgtest-dev cmake ninja-build gcc g++
+          version: 1.0
+
 
     - name: Build & run tests
       run: |
