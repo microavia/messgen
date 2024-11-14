@@ -63,6 +63,16 @@ python3 messgen-generate.py --basedir ./base_dir --protocol my_namespace/my_prot
 ```
 This command will generate json schema containing full protocol description. 
 
+#### TypeScript 
+
+Example for TypeScript messages generation:
+
+```bash
+python3 messgen-generate.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang ts --outdir out/ts
+```
+
+This command will generate ts schema containing full protocol description. 
+
 ### Basic Concepts
 
 #### Overview

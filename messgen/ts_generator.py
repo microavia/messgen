@@ -85,23 +85,26 @@ class TypeScriptGenerator:
         output_path = os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep))
         os.makedirs(output_path, exist_ok=True)
         return output_path
-
+    
     def _generate_file_content(self, proto_name, proto_comment, proto_version, out_dir, output_path):
-        self.code_lines.insert(0, '// === AUTO GENERATED CODE ===')
-        
+        header_lines = ['// === AUTO GENERATED CODE ===']
         if proto_comment:
-            self.code_lines.insert(1, f'// {proto_comment}')
-        self.code_lines.insert(2, f'// Protocol: {proto_name}')
+            header_lines.append(f'// {proto_comment}')
+        header_lines.append(f'// Protocol: {proto_name}')
         
         if proto_version:
-            self.code_lines.insert(3, f'// Version: {proto_version}')
-        self.code_lines.insert(4, "")
+            header_lines.append(f'// Version: {proto_version}')
+        header_lines.append('')
 
+        import_lines = []
         if self.imports:
             import_lines = self._generate_imports(out_dir, output_path)
-            self.code_lines = self.code_lines[:5] + import_lines + [""] + self.code_lines[5:]
+            import_lines.append('')
 
-        return '\n'.join(self.code_lines)
+        code_lines = header_lines + import_lines + self.code_lines
+
+        return '\n'.join(code_lines)
+
 
     def _generate_type(self, proto_name, type_name, types) -> None:
         if (proto_name, type_name) in self.generated_types:
@@ -113,7 +116,7 @@ class TypeScriptGenerator:
         comment = type_def.get("comment", "")
         interface_name = self._to_camel_case(type_name)
 
-        self._handle_type_dependencies(type_def, type_class)
+        self._handle_type_dependencies(type_def, type_class, proto_name)
         self._generate_type_definition(
             type_class=type_class,
             interface_name=interface_name,
@@ -121,14 +124,16 @@ class TypeScriptGenerator:
             comment=comment
         )
 
-    def _handle_type_dependencies(self, type_def, type_class):
+    def _handle_type_dependencies(self, type_def, type_class, proto_name):
         if type_class == "struct":
-            for field in type_def.get("fields", []):
+            fields = type_def.get("fields") or []
+
+            for field in fields:
                 field_type = field["type"]
                 base_types = self._extract_all_base_types(field_type)
                 for base_type in base_types:
                     if not self._is_builtin_type(base_type):
-                        self._handle_custom_type(base_type)
+                        self._handle_custom_type(base_type, proto_name)
 
     def _generate_type_definition(self, type_class, interface_name, type_def, comment):
         if comment:
@@ -140,8 +145,9 @@ class TypeScriptGenerator:
 
     def _generate_interface(self, interface_name, type_def):
         self.code_lines.append(f"export interface {interface_name} {{")
-        
-        for field in type_def.get("fields", []):
+        fields = type_def.get("fields") or [] 
+
+        for field in fields:
             if field.get("comment"):
                 self.code_lines.append(f"  /** {field['comment']} */")
             
@@ -172,22 +178,35 @@ class TypeScriptGenerator:
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(content)
 
-    def _generate_imports(self, out_dir, output_path):
-        import_lines = []
-        for proto_name, type_name in sorted(self.imports):
-            import_path = self._calculate_import_path(
-                out_dir, output_path, proto_name
-            )
-            import_lines.append(
-                f'import {{ {self._to_camel_case(type_name)} }} from "{import_path}/{proto_name.split(SEPARATOR)[-1]}";'
-            )
-        return import_lines
-
     def _calculate_import_path(self, out_dir, output_path, proto_name):
-        return os.path.relpath(
-            os.path.join(out_dir,proto_name.replace(SEPARATOR, os.sep)),
-            output_path
-        ).replace('\\', '/')
+        output_dir = os.path.dirname(output_path)
+        proto_dir = os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep))
+        proto_dir = os.path.dirname(proto_dir) 
+        imported_file_name = proto_name.split(SEPARATOR)[-1]
+        import_path = '../'
+
+        if proto_dir in output_dir:
+            import_path += proto_name.split(SEPARATOR)[-1]
+        else:
+            import_path += proto_name.replace(SEPARATOR, '/')
+
+        return f"{import_path}/{imported_file_name}".replace(SEPARATOR, os.sep)
+    def calculate_import_path(self, out_dir, output_path, proto_name):
+        proto_filename = proto_name.split(SEPARATOR)[-1]
+        proto_dir = os.path.dirname(os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep)))
+        output_dir = os.path.dirname(output_path)
+
+        relative_path = proto_filename if proto_dir in output_dir else proto_name.replace(SEPARATOR, '/')
+        
+        return os.path.join('..', relative_path, proto_filename)
+    
+    def _generate_imports(self, out_dir, output_path):
+        sorted_imports = sorted(self.imports)
+        return [
+            f'import {{ {self._to_camel_case(type_name)} }} '
+            f'from "{self._calculate_import_path(out_dir, output_path, proto_name)}";'
+            for proto_name, type_name in sorted_imports
+        ]
 
     def _get_ts_type(self, field_type, current_proto_name):
         typed_array_type = self._is_typed_array(field_type)
@@ -213,17 +232,18 @@ class TypeScriptGenerator:
         if field_type in TypeScriptTypes.TYPE_MAP:
             return TypeScriptTypes.get_type(field_type)
 
-        return self._handle_custom_type(field_type)
+        return self._handle_custom_type(field_type, current_proto_name)
 
-    def _handle_custom_type(self, type_name):
+    def _handle_custom_type(self, type_name, current_proto_name):
         if SEPARATOR in type_name:
             parts = type_name.split(SEPARATOR)
             proto_name = SEPARATOR.join(parts[:-1])
             imported_type_name = parts[-1]
             self.imports.add((proto_name, imported_type_name))
             return self._to_camel_case(imported_type_name)
-        else:
+        else: 
             return self._to_camel_case(type_name)
+
 
     def _extract_all_base_types(self, field_type) -> List[str]:
         base_types = []
