@@ -50,6 +50,7 @@ export type BasicTypesConfig = {
 
 
 export const IS_LITTLE_ENDIAN = true; // todo check
+
 /**
  *
  * Read function returns value from byte array.
