@@ -1,5 +1,6 @@
 from .json_generator import JsonGenerator
 from .cpp_generator import CppGenerator
+from .ts_generator import TypeScriptGenerator
 
 
 def get_generator(lang: str, protos, options):
@@ -7,3 +8,5 @@ def get_generator(lang: str, protos, options):
         return JsonGenerator(protos, options)
     elif lang == "cpp":
         return CppGenerator(protos, options)
+    elif lang == 'ts':
+        return TypeScriptGenerator(protos, options)

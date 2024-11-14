@@ -1,26 +1,53 @@
-import { Struct } from "./Struct";
+import { Converter } from "./converters/Converter";
 
 
-export type Field = {
+export interface Field {
   name: IName
   type: IType
+  comment?: string;
 }
 
-export type SchemaObj = {
-  id: IId
-  fields: Field[]
+export interface TypeClass {
+  type_class: "struct";
+  comment?: string;
+  fields: Field[] | null;
 }
 
-
-export type Messages<KEYS extends IName = IName> = {
-  __id__: Struct[]
-  __name__: KEYS[]
-  __messages__: Record<IName, Struct>
-  HEADER_STRUCT: Struct
+export interface EnumValue {
+  name: IName;
+  value: number;
+  comment?: string;
 }
 
+export interface EnumTypeClass {
+  type_class: "enum";
+  comment?: string;
+  base_type: INumberType;
+  values: EnumValue[];
+}
 
-export type Obj = Record<string, any>;
+export interface Types {
+  [key: string]: TypeClass | EnumTypeClass;
+}
+
+export interface ProtocolJSON {
+  proto_id: IProtocolId;
+  proto_name: IProtocolName;
+  types: Types;
+  messages: Record<string, unknown>;
+  types_map?: Record<ITypeId, IName>;
+  version: string;
+}
+
+export type SchemaObj = TypeClass
+
+
+export type Protocol = {
+  typesMap: Map<ITypeId, Converter>
+  typesNameToId: Record<IName, ITypeId>
+  converters: Map<IType, Converter>
+  protocol: ProtocolJSON
+}
 
 
 /*
@@ -40,27 +67,44 @@ export type Nominal<NAME extends string | number, Type = string> = Type & { [Nom
 
 
 export type IName = string
-export type IId = Nominal<'Id', number>
-export type IPrimitiveType =
-  "int8" |
+export type ITypeId = Nominal<'TypeId', number>
+export type IValue = Nominal<'Value', any>
+export type IProtocolId = Nominal<'ProtocolId', number>
+export type IProtocolName = Nominal<'IProtocolName', string>
+
+
+export type INumberType =
   "uint8" |
-  "int16" |
+  "int8" |
   "uint16" |
-  "int32" |
+  "int16" |
   "uint32" |
-  "int64" |
+  "int32" |
   "uint64" |
-  "double" |
+  "int64" |
+  "float32" |
+  "float64"
+
+export type IBasicType =
+  INumberType |
   "string" |
-  "char"
+  "bool" |
+  "char" |
+  'bytes'
 
 type ArrayDynamicSize = '[]';
 type ArrayFixSize = `[${number}]`;
-type MapType = `{${IPrimitiveType}}`;
+type MapType = `{${IBasicType}}`;
 
 type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
 
 
-export type IType = `${IName | IPrimitiveType}${SubType}${SubType}${SubType}`
+export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 
+export type GetProtocolPayload<
+  ProtocolMap extends Record<string, Record<string, any>>,
+  Name extends keyof ProtocolMap,
+  Type extends keyof ProtocolMap[Name]
+> = ProtocolMap[Name][Type];
 
+export type BaseProtocolMap = Record<string, any>
