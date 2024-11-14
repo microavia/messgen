@@ -14,8 +14,8 @@ Features:
 - Maps
 - Nested messages
 - Messages metadata
-- Supported output formats: C++, JSON
-- Supported output formats TODO: Go, TypeScript, Markdown (documentation)
+- Supported output formats: C++, JSON, Typescript
+- Supported output formats TODO: Go, Markdown (documentation)
 
 ## Dependencies
 
@@ -62,6 +62,16 @@ Example for JS messages generation:
 python3 messgen-generate.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang json --outdir out/json
 ```
 This command will generate json schema containing full protocol description. 
+
+#### TypeScript 
+
+Example for TypeScript messages generation:
+
+```bash
+python3 messgen-generate.py --basedir ./base_dir --protocol my_namespace/my_protocol --lang ts --outdir out/ts
+```
+
+This command will generate ts schema containing full protocol description. 
 
 ### Basic Concepts
 

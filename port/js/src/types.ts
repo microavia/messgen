@@ -42,7 +42,7 @@ export interface ProtocolJSON {
 export type SchemaObj = TypeClass
 
 
-export type Messages = {
+export type Protocol = {
   typesMap: Map<ITypeId, Converter>
   typesNameToId: Record<IName, ITypeId>
   converters: Map<IType, Converter>
@@ -101,3 +101,10 @@ type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
 
 export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 
+export type GetProtocolPayload<
+  ProtocolMap extends Record<string, Record<string, any>>,
+  Name extends keyof ProtocolMap,
+  Type extends keyof ProtocolMap[Name]
+> = ProtocolMap[Name][Type];
+
+export type BaseProtocolMap = Record<string, any>

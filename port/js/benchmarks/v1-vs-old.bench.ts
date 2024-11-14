@@ -1,9 +1,9 @@
 import { bench, describe } from 'vitest'
 // @ts-ignore
 import { Buffer, Struct } from "./deserialize-variant/messgen-old.js";
-import { Messgen } from "../src/Messgen";
 import { TypeClass } from "../src/types.js";
 import { StructConverter } from "../src/converters/StructConverter.js";
+import { initializeBasicConverter } from '../tests/utils.js';
 
 let srcStruct = new Struct({
   id: 2,
@@ -38,7 +38,7 @@ srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, src
 let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
 
 
-const converters = Messgen.initializeBasicConverter();
+const converters = initializeBasicConverter();
 const schema: TypeClass = {
   type_class: 'struct',
   fields: [
@@ -71,7 +71,7 @@ describe('calculate size', () => {
 })
 describe('serialize Obj', () => {
   bench('Old', () => {
-    let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
+    Buffer.serializeObj(srcStruct.schema.fields, srcData);
   }, { time: 1000 })
   bench('v1', () => {
     buffer.offset = 0;
@@ -80,12 +80,9 @@ describe('serialize Obj', () => {
 })
 
 describe('deserialize object', () => {
-  
-  
   bench('Old', () => {
-    let res = new Buffer(b).deserialize(srcStruct);
+    new Buffer(b).deserialize(srcStruct);
   }, { time: 1000 })
-  
   bench('v1', () => {
     buffer.offset = 0;
     let res = structConverter.deserialize(buffer);
