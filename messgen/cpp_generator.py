@@ -29,15 +29,15 @@ def _cpp_namespace(proto_name: str) -> str:
 
 
 class FieldsGroup:
-    def __init__(self):
+    def __init__(self) -> None:
         self.fields: list = []
         self.field_names: list = []
         self.size: int = 0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<FieldsGroup size=%s fields=%s>" % (self.size, self.field_names)
 
 
@@ -140,9 +140,9 @@ class CppGenerator:
             if type_id is not None:
                 self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
 
-        code.extend(self._generate_dispatcher(proto_name, proto))
-        code.append("")
         code.extend(self._generate_reflect_type(proto_name, proto))
+        code.append("")
+        code.extend(self._generate_dispatcher(proto_name, proto))
 
         for type_name in proto.get("types"):
             type_def = self._protocols.get_type(proto_name, type_name)
@@ -156,45 +156,38 @@ class CppGenerator:
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
         return code
 
-    def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
-        code: list[str] = []
-        code.append("struct dispatcher {")
-        code.append(_indent("template <class T>"))
-        code.append(_indent("static bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {"))
-        code.append(_indent("    switch (msg_id) {"))
-        for type_name in proto.get("types", []):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                code.append(_indent("        case %s::TYPE_ID:" % type_name))
-                code.append(_indent("            if constexpr (requires(%s msg) { handler(msg); }) {" % type_name))
-                if type_def["is_flat"]:
-                    code.append(_indent("                auto &msg = *reinterpret_cast<const %s *>(payload);" % type_name))
-                else:
-                    code.append(_indent("                %s msg;" % type_name))
-                    code.append(_indent("                msg.deserialize(payload);"))
-                code.append(_indent("                handler(msg);"))
-                code.append(_indent("            }"))
-                code.append(_indent("            return true;"))
-        code.append(_indent("        default:"))
-        code.append(_indent("            return false;"))
-        code.append(_indent("    }"))
-        code.append(_indent("}"))
-        code.append("};")
-        return code
-
     def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
         code: list[str] = []
-        code.append("template<typename Fn>")
+        code.append("template <typename Fn>")
         code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
-        code.append("    switch(type_id) {")
+        code.append("    switch (type_id) {")
         for type_name in proto.get("types", []):
             type_def = self._protocols.get_type(proto_name, type_name)
             type_id = type_def.get("id")
             if type_id is not None:
-                code.append(f"        case {type_name}::TYPE_ID: std::forward<Fn>(fn)(::messgen::reflect_type<{type_name}>); return;")
+                code.append(f"        case {type_name}::TYPE_ID:")
+                code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{type_name}>);")
+                code.append(f"            return;")
         code.append("    }")
         code.append("}")
+        return code
+
+    def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
+        code: list[str] = []
+        code.append("template <class T>")
+        code.append("bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {")
+        code.append("   auto result = false;")
+        code.append("   reflect_message(msg_id, [&]<class R>(R) {")
+        code.append("       using message_type = messgen::splice_t<R>;")
+        code.append("       if constexpr (requires(message_type msg) { handler(msg); }) {")
+        code.append("           message_type msg;")
+        code.append("           msg.deserialize(payload);")
+        code.append("           handler(std::move(msg));")
+        code.append("       }")
+        code.append("       result = true;")
+        code.append("   });")
+        code.append("   return result;")
+        code.append("};")
         return code
 
     def _generate_comment_type(self, type_def):

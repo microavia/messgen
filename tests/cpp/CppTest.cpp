@@ -1,10 +1,11 @@
+#include <another_proto.h>
 #include <messgen/messgen.h>
+#include <messgen/test_proto.h>
+#include <messgen/test_proto/complex_struct_with_empty.h>
 #include <messgen/test_proto/complex_struct.h>
+#include <messgen/test_proto/flat_struct.h>
 #include <messgen/test_proto/struct_with_enum.h>
 #include <messgen/test_proto/var_size_struct.h>
-#include <messgen/test_proto/flat_struct.h>
-#include <messgen/test_proto/complex_struct_with_empty.h>
-#include <another_proto.h>
 
 #include <gtest/gtest.h>
 
@@ -246,4 +247,25 @@ TEST_F(CppTest, MessageReflectionFieldTypes) {
 TEST_F(CppTest, EnumReflection) {
     auto enum_name = messgen::name_of(messgen::reflect_type<messgen::test_proto::simple_enum>);
     EXPECT_STREQ(enum_name.data(), "simple_enum");
+}
+
+TEST_F(CppTest, DispatchMessage1) {
+    using namespace messgen;
+
+    auto expected = test_proto::simple_struct{
+        .f0 = 1,
+        .f1 = 2,
+    };
+    _buf.resize(expected.serialized_size());
+    size_t ser_size = expected.serialize(_buf.data());
+
+    auto invoked = false;
+    auto handler = [&](auto &&actual) {
+        EXPECT_EQ(expected.f0, actual.f0);
+        EXPECT_EQ(expected.f1, actual.f1);
+        invoked = true;
+    };
+    test_proto::dispatch_message(expected.TYPE_ID, _buf.data(), handler);
+
+    EXPECT_TRUE(invoked);
 }
