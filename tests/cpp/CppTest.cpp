@@ -1,12 +1,11 @@
-#pragma once
-
+#include <another_proto.h>
 #include <messgen/messgen.h>
+#include <messgen/test_proto.h>
+#include <messgen/test_proto/complex_struct_with_empty.h>
 #include <messgen/test_proto/complex_struct.h>
+#include <messgen/test_proto/flat_struct.h>
 #include <messgen/test_proto/struct_with_enum.h>
 #include <messgen/test_proto/var_size_struct.h>
-#include <messgen/test_proto/flat_struct.h>
-#include <messgen/test_proto/complex_struct_with_empty.h>
-#include <another_proto.h>
 
 #include <gtest/gtest.h>
 
@@ -14,7 +13,7 @@ class CppTest : public ::testing::Test {
 protected:
     std::vector<uint8_t> _buf;
 
-    template<class T>
+    template <class T>
     void test_serialization(const T &msg) {
         size_t sz_check = msg.serialized_size();
 
@@ -29,7 +28,7 @@ protected:
         EXPECT_EQ(msg, msg1);
     }
 
-    template<class T>
+    template <class T>
     void test_zerocopy(const T &msg) {
         size_t sz_check = msg.serialized_size();
 
@@ -87,6 +86,7 @@ TEST_F(CppTest, VarSizeStruct) {
 
 TEST_F(CppTest, ComplexStruct) {
     messgen::test_proto::complex_struct msg{};
+
     msg.f0 = 255;
     msg.f2_vec.push_back(45.787);
     msg.e_vec.push_back(messgen::test_proto::simple_enum::another_value);
@@ -190,4 +190,82 @@ TEST_F(CppTest, TwoMsg) {
 TEST_F(CppTest, ComplexStructWithEmpty) {
     messgen::test_proto::complex_struct_with_empty e{};
     test_serialization(e);
+}
+
+template <class Func, class... T>
+constexpr void for_each(std::tuple<T...> &&obj, Func &&func) {
+    std::apply([&]<class... M>(M &&...members) { (func(members), ...); }, obj);
+}
+
+TEST_F(CppTest, MessageReflectionFieldNames) {
+    using namespace messgen;
+
+    auto message = test_proto::complex_struct{};
+
+    auto names = std::vector<std::string_view>{};
+    for_each(members_of(reflect_object(message)), [&](auto &&param) { names.push_back(name_of(param)); });
+    EXPECT_EQ(names.size(), 17);
+
+    auto expected_names = std::vector<std::string_view>{
+        "f0",     "f1",     "f2",     "s_arr", "f1_arr", "v_arr",   "f2_vec",         "e_vec",          "s_vec",
+        "v_vec0", "v_vec1", "v_vec2", "str",   "bs",     "str_vec", "map_str_by_int", "map_vec_by_str",
+    };
+    EXPECT_EQ(expected_names, names);
+}
+
+TEST_F(CppTest, MessageReflectionFieldTypes) {
+    using namespace messgen;
+
+    auto message = test_proto::complex_struct{};
+
+    auto types = std::vector<std::string_view>{};
+    for_each(members_of(reflect_object(message)), [&](auto &&param) { types.push_back(name_of(type_of(param))); });
+    EXPECT_EQ(types.size(), 17);
+
+    auto expected_types = std::vector<std::string_view>{
+        "uint64_t",
+        "uint32_t",
+        "uint64_t",
+        "array<simple_struct, 2>",
+        "array<int64_t, 4>",
+        "array<var_size_struct, 2>",
+        "vector<double>",
+        "vector<simple_enum>",
+        "vector<simple_struct>",
+        "vector<vector<var_size_struct>>",
+        "array<vector<var_size_struct>, 4>",
+        "vector<array<vector<int16_t>, 4>>",
+        "string",
+        "vector<uint8_t>",
+        "vector<string>",
+        "map<int32_t, string>",
+        "map<string, vector<int32_t>>",
+    };
+    EXPECT_EQ(expected_types, types);
+}
+
+TEST_F(CppTest, EnumReflection) {
+    auto enum_name = messgen::name_of(messgen::reflect_type<messgen::test_proto::simple_enum>);
+    EXPECT_STREQ(enum_name.data(), "simple_enum");
+}
+
+TEST_F(CppTest, DispatchMessage1) {
+    using namespace messgen;
+
+    auto expected = test_proto::simple_struct{
+        .f0 = 1,
+        .f1 = 2,
+    };
+    _buf.resize(expected.serialized_size());
+    size_t ser_size = expected.serialize(_buf.data());
+
+    auto invoked = false;
+    auto handler = [&](auto &&actual) {
+        EXPECT_EQ(expected.f0, actual.f0);
+        EXPECT_EQ(expected.f1, actual.f1);
+        invoked = true;
+    };
+    test_proto::dispatch_message(expected.TYPE_ID, _buf.data(), handler);
+
+    EXPECT_TRUE(invoked);
 }

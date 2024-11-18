@@ -172,7 +172,7 @@ def make_const_type(enumName, basetype, fields):
     for field in fields:
         value = "%s" % field["value"]
 
-        matches = re.fullmatch("\s*\(?(\d+)U\s*<<\s*(\d+)U\)?", value)
+        matches = re.fullmatch("\\s*\\(?(\\d+)U\\s*<<\\s*(\\d+)U\\)?", value)
         if matches is not None:
             value = matches.expand("\\1 << \\2")
 

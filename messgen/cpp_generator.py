@@ -3,6 +3,7 @@ import os
 from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
 from .protocols import Protocols
 
+
 def _inline_comment(comment):
     if comment:
         return "  ///< %s" % comment
@@ -28,15 +29,15 @@ def _cpp_namespace(proto_name: str) -> str:
 
 
 class FieldsGroup:
-    def __init__(self):
+    def __init__(self) -> None:
         self.fields: list = []
         self.field_names: list = []
         self.size: int = 0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<FieldsGroup size=%s fields=%s>" % (self.size, self.field_names)
 
 
@@ -103,6 +104,7 @@ class CppGenerator:
             code.extend(self._generate_type_enum(type_name, type_def))
         elif type_def["type_class"] == "struct":
             code.extend(self._generate_type_struct(type_name))
+            code.extend(self._generate_members_of(type_name))
 
         code.append("")
         code.append("} // namespace %s" % namespace)
@@ -138,29 +140,9 @@ class CppGenerator:
             if type_id is not None:
                 self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
 
-        code.append("struct dispatcher {")
-        code.append(_indent("template <class T>"))
-        code.append(_indent("static bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {"))
-        code.append(_indent("    switch (msg_id) {"))
-        for type_name in proto.get("types"):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                code.append(_indent("        case %s::TYPE_ID:" % type_name))
-                code.append(_indent("            if constexpr (requires(%s msg) { handler(msg); }) {" % type_name))
-                if type_def["is_flat"]:
-                    code.append(_indent("                auto &msg = *reinterpret_cast<const %s *>(payload);" % type_name))
-                else:
-                    code.append(_indent("                %s msg;" % type_name))
-                    code.append(_indent("                msg.deserialize(payload);"))
-                code.append(_indent("                handler(msg);"))
-                code.append(_indent("            }"))
-                code.append(_indent("            return true;"))
-        code.append(_indent("        default:"))
-        code.append(_indent("            return false;"))
-        code.append(_indent("    }"))
-        code.append(_indent("}"))
-        code.append("};")
+        code.extend(self._generate_reflect_type(proto_name, proto))
+        code.append("")
+        code.extend(self._generate_dispatcher(proto_name, proto))
 
         for type_name in proto.get("types"):
             type_def = self._protocols.get_type(proto_name, type_name)
@@ -172,7 +154,40 @@ class CppGenerator:
         code.append("} // namespace %s" % namespace)
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
+        return code
 
+    def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
+        code: list[str] = []
+        code.append("template <typename Fn>")
+        code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
+        code.append("    switch (type_id) {")
+        for type_name in proto.get("types", []):
+            type_def = self._protocols.get_type(proto_name, type_name)
+            type_id = type_def.get("id")
+            if type_id is not None:
+                code.append(f"        case {type_name}::TYPE_ID:")
+                code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{type_name}>);")
+                code.append(f"            return;")
+        code.append("    }")
+        code.append("}")
+        return code
+
+    def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
+        code: list[str] = []
+        code.append("template <class T>")
+        code.append("bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {")
+        code.append("   auto result = false;")
+        code.append("   reflect_message(msg_id, [&]<class R>(R) {")
+        code.append("       using message_type = messgen::splice_t<R>;")
+        code.append("       if constexpr (requires(message_type msg) { handler(msg); }) {")
+        code.append("           message_type msg;")
+        code.append("           msg.deserialize(payload);")
+        code.append("           handler(std::move(msg));")
+        code.append("       }")
+        code.append("       result = true;")
+        code.append("   });")
+        code.append("   return result;")
+        code.append("};")
         return code
 
     def _generate_comment_type(self, type_def):
@@ -185,20 +200,28 @@ class CppGenerator:
         return code
 
     def _generate_type_enum(self, type_name, type_def):
-        code = []
+        self._add_include("messgen/messgen.h")
 
+        code = []
         code.extend(self._generate_comment_type(type_def))
         code.append("enum class %s : %s {" % (type_name, self._cpp_type(type_def["base_type"])))
         for item in type_def["values"]:
             code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
         code.append("};")
 
+        code.append("")
+        code.append(f"[[nodiscard]] inline constexpr std::string_view name_of(::messgen::reflect_t<{type_name}>) noexcept {{")
+        code.append("    return \"%s\";" % type_name)
+        code.append("}")
+
         return code
 
     def _get_alignment(self, type_def):
         type_class = type_def["type_class"]
+
         if type_class in ["scalar", "enum"]:
             return type_def["size"]
+
         elif type_class == "struct":
             # Alignment of struct is equal to max of the field alignments
             a_max = 0
@@ -208,24 +231,29 @@ class CppGenerator:
                 if a > a_max:
                     a_max = a
             return a_max
+
         elif type_class == "array":
             # Alignment of array is equal to alignment of element
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"])
             return self._get_alignment(el_type_def)
+
         elif type_class == "vector":
             # Alignment of array is equal to max of size field alignment and alignment of element
             a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
             a_el = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"]))
             return max(a_sz, a_el)
+
         elif type_class == "map":
             # Alignment of array is equal to max of size field alignment and alignment of element
             a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
             a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
             a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
             return max(a_sz, a_key, a_value)
+
         elif type_class in ["string", "bytes"]:
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
+
         else:
             raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
 
@@ -233,7 +261,7 @@ class CppGenerator:
         align = self._get_alignment(type_def)
         return offs % align == 0
 
-    def _generate_type_struct(self, type_name):
+    def _generate_type_struct(self, type_name: str):
         curr_proto_name = self._ctx["proto_name"]
         type_def = self._protocols.get_type(curr_proto_name, type_name)
 
@@ -290,7 +318,7 @@ class CppGenerator:
                 # There is padding before current field
                 # Write together previous aligned fields, if any
                 code_ser.append("// %s" % ", ".join(group.field_names))
-                code_ser.extend(self._memcpy_to_buf(group.fields[0]["name"], group.size))
+                code_ser.extend(self._memcpy_to_buf("&" + group.fields[0]["name"], group.size))
             elif len(group.fields) == 1:
                 field = group.fields[0]
                 field_name = field["name"]
@@ -320,7 +348,7 @@ class CppGenerator:
                 # There is padding before current field
                 # Write together previous aligned fields, if any
                 code_deser.append("// %s" % ", ".join(group.field_names))
-                code_deser.extend(self._memcpy_from_buf(group.fields[0]["name"], group.size))
+                code_deser.extend(self._memcpy_from_buf("&" + group.fields[0]["name"], group.size))
             elif len(group.fields) == 1:
                 field = group.fields[0]
                 field_name = field["name"]
@@ -400,7 +428,7 @@ class CppGenerator:
 
     def _generate_includes(self):
         code = []
-        for inc in list(self._includes):
+        for inc in sorted(list(self._includes)):
             if inc[1] == "local":
                 code.append("#include \"%s\"" % inc[0])
             else:
@@ -409,17 +437,38 @@ class CppGenerator:
             code.append("")
         return code
 
+    def _generate_members_of(self, type_name: str):
+        curr_proto_name = self._ctx["proto_name"]
+        type_def = self._protocols.get_type(curr_proto_name, type_name)
+        fields = type_def["fields"]
+
+        self._add_include("tuple")
+
+        code: list[str] = []
+        code.append("")
+        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{type_name}>) noexcept {{")
+        code.append("    return std::tuple{")
+        for field in fields:
+            field_name = field["name"]
+            code.append(f"        ::messgen::member{{\"{field_name}\", &{type_name}::{field_name}}},")
+        code.append("    };")
+        code.append("}")
+        return code
+
     def _cpp_type(self, type_name: str) -> str:
         t = self._protocols.get_type(self._ctx["proto_name"], type_name)
         mode = self._get_mode()
+
         if t["type_class"] == "scalar":
             self._add_include("cstdint")
             return self._CPP_TYPES_MAP[type_name]
+
         elif t["type_class"] == "array":
             self._add_include("array")
             el_type_name = _cpp_namespace(t["element_type"])
             el_c_type = self._cpp_type(el_type_name)
             return "std::array<%s, %d>" % (el_c_type, t["array_size"])
+
         elif t["type_class"] == "vector":
             el_type_name = t["element_type"]
             el_c_type = self._cpp_type(el_type_name)
@@ -430,6 +479,7 @@ class CppGenerator:
                 return "messgen::vector<%s>" % el_c_type
             else:
                 raise RuntimeError("Unsupported mode for vector: %s" % mode)
+
         elif t["type_class"] == "map":
             key_c_type = self._cpp_type(t["key_type"])
             value_c_type = self._cpp_type(t["value_type"])
@@ -441,6 +491,7 @@ class CppGenerator:
                 return "std::span<std::pair<%s, %s>>" % (key_c_type, value_c_type)
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
+
         elif t["type_class"] == "string":
             if mode == "stl":
                 self._add_include("string")
@@ -450,6 +501,7 @@ class CppGenerator:
                 return "std::string_view"
             else:
                 raise RuntimeError("Unsupported mode for string: %s" % mode)
+
         elif t["type_class"] == "bytes":
             if mode == "stl":
                 self._add_include("vector")
@@ -458,6 +510,7 @@ class CppGenerator:
                 return "messgen::vector<uint8_t>"
             else:
                 raise RuntimeError("Unsupported mode for bytes: %s" % mode)
+
         elif t["type_class"] in ["enum", "struct"]:
             if SEPARATOR in type_name:
                 scope = "global"
@@ -465,6 +518,7 @@ class CppGenerator:
                 scope = "local"
             self._add_include("%s.h" % type_name, scope)
             return _cpp_namespace(type_name)
+
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
@@ -521,12 +575,13 @@ class CppGenerator:
             el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
             el_size = el_type_def.get("size")
             el_align = self._get_alignment(el_type_def)
+
             if el_size == 0:
                 pass
             elif el_size is not None and el_size % el_align == 0:
                 # Vector of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (el_size, field_name))
-                c.extend(self._memcpy_to_buf("%s[0]" % field_name, "_field_size"))
+                c.extend(self._memcpy_to_buf("%s.data()" % field_name, "_field_size"))
             else:
                 # Vector of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -590,7 +645,7 @@ class CppGenerator:
             elif el_size is not None and el_size % el_align == 0:
                 # Vector or array of fixed size elements, optimize with single memcpy
                 c.append("_field_size = %d * %s.size();" % (el_size, field_name))
-                c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                c.extend(self._memcpy_from_buf("%s.data()" % field_name, "_field_size"))
             else:
                 # Vector or array of variable size elements
                 c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -609,7 +664,7 @@ class CppGenerator:
                 elif el_size is not None and el_size % el_align == 0:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     c.append("_field_size = %d * %s.size();" % (el_size, field_name))
-                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                    c.extend(self._memcpy_from_buf("%s.data()" % field_name, "_field_size"))
                 else:
                     # Vector or array of variable size elements
                     c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -629,7 +684,7 @@ class CppGenerator:
                     # Vector or array of fixed size elements, optimize with single memcpy
                     if el_size != 1:
                         c.append("_field_size *= %d;" % el_size)
-                    c.extend(self._memcpy_from_buf("%s[0]" % field_name, "_field_size"))
+                    c.extend(self._memcpy_from_buf("%s.data()" % field_name, "_field_size"))
                 else:
                     # Vector or array of variable size elements
                     c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
@@ -732,12 +787,12 @@ class CppGenerator:
 
     def _memcpy_to_buf(self, src: str, size) -> list:
         return [
-            "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(&%s), %s);" % (src, size),
+            "::memcpy(&_buf[_size], reinterpret_cast<const uint8_t *>(%s), %s);" % (src, size),
             "_size += %s;" % size
         ]
 
     def _memcpy_from_buf(self, dst: str, size) -> list:
         return [
-            "::memcpy(reinterpret_cast<uint8_t *>(&%s), &_buf[_size], %s);" % (dst, size),
+            "::memcpy(reinterpret_cast<uint8_t *>(%s), &_buf[_size], %s);" % (dst, size),
             "_size += %s;" % size
         ]

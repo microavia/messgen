@@ -2,9 +2,9 @@ name: C++ CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "v1" ]
   pull_request:
-    branches: [ "master"  ]
+    branches: [ "master", "v1" ]
 
 jobs:
   build:
@@ -12,8 +12,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - uses: actions/checkout@v3
-    - name: Install gtest manually
-      run: sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake CMakeLists.txt && sudo make && sudo cp lib/*.a /usr/lib && sudo ln -s /usr/lib/libgtest.a /usr/local/lib/libgtest.a && sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/libgtest_main.a
-    - name: Run tests
-      run: cd tests && make all
+
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: libgtest-dev cmake ninja-build gcc g++
+        version: 1.0
+
+    - name: Build & run tests
+      run: |
+        mkdir -p build
+        cmake -Bbuild -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
+        cmake --build build
+        ctest --test-dir build/tests/ --output-on-failure
