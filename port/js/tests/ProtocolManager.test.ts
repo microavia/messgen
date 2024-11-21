@@ -1,24 +1,15 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { execSync } from "child_process";
-import path from "path";
-import fs from "fs";
 import { Types, ProtocolJSON, } from "../src/types";
 import { ProtocolManager } from "../src/protocol/ProtocolManager";
+import { generateTestData, uploadShema } from './utils';
 
 let testProtoData: ProtocolJSON;
 let anotherProtoData: ProtocolJSON;
 describe('ProtocolManager', () => {
   beforeAll(() => {
-    execSync(' npm run gen-json')
-    const protocolPath = path.resolve(__dirname, './messgen/test_proto/protocol.json');
-    const rawData = fs.readFileSync(protocolPath);
-    // @ts-ignore
-    testProtoData = JSON.parse(rawData);
-
-    const anotherProtocolPath = path.resolve(__dirname, './another_proto/protocol.json');
-    const anotherRawData = fs.readFileSync(anotherProtocolPath);
-    // @ts-ignore
-    anotherProtoData = JSON.parse(anotherRawData);
+    generateTestData();
+    testProtoData = uploadShema('./messgen/test_proto/protocol.json')
+    anotherProtoData = uploadShema('./another_proto/protocol.json')
   })
 
   describe('sortingTypesByDependency', () => {

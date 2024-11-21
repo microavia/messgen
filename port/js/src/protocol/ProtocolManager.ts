@@ -5,9 +5,10 @@ import {
     TypeClass,
     Types,
     EnumTypeClass,
-    IProtocolId,
-    IProtocolName,
+    ProtocolId,
+    ProtocolName,
     IName,
+    MessageId,
 } from "../types";
 import { GlobalBasicConverters } from "../converters/BasicConverter";
 import { Converter } from "../converters/Converter";
@@ -19,8 +20,8 @@ import { topologicalSort } from "../utils/topologicalSort";
 
 
 export class ProtocolManager {
-    private readonly protocols: Map<IProtocolId, Protocol> = new Map();
-    private readonly protocolNameToId: Map<IProtocolName, IProtocolId>;
+    private readonly protocols: Map<ProtocolId, Protocol> = new Map();
+    private readonly protocolNameToId: Map<ProtocolName, ProtocolId>;
 
     constructor(schema: ProtocolJSON[]) {
         schema.sort((a, b) => a.proto_id - b.proto_id);
@@ -31,7 +32,7 @@ export class ProtocolManager {
         }
     }
 
-    public getProtocolByName(protocolName: IProtocolName): Protocol {
+    public getProtocolByName(protocolName: ProtocolName): Protocol {
         const protocolId = this.protocolNameToId.get(protocolName);
         if (protocolId === undefined) {
             throw new Error(`Protocol not found: ${protocolName}`);
@@ -39,7 +40,7 @@ export class ProtocolManager {
         return this.getProtocolById(protocolId);
     }
 
-    public getProtocolById(protocolId: IProtocolId): Protocol {
+    public getProtocolById(protocolId: ProtocolId): Protocol {
         const protocol = this.protocols.get(protocolId);
         if (protocol === undefined) {
             throw new Error(`Protocol not found with ID: ${protocolId}`);
@@ -47,12 +48,12 @@ export class ProtocolManager {
         return protocol;
     }
 
-    public getConverter(protocolName: IProtocolName, type: IType): Converter {
+    public getConverter(protocolName: ProtocolName, type: IType): Converter {
         const protocol = this.getProtocolByName(protocolName);
         return this.getConverterFromProtocol(protocol, type);
     }
 
-    public getConverterById(protocol: Protocol, messageId: number): Converter {
+    public getConverterById(protocol: Protocol, messageId: MessageId): Converter {
         const converter = protocol.typesMap.get(messageId);
         if (!converter) {
             throw new Error(`Converter not found for message ID: ${messageId}`);
@@ -60,7 +61,7 @@ export class ProtocolManager {
         return converter;
     }
 
-    public getConverterFromProtocol(protocol: Protocol, type: IName): Converter {
+    private getConverterFromProtocol(protocol: Protocol, type: IName): Converter {
         const converter = protocol.converters.get(type);
         if (!converter) {
             throw new Error(`Converter not found for type: ${type}`);
@@ -72,17 +73,17 @@ export class ProtocolManager {
         const converters = new Map<IType, Converter>(GlobalBasicConverters);
         const typesNameToId = this.createTypesNameToIdMap(schema);
 
-        const protocolData: Protocol = {
+        const protocol: Protocol = {
             protocol: schema,
             typesMap: new Map(),
             converters,
             typesNameToId
         };
 
-        this.initializeConverters(schema, protocolData);
-        this.mapTypeIdsToConverters(schema, protocolData);
+        this.initializeConverters(schema, protocol);
+        this.mapTypeIdsToConverters(schema, protocol);
 
-        return protocolData;
+        return protocol;
     }
 
     private createTypesNameToIdMap(schema: ProtocolJSON): Record<string, number> {
@@ -91,29 +92,31 @@ export class ProtocolManager {
             .map(([id, type]) => [type.trim(), Number(id)]));
     }
 
-    private initializeConverters(schema: ProtocolJSON, protocolData: Protocol): void {
+    private initializeConverters(schema: ProtocolJSON, protocol: Protocol): void {
         const sortedTypes = ProtocolManager.getSortedTypesByDependency(schema.types);
 
         for (const [typeName, typeInfo] of sortedTypes) {
             if (typeInfo.type_class === "struct") {
-                this.initializeStructConverter(typeName, typeInfo, protocolData);
+                this.initializeStructConverter(typeName, typeInfo, protocol);
             } else if (typeInfo.type_class === "enum") {
-                this.initializeEnumConverter(typeName, typeInfo, protocolData);
+                this.initializeEnumConverter(typeName, typeInfo, protocol);
             }
         }
     }
 
-    private initializeStructConverter(typeName: IType, typeInfo: TypeClass, protocolData: Protocol): void {
-        typeInfo.fields?.forEach(field => {
+    private initializeStructConverter(typeName: IType, typeInfo: TypeClass, protocol: Protocol): void {
+        const fields = typeInfo.fields ?? [];
+
+        for (const field of fields) {
             if (this.isCrossProtocolType(field.type)) {
-                this.initializeCrossProtocolConverter(field.type, protocolData);
+                this.initializeCrossProtocolConverter(field.type, protocol);
             }
             if (this.isNestedType(field.type)) {
-                this.initializeNestedConverter(field.type, protocolData);
+                this.initializeNestedConverter(field.type, protocol);
             }
-        });
+        }
 
-        protocolData.converters.set(typeName, new StructConverter(typeName, typeInfo, protocolData.converters));
+        protocol.converters.set(typeName, new StructConverter(typeName, typeInfo, protocol.converters));
     }
 
     private initializeEnumConverter(typeName: IType, typeInfo: EnumTypeClass, protocolData: Protocol): void {
@@ -138,21 +141,21 @@ export class ProtocolManager {
         protocolData.converters.set(type, new NestedConverter(type, protocolData.converters));
     }
 
-    private parseCrossProtocolType(type: string): [IProtocolName, IName] {
+    private parseCrossProtocolType(type: string): [ProtocolName, IName] {
         const match = /(.*\/)([^{\[]*)/.exec(type);
         if (!match) {
             throw new Error(`Invalid cross-protocol type: ${type}`);
         }
-        return [match[1].slice(0, -1) as IProtocolName, match[2] as IName];
+        return [match[1].slice(0, -1) as ProtocolName, match[2] as IName];
     }
 
-    private mapTypeIdsToConverters(schema: ProtocolJSON, protocolData: Protocol): void {
+    private mapTypeIdsToConverters(schema: ProtocolJSON, protocol: Protocol): void {
         Object.entries<IType>(schema.types_map ?? {}).forEach(([id, type]) => {
-            const converter = protocolData.converters.get(type.trim() as IType);
+            const converter = protocol.converters.get(type.trim() as IType);
             if (!converter) {
                 throw new Error(`Missing converter for type: ${type}`);
             }
-            protocolData.typesMap.set(Number(id), converter);
+            protocol.typesMap.set(Number(id), converter);
         });
     }
 

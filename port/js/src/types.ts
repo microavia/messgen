@@ -31,21 +31,22 @@ export interface Types {
 }
 
 export interface ProtocolJSON {
-  proto_id: IProtocolId;
-  proto_name: IProtocolName;
+  proto_id: ProtocolId;
+  proto_name: ProtocolName;
   types: Types;
   messages: Record<string, unknown>;
-  types_map?: Record<ITypeId, IName>;
+  types_map?: Record<MessageId, IName>;
   version: string;
 }
 
 export type SchemaObj = TypeClass
 
+export type ConverterMap = Map<IType, Converter>
 
 export type Protocol = {
-  typesMap: Map<ITypeId, Converter>
-  typesNameToId: Record<IName, ITypeId>
-  converters: Map<IType, Converter>
+  typesMap: Map<MessageId, Converter>
+  typesNameToId: Record<IName, MessageId>
+  converters: ConverterMap
   protocol: ProtocolJSON
 }
 
@@ -67,10 +68,10 @@ export type Nominal<NAME extends string | number, Type = string> = Type & { [Nom
 
 
 export type IName = string
-export type ITypeId = Nominal<'TypeId', number>
 export type IValue = Nominal<'Value', any>
-export type IProtocolId = Nominal<'ProtocolId', number>
-export type IProtocolName = Nominal<'IProtocolName', string>
+export type ProtocolId = Nominal<'ProtocolId', number>
+export type MessageId = Nominal<'MessageId', number>
+export type ProtocolName = Nominal<'ProtocolName', string>
 
 
 export type INumberType =
@@ -96,15 +97,16 @@ type ArrayDynamicSize = '[]';
 type ArrayFixSize = `[${number}]`;
 type MapType = `{${IBasicType}}`;
 
-type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
+type SubType = ArrayDynamicSize | ArrayFixSize | MapType | '';
 
 
 export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 
-export type GetProtocolPayload<
-  ProtocolMap extends Record<string, Record<string, any>>,
-  Name extends keyof ProtocolMap,
-  Type extends keyof ProtocolMap[Name]
-> = ProtocolMap[Name][Type];
+export type GenericConfig = Record<string, any>
 
-export type BaseProtocolMap = Record<string, any>
+export type ExtractPayload<
+  ProtocolSchema extends Record<string, Record<string, any>>,
+  ProtocolName extends keyof ProtocolSchema,
+  MessageType extends keyof ProtocolSchema[ProtocolName]
+> = ProtocolSchema[ProtocolName][MessageType];
+

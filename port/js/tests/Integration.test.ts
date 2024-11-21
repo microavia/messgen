@@ -3,10 +3,10 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { ProtocolJSON } from "../src/types";
-import { Messgen } from "../src/Messgen";
+import { Codec } from "../src/Codec";
 
 let protocolData: ProtocolJSON;
-let messgen: Messgen;
+let messgen: Codec;
 let bigint = BigInt('0x1234567890abcdef');
 
 describe('integration', () => {
@@ -18,13 +18,13 @@ describe('integration', () => {
     // @ts-ignore
     protocolData = JSON.parse(rawData);
 
-    messgen = new Messgen([protocolData])
+    messgen = new Codec([protocolData])
   })
 
 
   it('shut be init messgen', () => {
     expect(() => {
-      return new Messgen([protocolData])
+      return new Codec([protocolData])
     }).not.toThrow()
   })
 
@@ -49,7 +49,7 @@ describe('integration', () => {
 
 
     const buffer = messgen.serialize('messgen/test_proto', 'simple_struct', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'simple_struct', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 0, new Uint8Array(rawDataBit).buffer)
 
     expect(result).toEqual({
       ...rawData,
@@ -71,7 +71,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(VarSizeStructBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'var_size_struct', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'var_size_struct', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 1, new Uint8Array(rawDataBit).buffer)
 
     expect(result).toEqual(rawData);
     expect(buffer.size).toEqual(rawDataBit.length)
@@ -92,7 +92,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(StructWithEnumBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'struct_with_enum', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'struct_with_enum', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 3, new Uint8Array(rawDataBit).buffer)
 
     expect(result).toEqual(rawData);
     expect(buffer.size).toEqual(rawDataBit.length)
@@ -107,7 +107,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(EmptyStructBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'empty_struct', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'empty_struct', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 4, new Uint8Array(rawDataBit).buffer)
     expect(result).toEqual(rawData);
     expect(buffer.size).toEqual(rawDataBit.length)
     expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(
@@ -141,7 +141,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(ComplexStructWithEmptyBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'complex_struct_with_empty', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'complex_struct_with_empty', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 5, new Uint8Array(rawDataBit).buffer)
 
     expect(result).toEqual(rawData);
     expect(buffer.size).toEqual(rawDataBit.length)
@@ -199,7 +199,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(ComplexStructNostlBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'complex_struct_nostl', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'complex_struct_nostl', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 6, new Uint8Array(rawDataBit).buffer)
 
     simpleStruct.f5 = expect.closeTo(simpleStruct.f5, 4)
     expect(result).toEqual(rawData);
@@ -208,7 +208,7 @@ describe('integration', () => {
       rawDataBit)))
 
   })
-  it('shut be parse complex_struct', () => {
+  it('should parse complex_struct', () => {
     const simpleStruct = {
       "f0": BigInt("0x1234567890abcdef"),
       "f1": BigInt("0x1234567890abcdef"),
@@ -260,7 +260,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(ComplexStructBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'complex_struct', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'complex_struct', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 6, new Uint8Array(rawDataBit).buffer)
 
     simpleStruct.f5 = expect.closeTo(simpleStruct.f5, 4)
     expect(result).toEqual(rawData);
@@ -286,7 +286,7 @@ describe('integration', () => {
     const rawDataBit = fs.readFileSync(FlatStructBitPath);
 
     const buffer = messgen.serialize('messgen/test_proto', 'flat_struct', rawData)
-    const result = messgen.deserialize('messgen/test_proto', 'flat_struct', new Uint8Array(rawDataBit).buffer)
+    const result = messgen.deserialize(1, 7, new Uint8Array(rawDataBit).buffer)
 
     rawData.f5 = expect.closeTo(rawData.f5, 5)
     expect(result).toEqual(rawData);
