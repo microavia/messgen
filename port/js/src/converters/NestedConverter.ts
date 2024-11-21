@@ -9,10 +9,10 @@ export let DYNAMIC_SIZE_TYPE: IBasicType = "uint32";
 export class NestedConverter extends Converter {
   private types: ParseType;
   private dynConverter: Converter;
-  
+
   constructor(
     name: IType,
-    private converters: Map<IType, Converter>
+    converters: Map<IType, Converter>
   ) {
     super(name);
     let dynConverter = converters.get(DYNAMIC_SIZE_TYPE)
@@ -22,20 +22,20 @@ export class NestedConverter extends Converter {
     this.dynConverter = dynConverter
     this.types = parseType(name, converters);
   }
-  
+
   serialize(value: IValue, buffer: Buffer) {
     this._serialize(value, buffer, this.types.wrapper.length - 1);
   }
-  
+
   private _serialize(value: any, buffer: Buffer, offsetWrapper: number) {
     if (offsetWrapper < 0) {
       this.types.converter.serialize(value, buffer);
       return;
     }
-    
+
     let currentType = this.types.wrapper[offsetWrapper];
     let arrayLength
-    
+
     switch (currentType.variant) {
       case "typed-array":
         if (currentType.length === undefined) {
@@ -45,19 +45,19 @@ export class NestedConverter extends Converter {
           arrayLength = currentType.length;
         }
         const TypedArray = currentType.TypedArray
-        
+
         if (value.buffer && buffer.offset % TypedArray.BYTES_PER_ELEMENT === 0) {
-          
+
           let typedArray = new TypedArray(
             buffer.dataView.buffer,
             buffer.offset,
             arrayLength
           )
-          
+
           typedArray.set(value)
-          
+
           buffer.offset += typedArray.byteLength
-          
+
         } else {
           for (let i = 0; i < arrayLength; i++) {
             this._serialize(value[i], buffer, offsetWrapper - 1);
@@ -71,8 +71,8 @@ export class NestedConverter extends Converter {
         } else {
           arrayLength = currentType.length;
         }
-        
-        
+
+
         for (let i = 0; i < arrayLength; i++) {
           this._serialize(value[i], buffer, offsetWrapper - 1);
         }
@@ -82,7 +82,7 @@ export class NestedConverter extends Converter {
         if ((value instanceof Map)) {
           let map: Map<IBasicType, IValue> = value
           this.dynConverter.serialize(map.size, buffer)
-          
+
           map.forEach((v, k) => {
             currentType.converter.serialize(k, buffer)
             this._serialize(v, buffer, offsetWrapper - 1)
@@ -97,27 +97,27 @@ export class NestedConverter extends Converter {
             currentType.converter.serialize(k, buffer)
             this._serialize(v, buffer, offsetWrapper - 1)
           })
-          
+
         } else {
           throw new Error(`Value is not an object or Map: ${value}`)
         }
         break;
-      
+
       default:
         ASSERT_EXHAUSTIVE(currentType)
     }
   }
-  
+
   deserialize(buffer: Buffer): IValue {
     return this._deserialize(buffer, this.types.wrapper.length - 1);
   }
-  
+
   private _deserialize(buffer: Buffer, offsetWrapper: number): IValue {
-    
+
     if (offsetWrapper < 0) {
       return this.types.converter.deserialize(buffer);
     }
-    
+
     let currentType = this.types.wrapper[offsetWrapper];
     let arrayLength
     let result
@@ -129,12 +129,12 @@ export class NestedConverter extends Converter {
           arrayLength = currentType.length;
         }
         const TypedArray = currentType.TypedArray
-        
+
         let typedArray = new TypedArray(buffer.dataView.buffer.slice(
           buffer.offset,
           buffer.offset + arrayLength * TypedArray.BYTES_PER_ELEMENT
         ));
-        
+
         buffer.offset += typedArray.byteLength
         return typedArray
       case "array":
@@ -143,7 +143,7 @@ export class NestedConverter extends Converter {
         } else {
           arrayLength = currentType.length;
         }
-        
+
         result = new Array(arrayLength);
         for (let i = 0; i < arrayLength; i++) {
           result[i] = this._deserialize(buffer, offsetWrapper - 1);
@@ -162,11 +162,11 @@ export class NestedConverter extends Converter {
         ASSERT_EXHAUSTIVE(currentType)
     }
   }
-  
+
   size(value: IValue): number {
     return this._size(value, this.types.wrapper.length - 1);
   }
-  
+
   private _size(value: IValue, offsetWrapper: number): number {
     if (offsetWrapper < 0) {
       return this.types.converter.size(value);
@@ -189,7 +189,7 @@ export class NestedConverter extends Converter {
         return arrayLengthSize + value.length * this.types.converter.size(0);
       case "array":
         arrayLengthSize = 0
-        
+
         if (currentType.length === undefined) {
           arrayLengthSize = this.dynConverter.size(value.length)
         } else {
@@ -198,17 +198,17 @@ export class NestedConverter extends Converter {
           }
         }
         return arrayLengthSize + value.reduce((acc: number, v: IValue) => acc + this._size(v, offsetWrapper - 1), 0);
-      
+
       case "map":
         let mapSizeSize = this.dynConverter.size(value.size)
         if (value instanceof Map) {
           let map: Map<IBasicType, IValue> = value
-          
+
           let mapSize = mapSizeSize
           map.forEach((v, k) => {
             mapSize += currentType.converter.size(k) + this._size(v, offsetWrapper - 1)
           })
-          
+
           return mapSize;
         } else if (value instanceof Object) {
           let entries = Object.entries(value) as [IBasicType, IValue][]
@@ -218,11 +218,11 @@ export class NestedConverter extends Converter {
             let v: IValue = entry[1]
             mapSize += currentType.converter.size(k) + this._size(v, offsetWrapper - 1)
           })
-          
+
           return mapSize;
         }
         throw new Error(`Value is not an object or Map: ${value}`)
-      
+
       default:
         ASSERT_EXHAUSTIVE(currentType)
         return 0;
