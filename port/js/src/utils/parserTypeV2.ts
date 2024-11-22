@@ -1,36 +1,7 @@
 import { IType, IBasicType, IName, TypedArrayConstructor } from "../types";
 import { Converter } from "../converters/Converter";
 
-export type ParseArrayType = {
-    variant: 'array';
-    length?: number;
-    elementType: IType;
-};
 
-export type ParseTypedArrayType = {
-    variant: 'typed-array';
-    length?: number;
-    elementType: IType;
-    TypedArray: TypedArrayConstructor;
-};
-
-export type ParseMapType = {
-    variant: 'map';
-    keyType: IType;
-    valueType: IType;
-    converter: Converter;
-};
-
-export type WrapperType = ParseArrayType | ParseTypedArrayType | ParseMapType;
-
-export type ParseType = {
-    converter: Converter;
-    wrapper: WrapperType[];
-};
-
-/**
- * Parses a complex type string into a structured representation
- */
 export function parseType(typeStr: IType, converters: Map<IType, Converter>): ParseType {
     const wrappers: WrapperType[] = [];
     let currentType = typeStr;
@@ -73,7 +44,6 @@ export function parseType(typeStr: IType, converters: Map<IType, Converter>): Pa
 
             currentType = currentType.slice(arrayMatch[0].length);
         }
-        // Handle map notation {}
         else if (currentType.startsWith('{')) {
             const mapMatch = currentType.match(/^\{([^\}]+)\}/);
             if (!mapMatch) {
@@ -103,9 +73,6 @@ export function parseType(typeStr: IType, converters: Map<IType, Converter>): Pa
     };
 }
 
-/**
- * Gets a converter from the map or throws a descriptive error
- */
 function getConverterOrThrow(type: IType, converters: Map<IType, Converter>): Converter {
     const converter = converters.get(type);
     if (!converter) {
@@ -115,3 +82,31 @@ function getConverterOrThrow(type: IType, converters: Map<IType, Converter>): Co
     }
     return converter;
 }
+
+
+export type ParseArrayType = {
+    variant: 'array';
+    length?: number;
+    elementType: IType;
+};
+
+export type ParseTypedArrayType = {
+    variant: 'typed-array';
+    length?: number;
+    elementType: IType;
+    TypedArray: TypedArrayConstructor;
+};
+
+export type ParseMapType = {
+    variant: 'map';
+    keyType: IType;
+    valueType: IType;
+    converter: Converter;
+};
+
+export type WrapperType = ParseArrayType | ParseTypedArrayType | ParseMapType;
+
+export type ParseType = {
+    converter: Converter;
+    wrapper: WrapperType[];
+};

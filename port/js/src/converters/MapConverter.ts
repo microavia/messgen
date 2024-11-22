@@ -7,7 +7,6 @@ export interface OrderedMapType {
     valueType: IType;
 }
 
-
 export class MapConverter extends Converter {
     protected keyConverter: Converter;
     protected valueConverter: Converter;

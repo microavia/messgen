@@ -8,7 +8,7 @@ export abstract class Converter {
     this.name = name;
   }
 
-  serialize(value: IValue, buffer: Buffer) { // modify buffer.offset
+  serialize(value: IValue, buffer: Buffer) {
     throw new Error(`Not implemented in abstract class ${this.name} `);
   }
 
@@ -16,7 +16,7 @@ export abstract class Converter {
     throw new Error(`Not implemented in abstract class ${this.name} `);
   }
 
-  deserialize(buffer: Buffer): IValue {// modify buffer.offset.offset
+  deserialize(buffer: Buffer): IValue {
     throw new Error(`Not implemented in abstract class ${this.name} `);
   }
 

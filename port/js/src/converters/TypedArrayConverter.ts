@@ -3,46 +3,37 @@ import { Buffer } from "../Buffer";
 import { IType, TypedArray, TypedArrayConstructor } from "../types";
 
 export class TypedArrayConverter extends Converter {
-    private elementConverter: Converter;
-    private dynamicSizeConverter: Converter;
-    private TypedArrayConstructor: TypedArrayConstructor;
-    private arraySize?: number;
-
     constructor(
         name: IType,
-        elementConverter: Converter,
-        dynamicSizeConverter: Converter,
-        TypedArrayConstructor: TypedArrayConstructor,
-        arraySize?: number
+        private converter: Converter,
+        private sizeConverter: Converter,
+        private TypedArrayConstructor: TypedArrayConstructor,
+        private arraySize?: number
     ) {
         super(name);
-        this.elementConverter = elementConverter;
-        this.dynamicSizeConverter = dynamicSizeConverter;
-        this.TypedArrayConstructor = TypedArrayConstructor;
-        this.arraySize = arraySize;
     }
 
     serialize(value: TypedArray, buffer: Buffer): void {
-        const length = value.length;
-        if (this.arraySize !== undefined && length !== this.arraySize) {
-            throw new Error(`TypedArray length mismatch: ${length} !== ${this.arraySize}`);
+        const arraySize = value.length;
+        if (this.arraySize !== undefined && arraySize !== this.arraySize) {
+            throw new Error(`TypedArray length mismatch: ${arraySize} !== ${this.arraySize}`);
         }
 
         if (this.arraySize === undefined) {
-            this.dynamicSizeConverter.serialize(length, buffer);
+            this.sizeConverter.serialize(arraySize, buffer);
         }
 
-        for (let i = 0; i < length; i++) {
-            this.elementConverter.serialize(value[i], buffer);
+        for (let i = 0; i < arraySize; i++) {
+            this.converter.serialize(value[i], buffer);
         }
     }
 
     deserialize(buffer: Buffer): TypedArray {
-        const length = this.arraySize ?? this.dynamicSizeConverter.deserialize(buffer);
-        const result = new this.TypedArrayConstructor(length);
+        const arraySize = this.arraySize ?? this.sizeConverter.deserialize(buffer);
+        const result = new this.TypedArrayConstructor(arraySize);
 
-        for (let i = 0; i < length; i++) {
-            result[i] = this.elementConverter.deserialize(buffer);
+        for (let i = 0; i < arraySize; i++) {
+            result[i] = this.converter.deserialize(buffer);
         }
 
         return result;
@@ -50,15 +41,12 @@ export class TypedArrayConverter extends Converter {
 
 
     size(value: TypedArray): number {
-        const length = value.length;
-        if (this.arraySize !== undefined && length !== this.arraySize) {
-            throw new Error(`TypedArray length mismatch: ${length} !== ${this.arraySize}`);
+        const arraySize = value.length;
+        if (this.arraySize !== undefined && arraySize !== this.arraySize) {
+            throw new Error(`TypedArray length mismatch: ${arraySize} !== ${this.arraySize}`);
         }
 
-        const dynamicSize = this.arraySize === undefined ?
-            this.dynamicSizeConverter.size(length) :
-            0;
-
-        return dynamicSize + value.byteLength;
+        const size = this.arraySize === undefined ? this.sizeConverter.size(arraySize) : 0;
+        return size + value.byteLength;
     }
 }

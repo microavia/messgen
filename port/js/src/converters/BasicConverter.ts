@@ -49,7 +49,7 @@ export type BasicTypesConfig = {
 };
 
 
-export const IS_LITTLE_ENDIAN = true; // todo check
+export const IS_LITTLE_ENDIAN = true;
 
 /**
  *
