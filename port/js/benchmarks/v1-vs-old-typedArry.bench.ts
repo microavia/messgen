@@ -128,10 +128,7 @@ const name = 'testStruct';
 
 schema.fields?.forEach((field) => {
   if (field.type.includes("[") || field.type.includes("{")) {
-    converters.set(field.type, new NestedConverter(
-      field.type,
-      converters
-    ));
+    converters.set(field.type, new NestedConverter(field.type, converters));
   }
 })
 

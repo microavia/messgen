@@ -1,6 +1,6 @@
 import { ProtocolManager } from "./protocol/ProtocolManager";
-import { Buffer } from "./Buffer";
 import { ProtocolJSON, ExtractPayload, GenericConfig, ProtocolId, MessageId } from "./types";
+import { Buffer } from "./Buffer";
 
 export class Codec<Config extends GenericConfig = GenericConfig> {
   private readonly protocolManager: ProtocolManager;
