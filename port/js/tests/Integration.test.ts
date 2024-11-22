@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, } from 'vitest';
 import { execSync } from 'child_process';
 import { Codec } from "../src/Codec";
 import { uploadShema, uploadBinary } from "./utils";
-import { ProtocolJSON } from '../src/protocol/types';
+import { ProtocolJSON } from '../src/protocol/Protocol.types';
 
 
 describe('integration', () => {

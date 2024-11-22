@@ -1,17 +1,18 @@
-import { ExtractPayload, ProtocolId, MessageId, ProtocolName } from "./types";
-import { Protocols } from "./protocol/Protocols";
-import { ProtocolJSON } from "./protocol/types";
+import { ProtocolId, MessageId, ProtocolName } from "./types";
+import { Protocol } from "./protocol/Protocol";
+import { ProtocolJSON } from "./protocol/Protocol.types";
 import { Converter } from "./converters/Converter";
 import { ConverterFactory } from "./converters/ConverterFactory";
 import { Buffer } from "./Buffer";
+import { ExtractPayload, GenericConfig, TypeToIdMap, TypeToNameMap } from "./Codec.types";
 
 export class Codec<Config extends GenericConfig = GenericConfig> {
   private typesByName: TypeToNameMap = new Map();
   private typesById: TypeToIdMap = new Map();
-  private protocols: Protocols;
+  private protocols: Protocol;
 
   constructor(schema: ProtocolJSON[]) {
-    this.protocols = new Protocols(schema);
+    this.protocols = new Protocol(schema);
     const protocols = this.protocols.getProtocols();
     const converterFactory = new ConverterFactory(this.protocols);
 
@@ -80,6 +81,3 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
 }
 
 
-type GenericConfig = Record<string, Record<string, any>>;
-type TypeToNameMap = Map<ProtocolName, Map<string, Converter>>;
-type TypeToIdMap = Map<ProtocolId, Map<MessageId, Converter>>;

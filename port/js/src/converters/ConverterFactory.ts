@@ -1,7 +1,7 @@
 import { ProtocolName } from "../types";
 import { Converter } from "./Converter";
 import { EnumConverter } from "./base/EnumConverter";
-import { Protocols } from "../protocol/Protocols";
+import { Protocol } from "../protocol/Protocol";
 import { ScalarConverter } from "./base/ScalarConverter";
 import { StructConverter } from "./base/StructConverter";
 import { ArrayConverter } from "./base/ArrayConverter";
@@ -10,7 +10,7 @@ import { MapConverter } from "./base/MapConverter";
 import { ASSERT_EXHAUSTIVE } from "../utils/ASSERT_EXHAUSTIVE";
 
 export class ConverterFactory {
-    constructor(private protocols: Protocols) { }
+    constructor(private protocols: Protocol) { }
 
     toConverter(protocolName: ProtocolName, typeName: string): Converter {
         const typeDef = this.protocols.getType(protocolName, typeName);

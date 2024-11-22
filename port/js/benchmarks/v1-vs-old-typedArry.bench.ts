@@ -1,10 +1,9 @@
 import { bench, describe } from 'vitest'
 // @ts-ignore
 import { Buffer, Struct } from "./deserialize-variant/messgen-old.js";
-import { TypeClass } from "../src/types.js";
-import { StructConverter } from "../src/converters/StructConverter.js";
-import { NestedConverter } from "../src/converters/NestedConverter";
-import { initializeBasicConverter } from '../tests/utils.js';
+import { StructTypeDefinition } from "../src/types.js";
+import { initGetType } from '../tests/utils.js';
+import { StructConverter } from '../src/converters/base/StructConverter.js';
 
 let srcStruct = new Struct({
   id: 2,
@@ -86,9 +85,9 @@ srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, src
 let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
 
 
-const converters = initializeBasicConverter();
-const schema: TypeClass = {
-  type_class: 'struct',
+const schema: StructTypeDefinition = {
+  typeClass: 'struct',
+  typeName: 'testStruct',
   fields: [
     { name: 'type_Int8', type: 'int8' },
     { name: 'type_Uint8', type: 'uint8' },
@@ -126,41 +125,34 @@ const schema: TypeClass = {
 };
 const name = 'testStruct';
 
-schema.fields?.forEach((field) => {
-  if (field.type.includes("[") || field.type.includes("{")) {
-    converters.set(field.type, new NestedConverter(field.type, converters));
-  }
-})
 
-
-const structConverter = new StructConverter(name, schema, converters);
-
+const getType = initGetType();
+const structConverter = new StructConverter('testStruct', schema, getType);
 const size = structConverter.size(srcData);
 const buffer = new Buffer(new ArrayBuffer(size));
+const data = srcDataFn();
 
 describe('calculate size with typedArray', () => {
   bench('old', () => {
     // @ts-ignore
-    Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcDataFn()));
+    Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, data));
   }, { time: 1000 })
 
   bench('v1', () => {
-    structConverter.size(srcDataFn());
+    structConverter.size(data);
   })
 })
 describe('serialize Obj with typedArray', () => {
   bench('Old', () => {
-    Buffer.serializeObj(srcStruct.schema.fields, srcDataFn());
+    Buffer.serializeObj(srcStruct.schema.fields, data);
   }, { time: 1000 })
   bench('v1', () => {
     buffer.offset = 0;
-    structConverter.serialize(srcDataFn(), buffer);
+    structConverter.serialize(data, buffer);
   })
 })
 
 describe('deserialize object with typedArray', () => {
-
-
   bench('Old', () => {
     new Buffer(b).deserialize(srcStruct);
   }, { time: 1000 })

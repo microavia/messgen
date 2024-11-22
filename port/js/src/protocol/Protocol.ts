@@ -1,5 +1,5 @@
 import { IBasicType, IName, IType, ProtocolName, TypeDefinition } from "../types";
-import { Protocol, ProtocolJSON, StructureType } from "./types";
+import { ProtocolConfig, ProtocolJSON, StructureType } from "./Protocol.types";
 
 
 const SCALAR_TYPES_INFO = new Map<string, boolean>([
@@ -19,9 +19,9 @@ const SCALAR_TYPES_INFO = new Map<string, boolean>([
     ["bool", false]
 ]);
 
-export class Protocols {
+export class Protocol {
     private static SEPARATOR = "/";
-    private protocols = new Map<ProtocolName, Protocol>();
+    private protocols = new Map<ProtocolName, ProtocolConfig>();
 
     constructor(jsons: ProtocolJSON[]) {
         for (const json of jsons) {
@@ -35,7 +35,7 @@ export class Protocols {
                 name: json.proto_name,
                 types,
                 messageIds,
-            } as Protocol);
+            } as ProtocolConfig);
         }
     }
 
@@ -118,11 +118,11 @@ export class Protocols {
         return [parts.slice(0, -1).join("{"), parts[parts.length - 1]];
     }
 
-    private resolveType(currProtoName: string, typeName: string): [Protocol, TypeDefinition | undefined] {
-        if (typeName.includes(Protocols.SEPARATOR)) {
-            const parts = typeName.split(Protocols.SEPARATOR);
+    private resolveType(currProtoName: string, typeName: string): [ProtocolConfig, TypeDefinition | undefined] {
+        if (typeName.includes(Protocol.SEPARATOR)) {
+            const parts = typeName.split(Protocol.SEPARATOR);
             const localType = parts.pop()!;
-            const protoName = parts.join(Protocols.SEPARATOR);
+            const protoName = parts.join(Protocol.SEPARATOR);
             const proto = this.protocols.get(protoName);
 
             if (!proto) {

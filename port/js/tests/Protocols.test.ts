@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { Protocols } from "../src/protocol/Protocols";
-import { ProtocolJSON } from '../src/protocol/types';
+import { Protocol } from "../src/protocol/Protocol";
+import { ProtocolJSON } from '../src/protocol/Protocol.types';
 
 
-describe('Protocols', () => {
+describe('Protocol', () => {
     let testProtoData: ProtocolJSON;
-    let protocols: Protocols
+    let protocols: Protocol
 
     beforeAll(() => {
         testProtoData = {
@@ -33,7 +33,7 @@ describe('Protocols', () => {
                 "1": "simple_enum"
             }
         } as unknown as ProtocolJSON;
-        protocols = new Protocols([testProtoData]);
+        protocols = new Protocol([testProtoData]);
     })
 
     describe('constructor', () => {

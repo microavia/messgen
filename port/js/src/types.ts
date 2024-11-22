@@ -54,7 +54,6 @@ export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 export interface Field {
   name: IName
   type: IType
-  comment?: string;
 }
 
 export interface EnumValue {
@@ -62,13 +61,6 @@ export interface EnumValue {
   value: number;
   comment?: string;
 }
-
-
-export type ExtractPayload<
-  ProtocolSchema extends Record<string, Record<string, any>>,
-  ProtocolName extends keyof ProtocolSchema,
-  MessageType extends keyof ProtocolSchema[ProtocolName]
-> = ProtocolSchema[ProtocolName][MessageType];
 
 
 export type ScalarTypeDefinition = {

@@ -1,7 +1,15 @@
-import { EnumValue, Field, IName, INumberType, IType, MessageId, ProtocolId, ProtocolName, TypeDefinition } from "../types";
+import { IName, INumberType, IType, MessageId, ProtocolId, ProtocolName, TypeDefinition } from "../types";
 
+export interface Field {
+    name: IName
+    type: IType
+    comment?: string;
+}
 
-
+interface EnumValue {
+    name: IName;
+    value: number;
+}
 
 export interface TypeClass {
     type_class: "struct";
@@ -24,12 +32,11 @@ export interface ProtocolJSON {
     proto_id: ProtocolId;
     proto_name: ProtocolName;
     types: Types;
-    messages: Record<string, unknown>;
     types_map?: Record<MessageId, IName>;
     version: string;
 }
 
-export interface Protocol {
+export interface ProtocolConfig {
     id: ProtocolId;
     name: ProtocolName;
     types: Map<string, TypeDefinition>;
