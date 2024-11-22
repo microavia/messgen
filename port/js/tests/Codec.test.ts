@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { execSync } from "child_process";
-import { Codec } from "../src/Codec copy";
+import { Codec } from "../src/Codec";
 import { ProtocolJSON, } from "../src/types";
 import { uploadShema } from './utils';
 
-let testProtoData: ProtocolJSON;
-let anotherProtoData: ProtocolJSON;
+
 describe('Codec', () => {
+  let testProtoData: ProtocolJSON;
+  let anotherProtoData: ProtocolJSON;
+
   beforeAll(() => {
     execSync('npm run gen-json')
     testProtoData = uploadShema('./messgen/test_proto/protocol.json')

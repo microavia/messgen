@@ -1,6 +1,6 @@
-import { Converter } from "./Converter";
 import { Buffer } from "../Buffer";
-import { ArrayTypeDefinition, IType, TypedArray, TypedArrayConstructor, TypedArrayTypeDefinition } from "../types";
+import { IType, TypedArray, TypedArrayConstructor, TypedArrayTypeDefinition } from "../types";
+import { Converter } from "./Converter";
 import { GetType } from "./ConverterFactory";
 
 const TYPED_ARRAY_MAP = new Map<IType, TypedArrayConstructor>([
@@ -43,6 +43,14 @@ export class TypedArrayConverter extends Converter {
             throw new Error(`Array length mismatch: ${length} !== ${this.arraySize}`);
         }
 
+        if (this.arraySize === undefined) {
+            this.sizeConverter.serialize(length, buffer);
+        }
+
+
+        for (let i = 0; i < length; i++) {
+            this.converter.serialize(value[i], buffer);
+        }
     }
 
     deserialize(buffer: Buffer): TypedArray {

@@ -7,6 +7,7 @@ import { StructConverter } from "./StructConverter";
 import { ArrayConverter } from "./ArrayConverter";
 import { TypedArrayConverter } from "./TypedArrayConverter";
 import { MapConverter } from "./MapConverter";
+import { ASSERT_EXHAUSTIVE } from "../utils/ASSERT_EXHAUSTIVE";
 
 export class ConverterFactory {
     constructor(private protocols: Protocols) { }
@@ -29,6 +30,7 @@ export class ConverterFactory {
             case "map":
                 return new MapConverter(protocolName, typeDef, getType,);
             default:
+                ASSERT_EXHAUSTIVE(typeDef)
                 throw new Error(`Unsupported type class ${typeName}`);
         }
     }

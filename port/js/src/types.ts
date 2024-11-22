@@ -128,7 +128,7 @@ export type ArrayTypeDefinition = {
   type: IType;
   typeClass: "array";
   elementType: IType;
-  arraySize: number;
+  arraySize?: number;
   size?: number;
 }
 

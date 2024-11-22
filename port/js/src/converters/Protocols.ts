@@ -90,7 +90,7 @@ export class Protocols {
                 type: typeName,
                 typeClass: "array",
                 elementType,
-                arraySize: size || 0
+                arraySize: size
             };
         }
 
@@ -105,7 +105,7 @@ export class Protocols {
         }
 
 
-        const [proto, type] = this.resolveType(currProtoName, typeName);
+        const [, type] = this.resolveType(currProtoName, typeName);
         if (!type) throw new Error(`Type not found: ${typeName} in ${currProtoName}`);
 
         return type;
@@ -129,11 +129,21 @@ export class Protocols {
             const parts = typeName.split(Protocols.SEPARATOR);
             const localType = parts.pop()!;
             const protoName = parts.join(Protocols.SEPARATOR);
-            const proto = this.protocols.get(protoName)!;
+            const proto = this.protocols.get(protoName);
+
+            if (!proto) {
+                throw new Error(`Unknown type: ${typeName} not found at protocol ${currProtoName}`);
+            }
+
             return [proto, proto.types.get(localType)];
         }
 
-        const proto = this.protocols.get(currProtoName)!;
+        const proto = this.protocols.get(currProtoName);
+
+        if (!proto) {
+            throw new Error(`Unknown type: ${typeName} not found at protocol ${currProtoName}`);
+        }
+
         return [proto, proto.types.get(typeName)];
     }
 }

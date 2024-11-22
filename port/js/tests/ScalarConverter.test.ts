@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { BasicConverter, basicTypes, IS_LITTLE_ENDIAN } from "../src/converters/BasicConverter";
 import { Buffer } from "../src/Buffer";
+import { ScalarConverter } from '../src/converters/ScalarConverter';
+import { IBasicType } from '../src/types';
 
-describe('BasicConverter', () => {
+const IS_LITTLE_ENDIAN = true;
 
+describe('ScalarConverter', () => {
   describe('::primitive', () => {
     it('should serialize int8', () => {
       const converter = getConverter('int8');
@@ -559,8 +561,8 @@ describe('BasicConverter', () => {
     expect(deserializedValue2).toBe(value2);
   });
 
-  function getConverter(name: string) {
-    return new BasicConverter(basicTypes.find(type => type.name === name)!);
+  function getConverter(name: IBasicType) {
+    return new ScalarConverter(name);
   }
 
   function getBuffer(size: number) {
