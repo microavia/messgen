@@ -261,11 +261,17 @@ TEST_F(CppTest, DispatchMessage1) {
 
     auto invoked = false;
     auto handler = [&](auto &&actual) {
-        EXPECT_EQ(expected.f0, actual.f0);
-        EXPECT_EQ(expected.f1, actual.f1);
-        invoked = true;
+        using ActualType = std::decay_t<decltype(actual)>;
+        
+        if constexpr (std::is_same_v<ActualType, test_proto::simple_struct>) {
+            EXPECT_EQ(expected.f0, actual.f0);
+            EXPECT_EQ(expected.f1, actual.f1);
+            invoked = true;
+        } else {
+            FAIL() << "Unexpected message type handled.";
+        }
     };
-    test_proto::dispatch_message(expected.TYPE_ID, _buf.data(), handler);
+    test_proto::dispatch_message(test_proto::simple_struct::TYPE_ID, _buf.data(), handler);
 
     EXPECT_TRUE(invoked);
 }
