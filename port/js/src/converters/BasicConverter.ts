@@ -1,11 +1,11 @@
 import { Converter } from "./Converter";
-import { IBasicType, IValue } from "../types";
+import { IBasicType, IValue, TypedArrayConstructor } from "../types";
 import { Buffer } from "../Buffer";
 import { decodeUTF8, encodeUTF8 } from "../utils/utf8";
 
 
 export class BasicConverter extends Converter {
-  typedArray?: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
+  typedArray?: TypedArrayConstructor
   constructor(private config: BasicTypesConfig) {
     super(config.name);
     this.typedArray = config.typedArray;
@@ -45,7 +45,7 @@ export type BasicTypesConfig = {
   read: (v: DataView, byteOffset: number) => IValue;
   write: (v: DataView, byteOffset: number, value: IValue) => number;
   default: () => IValue;
-  typedArray?: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
+  typedArray?: TypedArrayConstructor;
 };
 
 
