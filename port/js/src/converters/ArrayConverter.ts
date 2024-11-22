@@ -1,15 +1,18 @@
 import { Buffer } from "../Buffer";
-import { IType, IValue } from "../types";
+import { ArrayTypeDefinition, IValue } from "../types";
 import { Converter } from "./Converter";
+import { GetType } from "./ConverterFactory";
 
 export class ArrayConverter extends Converter {
-    constructor(
-        name: IType,
-        private converter: Converter,
-        private sizeConverter: Converter,
-        private arraySize?: number
-    ) {
-        super(name);
+    private converter: Converter;
+    private sizeConverter: Converter;
+    private arraySize?: number;
+
+    constructor(protocolName: string, typeDef: ArrayTypeDefinition, getType: GetType) {
+        super(typeDef.type + typeDef.elementType);
+        this.converter = getType(protocolName, typeDef.elementType);
+        this.sizeConverter = getType(protocolName, "uint32");
+        this.arraySize = typeDef.arraySize;
     }
 
     serialize(value: Array<IValue>, buffer: Buffer): void {

@@ -1,145 +1,65 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { EnumConverter } from "../src/converters/EnumConverter";
-import { EnumTypeClass } from "../src/types";
+import { EnumTypeDefinition, EnumValue, IBasicType } from "../src/types";
 import { Buffer } from "../src/Buffer";
-import { Converter } from "../src/converters/Converter";
-import { initializeBasicConverter } from './utils';
-
-const jest = vi
-
+import { initGetType } from './utils';
 
 describe('EnumConverter', () => {
-
-  it('Should correctly serialize and deserialize single value enum values', () => {
-    // Given
-    const name = 'TestEnum';
-    const baseType = 'int8';
-    const types: EnumTypeClass = { type_class: 'enum', base_type: baseType, values: [{ name: 'Value1', value: 1 }] };
-    const converters = initializeBasicConverter();
-
-    const enumConverter = new EnumConverter(name, types, converters);
+  it('should serialize single valued enum', () => {
     const value = 1;
-    const buffer = new Buffer(new ArrayBuffer(10));
+    const converter = intiEnumConverter([{ name: 'Value1', value }])
+    const buffer = new Buffer(new ArrayBuffer(2));
 
-    // When
-    enumConverter.serialize(value, buffer);
+    converter.serialize(value, buffer);
+
+    expect(buffer.offset).toBe(1);
+  });
+
+  it('should deserialize single value enum', () => {
+    const value = 1;
+    const converter = intiEnumConverter([{ name: 'Value1', value }])
+    const buffer = new Buffer(new ArrayBuffer(2));
+
+    converter.serialize(value, buffer);
     buffer.offset = 0;
-    const result = enumConverter.deserialize(buffer);
-    console.log(`:: result =`, result);
-    // Then
+    const result = converter.deserialize(buffer);
+
     expect(result).toBe(value);
   });
 
 
-  it('Should correctly serialize and deserialize enum values with multiple values', () => {
-    // Given
-    const name = 'testEnum';
-    const baseType = 'int8';
-    const values = [
+  it('should serialize  multiple values enum', () => {
+    const converter = intiEnumConverter([
       { name: 'VALUE1', value: 1 },
       { name: 'VALUE2', value: 2 },
       { name: 'VALUE3', value: 3 }
-    ];
-    const types: EnumTypeClass = {
-      type_class: 'enum',
-      base_type: baseType,
-      values: values
-    };
-    const converters = new Map();
-    const converterMock = {
-      serialize: jest.fn(),
-      deserialize: jest.fn(),
-      size: jest.fn()
-    };
-    converters.set(baseType, converterMock);
-    const enumConverter = new EnumConverter(name, types, converters);
-    const value = 'value2';
-    const buffer = new Buffer(new ArrayBuffer(10));
+    ])
+    const buffer = new Buffer(new ArrayBuffer(2));
 
-    // When
-    enumConverter.serialize(value, buffer);
+    converter.serialize('value2', buffer);
 
-    // Then
-    expect(converterMock.serialize).toHaveBeenCalledWith(value, buffer);
+    expect(buffer.offset).toEqual(1);
   });
 
-
-  it('Should throw an error if base type converter is not found', () => {
-    const name = "test";
-    const types: EnumTypeClass = {
-      type_class: "enum",
-      comment: "test",
-      base_type: "int32",
-      values: []
-    };
-    const converters = new Map();
-
-    const serializeFn = () => new EnumConverter(name, types, converters);
-
-    expect(serializeFn).toThrowError(`Converter for type ${types.base_type} is not found in ${name}`);
-  });
-
-  it('Should correctly return size of serialized enum value using base type converter', () => {
-    // Given
-    const name = "testName";
-    const baseType = "int32";
-    const enumTypeClass: EnumTypeClass = {
-      type_class: "enum",
-      base_type: baseType,
-      values: []
-    };
-    const converters = initializeBasicConverter();
-    const baseTypeConverter: Converter = {
-      name: baseType,
-      serialize: jest.fn(),
-      deserialize: jest.fn(),
-      size: jest.fn().mockReturnValue(10),
-      default: jest.fn()
-    };
-    converters.set(baseType, baseTypeConverter);
-    const enumConverter = new EnumConverter(name, enumTypeClass, converters);
+  it('should return size for enum value', () => {
     const value = 1;
+    const converter = intiEnumConverter([{ name: 'Value1', value }], 'int32')
 
-    // When
-    const result = enumConverter.size(value);
+    const result = converter.size(value);
 
-    // Then
-    expect(result).toBe(10);
-    expect(baseTypeConverter.size).toHaveBeenCalledWith(value);
+    expect(result).toEqual(4);
   });
 
 
-  it('Should handle enum values with non-string values', () => {
-    const name = 'TestEnum';
-    const baseType = 'int8';
-    const values = [
-      { name: 'VALUE1', value: 1 },
-      { name: 'VALUE2', value: 2 },
-      { name: 'VALUE3', value: 3 }
-    ];
-    const types: EnumTypeClass = {
-      type_class: 'enum',
-      base_type: baseType,
-      values: values
-    };
-    const converters = initializeBasicConverter();
-    const converterMock: Converter = {
-      name: baseType,
-      serialize: jest.fn(),
-      deserialize: jest.fn(),
-      size: jest.fn(),
-      default: jest.fn()
-    };
-    converters.set(baseType, converterMock);
-    const enumConverter = new EnumConverter(name, types, converters);
-    const value = 2;
+  function intiEnumConverter(values: EnumValue[], type?: IBasicType): EnumConverter {
+    const schema = createSchema(values, type);
+    const getType = initGetType();
+    return new EnumConverter('testStruct', schema, getType);
+  }
 
-    const buffer = new Buffer(new ArrayBuffer(10));
-
-    enumConverter.serialize(value, buffer);
-
-    expect(converterMock.serialize).toHaveBeenCalledWith(value, buffer);
-  });
+  function createSchema(values: EnumValue[] = [], type: IBasicType = 'int8'): EnumTypeDefinition {
+    return { typeClass: 'enum', values, typeName: 'testStruct', type };
+  }
 
 
 })

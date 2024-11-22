@@ -1,6 +1,7 @@
-import { IType, IValue, } from "../types";
+import { IType, IValue, MapTypeDefinition, } from "../types";
 import { Converter } from "./Converter";
 import { Buffer } from "../Buffer";
+import { GetType } from "./ConverterFactory";
 
 export interface OrderedMapType {
     keyType: IType;
@@ -12,16 +13,11 @@ export class MapConverter extends Converter {
     protected valueConverter: Converter;
     protected dynamicSizeConverter: Converter;
 
-    constructor(
-        name: IType,
-        keyConverter: Converter,
-        valueConverter: Converter,
-        dynamicSizeConverter: Converter
-    ) {
-        super(name);
-        this.keyConverter = keyConverter;
-        this.valueConverter = valueConverter;
-        this.dynamicSizeConverter = dynamicSizeConverter;
+    constructor(protocolName: string, typeDef: MapTypeDefinition, getType: GetType) {
+        super(typeDef.name);
+        this.keyConverter = getType(protocolName, typeDef.keyType);
+        this.valueConverter = getType(protocolName, typeDef.valueType);
+        this.dynamicSizeConverter = getType(protocolName, "uint32");
     }
 
     serialize(value: Map<IValue, IValue> | Record<string, IValue>, buffer: Buffer): void {

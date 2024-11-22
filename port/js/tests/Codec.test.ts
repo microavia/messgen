@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { execSync } from "child_process";
-import path from "path";
-import fs from "fs";
-import { Codec } from "../src/Codec";
+import { Codec } from "../src/Codec copy";
 import { ProtocolJSON, } from "../src/types";
 import { uploadShema } from './utils';
 

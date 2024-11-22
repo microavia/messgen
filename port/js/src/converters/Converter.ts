@@ -23,6 +23,4 @@ export abstract class Converter {
   default(): IValue {
     return null;
   }
-
-  typedArray?: TypedArrayConstructor
 }

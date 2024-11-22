@@ -1,17 +1,18 @@
 import { Buffer } from "../Buffer";
-import { IName, TypeClass, IType, IValue } from "../types";
+import { IName, IValue, StructTypeDefinition } from "../types";
 import { Converter } from "./Converter";
+import { GetType } from "./ConverterFactory";
 
 export class StructConverter extends Converter {
   convertorsList: { converter: Converter, name: string }[] = [];
   reservedWords: string[] = Object.getOwnPropertyNames(Object.prototype);
   parentObject: Record<IName, IValue>
 
-  constructor(name: IName, schema: TypeClass, private converters: Map<IType, Converter>) {
-    super(name);
+  constructor(protocolName: string, typeDef: StructTypeDefinition, getType: GetType) {
+    super(typeDef.typeName);
 
-    schema.fields?.forEach((field, index) => {
-      if (schema.fields?.slice(index + 1).some((f) => f.name === field.name)) {
+    typeDef.fields?.forEach((field, index) => {
+      if (typeDef.fields?.slice(index + 1).some((f) => f.name === field.name)) {
         throw new Error(`Field ${field.name} is duplicated in ${this.name}`);
       }
 
@@ -19,7 +20,7 @@ export class StructConverter extends Converter {
         throw new Error(`Field ${field.name} is a reserved word in JavaScript`);
       }
 
-      const converter = this.converters.get(field.type);
+      const converter = getType(protocolName, field.type);
       if (!converter) {
         throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
       }

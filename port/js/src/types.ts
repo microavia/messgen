@@ -47,7 +47,6 @@ export type Protocol = {
   typesMap: Map<MessageId, Converter>
   typesNameToId: Record<IName, MessageId>
   converters: ConverterMap
-  protocol: ProtocolJSON
 }
 
 
@@ -112,3 +111,51 @@ export type ExtractPayload<
 
 export type TypedArrayConstructor = Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor | BigUint64ArrayConstructor | BigInt64ArrayConstructor | Float64ArrayConstructor
 export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigUint64Array | BigInt64Array | Float64Array
+
+export type ScalarTypeDefinition = {
+  type: IBasicType;
+  typeClass: "scalar";
+}
+
+export type TypedArrayTypeDefinition = {
+  type: IType;
+  typeClass: "typed-array";
+  elementType: IType;
+  arraySize?: number;
+}
+
+export type ArrayTypeDefinition = {
+  type: IType;
+  typeClass: "array";
+  elementType: IType;
+  arraySize: number;
+  size?: number;
+}
+
+export type MapTypeDefinition = {
+  type: IType;
+  typeClass: "map";
+  keyType: IType;
+  valueType: IType;
+}
+
+export type StructTypeDefinition = {
+  typeClass: "struct";
+  fields: Field[] | null;
+  typeName: IName;
+}
+
+export type EnumTypeDefinition = {
+  type: IType;
+  typeClass: "enum";
+  values: EnumValue[];
+  typeName: IName;
+}
+
+export type TypeDefinition =
+  ScalarTypeDefinition |
+  TypedArrayTypeDefinition |
+  ArrayTypeDefinition |
+  MapTypeDefinition |
+  StructTypeDefinition |
+  EnumTypeDefinition

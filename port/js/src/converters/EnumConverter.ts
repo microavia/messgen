@@ -1,6 +1,8 @@
 import { Converter } from "./Converter";
-import { EnumTypeClass, IValue, ConverterMap } from "../types";
+import { EnumTypeClass, IValue, ConverterMap, EnumTypeDefinition } from "../types";
 import { Buffer } from "../Buffer";
+import { GetType } from "./ConverterFactory";
+import { get } from "http";
 
 
 export class EnumConverter extends Converter {
@@ -8,21 +10,17 @@ export class EnumConverter extends Converter {
   private enumsByName: Record<string, number>;
   private enumsByValue: string[];
 
-  constructor(name: string, types: EnumTypeClass, converters: ConverterMap) {
-    super(name);
+  constructor(protocolName: string, typeDef: EnumTypeDefinition, getType: GetType) {
+    super(typeDef.typeName);
 
-    const converter = converters.get(types.base_type);
-    if (!converter) {
-      throw new Error(`Converter for type ${types.base_type} is not found in ${name}`);
-    }
-    this.converter = converter;
+    this.converter = getType(protocolName, typeDef.type);
 
-    this.enumsByName = types.values.reduce((acc, value) => {
+    this.enumsByName = typeDef.values.reduce((acc, value) => {
       acc[value.name] = value.value;
       return acc;
     }, {} as Record<string, number>)
 
-    this.enumsByValue = types.values.reduce((acc, value) => {
+    this.enumsByValue = typeDef.values.reduce((acc, value) => {
       acc[value.value] = value.name;
       return acc;
     }, [] as string[]);
