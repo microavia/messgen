@@ -13,7 +13,7 @@ import {
 import { GlobalBasicConverters } from "../converters/BasicConverter";
 import { Converter } from "../converters/Converter";
 import { StructConverter } from "../converters/StructConverter";
-import { NestedConverter } from "../converters/NestedConverterV1";
+import { NestedConverter } from "../converters/NestedConverter";
 import { EnumConverter } from "../converters/EnumConverter";
 import { topologicalSort } from "../utils/topologicalSort";
 

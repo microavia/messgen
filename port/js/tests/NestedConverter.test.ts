@@ -50,7 +50,7 @@ describe('NestedConverter', () => {
     // When, Then
     expect(() => {
       const converter = new NestedConverter(name, converters);
-    }).toThrowError(`Unknown type: ${name}, if is complex type you must define before the struct.`);
+    }).toThrowError(`Unknown type: customType. If this is a complex type, ensure it's defined before use.`);
   });
 
   it('should throw an error when the dynamic size type is not found in the converters map', () => {
@@ -63,7 +63,7 @@ describe('NestedConverter', () => {
     expect(() => {
       const converter = new NestedConverter(name, converters);
 
-    }).toThrowError(`Converter for type ${DYNAMIC_SIZE_TYPE} is not found in ${name}`);
+    }).toThrowError(`Required dynamic size converter (uint32) not found for int32[5]{int32}`);
   });
 
   it('should throw an error when the map key type is not found in the converters map', () => {
@@ -75,7 +75,7 @@ describe('NestedConverter', () => {
     expect(() => {
       const converter = new NestedConverter(name, converters);
       converter.serialize({ key: 42 }, new Buffer(new ArrayBuffer(4)));
-    }).toThrowError(`Unknown type: customType, if is complex type you must define before the struct.`);
+    }).toThrowError(`Unknown type: customType. If this is a complex type, ensure it's defined before use`);
   });
 
   it('should serialize and deserialize an array of dynamic length correctly', () => {
@@ -237,7 +237,7 @@ describe('NestedConverter', () => {
     const converters = initializeBasicConverter();
 
     const nestedConverter = new NestedConverter(name, converters);
-    const value = [1, 2, 3, 4, 5];
+    const value = new Int32Array([1, 2, 3, 4, 5]);
     const expectedSize = 4 * 5;
 
     // When
@@ -252,7 +252,7 @@ describe('NestedConverter', () => {
     const converters = initializeBasicConverter();
 
     const nestedConverter = new NestedConverter("int32[3][2]", converters);
-    const value = [[1, 2, 3], [4, 5, 6]];
+    const value = [Int32Array.from([1, 2, 3]), Int32Array.from([4, 5, 6])];
 
     // When
     const size = nestedConverter.size(value);
@@ -269,7 +269,7 @@ describe('NestedConverter', () => {
     // When
     const serializeFn = () => new NestedConverter(name, converters);
     // Then
-    expect(serializeFn).toThrowError('Unknown type: undefined, if is complex type you must define before the struct. ');
+    expect(serializeFn).toThrowError('Unknown type: undefined. If this is a complex type, ensure i');
   });
 
 
@@ -369,7 +369,7 @@ describe('NestedConverter', () => {
   it('should throw an error when the map key type converters is not found', () => {
     const converters = new Map<IType, Converter>();
     const typeStr = 'int32{int32}';
-    expect(() => new NestedConverter(typeStr, converters)).toThrow(`Converter for type uint32 is not found in int32{int32}`);
+    expect(() => new NestedConverter(typeStr, converters)).toThrow(`Required dynamic size converter (uint32) not found for int32{int32}`);
   });
 
 });
