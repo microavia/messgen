@@ -1,8 +1,8 @@
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
-import { ProtocolJSON } from "../src/types";
 import { ConverterFactory } from "../src/converters/ConverterFactory";
+import { ProtocolJSON } from "../src/protocol/Protocol.types";
 import { Protocol } from "../src/protocol/Protocol";
 
 export function uploadShema(filePath: string): ProtocolJSON {

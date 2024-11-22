@@ -56,15 +56,18 @@ export class TypedArrayConverter extends Converter {
 
     deserialize(buffer: Buffer): TypedArray {
         const length = this.arraySize ?? this.sizeConverter.deserialize(buffer);
+        const TypedArray = this.TypedArrayConstructor;
 
-        const result = new this.TypedArrayConstructor(length);
+        const result = new this.TypedArrayConstructor(buffer.dataView.buffer.slice(
+            buffer.offset,
+            buffer.offset + length * TypedArray.BYTES_PER_ELEMENT
+        ));
 
-        for (let i = 0; i < length; i++) {
-            result[i] = this.converter.deserialize(buffer);
-        }
+        buffer.offset += result.byteLength
 
         return result;
     }
+
     size(value: TypedArray): number {
         const length = value.length;
 

@@ -2,17 +2,25 @@ import { Buffer } from "../Buffer";
 import { IType, IValue } from "../types";
 
 export abstract class Converter {
-  protected name: IType
+  name: IType
 
   constructor(name: IType) {
     this.name = name;
   }
 
-  abstract serialize(value: IValue, buffer: Buffer): void;
+  serialize(value: IValue, buffer: Buffer) {
+    throw new Error(`Not implemented in abstract class ${this.name} `);
+  }
 
-  abstract deserialize(buffer: Buffer): IValue;
+  size(value: IValue): number {
+    throw new Error(`Not implemented in abstract class ${this.name} `);
+  }
 
-  abstract size(value: IValue): number;
+  deserialize(buffer: Buffer): IValue {
+    throw new Error(`Not implemented in abstract class ${this.name} `);
+  }
 
-  abstract default(): IValue
+  default(): IValue {
+    return null;
+  }
 }

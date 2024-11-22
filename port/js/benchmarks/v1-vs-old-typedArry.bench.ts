@@ -44,7 +44,7 @@ let srcStruct = new Struct({
   ]
 });
 
-const arry = new Array(1000).fill(0).map((_, i) => i);
+const array = new Array(1000).fill(0).map((_, i) => i);
 let srcDataFn = () => ({
   type_Int8: 8,
   type_Uint8: 8,
@@ -57,27 +57,27 @@ let srcDataFn = () => ({
   type_String: 'This is test string',
   type_Double: -Math.PI,
 
-  type_Int8_a: new Int8Array(arry),
-  type_Uint8_a: new Uint8Array(arry),
-  type_Int16_a: new Int16Array(arry),
-  type_Uint16_a: new Uint16Array(arry),
-  type_Int32_a: new Int32Array(arry),
-  type_Uint32_a: new Uint32Array(arry),
-  type_Int64_a: new BigInt64Array(arry.map(BigInt)),
-  type_Uint64_a: new BigUint64Array(arry.map(BigInt)),
-  type_String_a: arry.map(i => `String ${i}`),
-  type_Double_a: arry.map(i => Math.PI * i),
+  type_Int8_a: new Int8Array(array),
+  type_Uint8_a: new Uint8Array(array),
+  type_Int16_a: new Int16Array(array),
+  type_Uint16_a: new Uint16Array(array),
+  type_Int32_a: new Int32Array(array),
+  type_Uint32_a: new Uint32Array(array),
+  type_Int64_a: new BigInt64Array(array.map(BigInt)),
+  type_Uint64_a: new BigUint64Array(array.map(BigInt)),
+  type_String_a: array.map(i => `String ${i}`),
+  type_Double_a: array.map(i => Math.PI * i),
 
-  type_Int8_as: new Int8Array(arry),
-  type_Uint8_as: new Uint8Array(arry),
-  type_Int16_as: new Int16Array(arry),
-  type_Uint16_as: new Uint16Array(arry),
-  type_Int32_as: new Int32Array(arry),
-  type_Uint32_as: new Uint32Array(arry),
-  type_Int64_as: new BigInt64Array(arry.map(BigInt)),
-  type_Uint64_as: new BigUint64Array(arry.map(BigInt)),
-  type_String_as: arry.map(i => `String ${i}`),
-  type_Double_as: arry.map(i => Math.PI * i),
+  type_Int8_as: new Int8Array(array),
+  type_Uint8_as: new Uint8Array(array),
+  type_Int16_as: new Int16Array(array),
+  type_Uint16_as: new Uint16Array(array),
+  type_Int32_as: new Int32Array(array),
+  type_Uint32_as: new Uint32Array(array),
+  type_Int64_as: new BigInt64Array(array.map(BigInt)),
+  type_Uint64_as: new BigUint64Array(array.map(BigInt)),
+  type_String_as: array.map(i => `String ${i}`),
+  type_Double_as: array.map(i => Math.PI * i),
 });
 const srcData = srcDataFn();
 // @ts-ignore
