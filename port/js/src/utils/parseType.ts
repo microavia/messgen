@@ -1,114 +1,112 @@
-import { IType, IBasicType, IName } from "../types";
+import { IType, IBasicType, IName, TypedArrayConstructor } from "../types";
 import { Converter } from "../converters/Converter";
 
-export type ParseArrayType =
-  {
-    variant: 'array'
-    length: number | undefined
-  }
 
-export type ParseTypedArrayType =
-  {
-    variant: 'typed-array'
-    length: number | undefined
-    TypedArray: Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | BigInt64ArrayConstructor | BigUint64ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor;
-    
-  }
-
-export type ParseMapType =
-  {
-    variant: 'map'
-    converter: Converter
-  }
-
-export type ParseType =
-  {
-    converter: Converter
-    wrapper: Array<ParseArrayType | ParseMapType | ParseTypedArrayType>
-  }
-
-/**
- * The parseType function is used to parse a type string and convert it into a structured object representation. It takes a type string and a map of converters as inputs and returns a ParseType object.
- * Example Usage
- * const typeStr = 'int32[5]{int32}';
- * const converters = new Map<IType, Converter>();
- * const result = parseType(typeStr, converters);
- * console.log(result);
- * // Output: { converters: Converter, wrapper: [ { variant: 'array', length: 5 }, { variant: 'map', converters: Converter } ] }
- * Code Analysis
- * Inputs
- * typeStr (string): The type string to be parsed.
- * converters (Map<IType, Converter>): A map of converters used to convert the basis type and key type of the type string.
- *
- * Flow
- * Split the type string into parts using regular expressions to identify array and map notations.
- * Extract the basis type from the first part of the type string.
- * Iterate over the remaining parts of the type string.
- * If a part ends with ']', add an ParseArrayType object to the wrapper array with the length extracted from the part.
- * If a part ends with '}', extract the key type and add a ParseMapType object to the wrapper array with the corresponding converters.
- * Get the converters for the basis type from the converters map.
- * Return a ParseType object with the converters and the wrapper array.
- *
- * Outputs
- * ParseType object: An object containing the converters for the basis type and an array of ParseArrayType and ParseMapType objects representing the array and map notations in the type string.
- *
- * @param typeStr
- * @param converters
- */
 export function parseType(typeStr: IType, converters: Map<IType, Converter>): ParseType {
-  let wrapper: Array<ParseArrayType | ParseMapType | ParseTypedArrayType> = [];
-  let basisType: IBasicType | IName;
-  let typeParts = typeStr.split(
-    /[\[\{]/ig
-  );
-  
-  
-  basisType = typeParts[0] as IBasicType | IName;
-  
-  let converter = converters.get(basisType);
-  if (!converter) {
-    throw new Error(`Unknown type: ${basisType}, if is complex type you must define before the struct. `)
+  const wrappers: WrapperType[] = [];
+  let currentType = typeStr;
+  let baseType: IType;
+
+  const baseMatch = currentType.match(/^([^\[\{]+)/);
+  if (!baseMatch) {
+    throw new Error(`Invalid type string, no base type found: ${typeStr}`);
   }
-  
-  for (let i = 1; i < typeParts.length; i++) {
-    let item = typeParts[i];
-    let keyType: IBasicType | undefined;
-    
-    if (item.includes(']')) {
-      let lengthStr = item.slice(0, -1);
-      if (i === 1 && converter.typedArray) {
-        wrapper.push({
+
+  baseType = baseMatch[1];
+  currentType = currentType.slice(baseMatch[1].length);
+
+  const baseConverter = getConverterOrThrow(baseType, converters);
+
+  while (currentType.length > 0) {
+    if (currentType.startsWith('[')) {
+      const arrayMatch = currentType.match(/^\[(\d*)\]/);
+      if (!arrayMatch) {
+        throw new Error(`Invalid array syntax in: ${typeStr}`);
+      }
+
+      const lengthStr = arrayMatch[1];
+      const length = lengthStr ? parseInt(lengthStr) : undefined;
+
+      if (wrappers.length === 0 && baseConverter.typedArray) {
+        wrappers.push({
           variant: 'typed-array',
-          length: lengthStr ? parseInt(lengthStr) : undefined,
-          TypedArray: converter.typedArray
+          length,
+          elementType: baseType,
+          TypedArray: baseConverter.typedArray
         });
       } else {
-        wrapper.push({
+        wrappers.push({
           variant: 'array',
-          length: lengthStr ? parseInt(lengthStr) : undefined
+          length,
+          elementType: baseType
         });
       }
-      
-    } else if (item.includes('}')) {
-      keyType = item.slice(0, -1) as IBasicType;
-      if (keyType === undefined) {
-        throw new Error(`Invalid map key type: ${item}`);
+
+      currentType = currentType.slice(arrayMatch[0].length);
+    }
+    else if (currentType.startsWith('{')) {
+      const mapMatch = currentType.match(/^\{([^\}]+)\}/);
+      if (!mapMatch) {
+        throw new Error(`Invalid map syntax in: ${typeStr}`);
       }
-      
-      let keyConverter = converters.get(keyType);
-      if (!keyConverter) {
-        throw new Error(`Unknown type: ${keyType}, if is complex type you must define before the struct. `)
-      }
-      wrapper.push({
+
+      const keyType = mapMatch[1] as IBasicType;
+      const keyConverter = getConverterOrThrow(keyType, converters);
+
+      wrappers.push({
         variant: 'map',
+        keyType,
+        valueType: keyConverter.name,
         converter: keyConverter
       });
+
+      currentType = currentType.slice(mapMatch[0].length);
+    }
+    else {
+      throw new Error(`Invalid syntax in type string: ${typeStr}`);
     }
   }
-  
+
   return {
-    converter: converter,
-    wrapper: wrapper
-  }
-  
+    converter: baseConverter,
+    wrapper: wrappers
+  };
 }
+
+function getConverterOrThrow(type: IType, converters: Map<IType, Converter>): Converter {
+  const converter = converters.get(type);
+  if (!converter) {
+    throw new Error(
+      `Unknown type: ${type}. If this is a complex type, ensure it's defined before use.`
+    );
+  }
+  return converter;
+}
+
+
+export type ParseArrayType = {
+  variant: 'array';
+  length?: number;
+  elementType: IType;
+};
+
+export type ParseTypedArrayType = {
+  variant: 'typed-array';
+  length?: number;
+  elementType: IType;
+  TypedArray: TypedArrayConstructor;
+};
+
+export type ParseMapType = {
+  variant: 'map';
+  keyType: IType;
+  valueType: IType;
+  converter: Converter;
+};
+
+export type WrapperType = ParseArrayType | ParseTypedArrayType | ParseMapType;
+
+export type ParseType = {
+  converter: Converter;
+  wrapper: WrapperType[];
+};

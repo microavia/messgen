@@ -1,5 +1,5 @@
 import { IBasicType, IType, IValue } from "../types";
-import { parseType } from "../utils/parserTypeV2";
+import { parseType } from "../utils/parseType";
 import { ArrayConverter } from "./ArrayConverter";
 import { Converter } from "./Converter";
 import { MapConverter } from "./MapConverter";

@@ -1,323 +1,193 @@
-import { parseType } from "../src/utils/parseType";
-import { describe, it, expect } from 'vitest';
-import { IType } from "../src/types";
-import { StructConverter } from "../src/converters/StructConverter";
-import { initializeBasicConverter } from './utils';
-
+import { describe, it, expect, beforeEach } from 'vitest';
+import { parseType, ParseTypedArrayType } from '../src/utils/parseType';
+import { Converter } from '../src/converters/Converter';
+import { IType } from '../src/types';
 
 describe('parseType', () => {
-  const converters = initializeBasicConverter()
-  converters.set('MyType', new StructConverter('MyType', {
-    type_class: 'struct',
-    fields: [
-      {
-        name: 'field1',
-        type: 'int8'
-      },
-      {
-        name: 'field2',
-        type: 'int16'
-      },
-      {
-        name: 'field3',
-        type: 'int32'
-      },
-      {
-        name: 'field4',
-        type: 'int64'
-      },
-      {
-        name: 'field5',
-        type: 'int8'
-      },
-    ]
-  }, converters));
+  class MockConverter extends Converter {
+    name = 'mock';
+    typedArray = Float32Array;
+    serialize() { }
+    deserialize() { }
+    size() { return 4; }
+  }
 
+  class StringConverter extends Converter {
+    name = 'string';
+    serialize() { }
+    deserialize() { }
+    size() { return 4; }
+  }
 
-  it('should parse primitive type', () => {
-    // Given
-    const typeStr = 'int8';
+  let converters: Map<IType, Converter>;
 
-    // When
-    const result = parseType(typeStr, converters);
+  beforeEach(() => {
+    converters = new Map();
+    converters.set('mock', new MockConverter('mock'));
+    converters.set('string', new StringConverter('string'));
+  });
 
-    // Then
-    expect(result).toEqual({
-      converter: converters.get('int8'),
-      wrapper: []
+  describe('::base', () => {
+    it('should parse simple type without wrappers', () => {
+      const result = parseType('mock', converters);
+
+      expect(result.converter).toBeInstanceOf(MockConverter);
+      expect(result.wrapper).toHaveLength(0);
+    });
+
+    it('should throw error for unknown type', () => {
+      expect(() => parseType('unknown', converters))
+        .toThrow('Unknown type: unknown');
+    });
+
+    it('should throw error for invalid type array type', () => {
+      expect(() => parseType('[]', converters))
+        .toThrow('Invalid type string, no base type found');
+    });
+
+    it('should throw error for invalid type map type', () => {
+      expect(() => parseType('{}', converters))
+        .toThrow('Invalid type string, no base type found');
     });
   });
 
-  it('should parse primitive type with array notation', () => {
-    const typeStr = 'int32[5]';
+  describe('::array', () => {
+    it('should parse fixed-size array', () => {
+      const result = parseType('mock[5]', converters);
 
-    const result = parseType(typeStr, converters);
-
-    expect(result).toEqual(
-      {
-        converter: converters.get('int32'),
-        wrapper: [
-          {
-            variant: "typed-array",
-            TypedArray: Int32Array,
-            length: 5
-          }
-        ]
-      }
-    );
-  });
-
-  it('should parse primitive type with dimensional array notation', () => {
-    const typeStr = 'int32[5]{int32}';
-
-    const result = parseType(typeStr, converters);
-
-    expect(result).toEqual({
-      converter: converters.get('int32'),
-      wrapper: [
-        {
-          variant: "typed-array",
-          TypedArray: Int32Array,
-          length: 5
-        },
-        {
-          variant: 'map',
-          converter: converters.get('int32'),
-        }
-      ]
-    });
-  });
-
-  it('should throw an error when encountering an unknown type', () => {
-    const error = 'Unknown type: UnknownType, if is complex type you must define before the struct.';
-
-    expect(() => parseType('UnknownType', converters)).toThrowError(error);
-  });
-
-  it('should complex type with converters parameter', () => {
-    // Given
-    const typeStr = 'MyType' as IType;
-
-    // When
-    const result = parseType(typeStr, converters);
-
-    // Then
-    expect(result).toEqual({
-      converter: converters.get('MyType'),
-      wrapper: []
-    });
-  });
-
-  it('should parse a simple complex type with array notation with converters parameter', () => {
-    // Given
-    const typeStr = "MyType[10]";
-
-    // When
-    const result = parseType(typeStr, converters);
-
-    // Then
-    expect(result).toEqual({
-      converter: converters.get('MyType'),
-      wrapper: [
-        {
-          variant: 'array',
-          length: 10
-        }
-      ]
-    });
-  });
-
-  it('should parse a primitive type with array notation with zero length', () => {
-    const typeStr = "int8[0]";
-
-    expect(parseType(typeStr, converters)).toEqual({
-      converter: converters.get('int8'),
-      wrapper: [{
+      expect(result.converter).toBeInstanceOf(MockConverter);
+      expect(result.wrapper).toHaveLength(1);
+      expect(result.wrapper[0]).toEqual({
         variant: 'typed-array',
-        TypedArray: Int8Array,
-        length: 0
-      }]
+        length: 5,
+        elementType: 'mock',
+        TypedArray: Float32Array
+      });
     });
-  });
 
-  it('should parse primitive type with array notation and length non zero length', () => {
-    expect(parseType("int8[1]", converters)).toEqual({
-      converter: converters.get('int8'),
-      wrapper: [{
+    it('should parse dynamic-size array', () => {
+      const result = parseType('mock[]', converters);
+
+      expect(result.wrapper).toHaveLength(1);
+      expect(result.wrapper[0]).toEqual({
         variant: 'typed-array',
-        TypedArray: Int8Array,
-        length: 1
-      }]
+        length: undefined,
+        elementType: 'mock',
+        TypedArray: Float32Array
+      });
+    });
+
+    it('should parse nested arrays', () => {
+      const result = parseType('mock[3][2]', converters);
+
+      expect(result.wrapper).toHaveLength(2);
+      expect(result.wrapper[0]).toEqual({
+        variant: 'typed-array',
+        length: 3,
+        elementType: 'mock',
+        TypedArray: Float32Array
+      });
+      expect(result.wrapper[1]).toEqual({
+        variant: 'array',
+        length: 2,
+        elementType: 'mock'
+      });
+    });
+
+    it('should throw error for invalid array syntax', () => {
+      expect(() => parseType('mock[', converters))
+        .toThrow('Invalid array syntax');
     });
   });
 
-  it('should parsea simple complex type with array notation and a length of 0 and with converters parameter', () => {
-    // Given
-    const typeStr = "MyType[0]";
+  describe('map parsing', () => {
+    it('should parse simple map', () => {
+      const result = parseType('mock{string}', converters);
 
-    // When
-    const result = parseType(typeStr, converters);
+      expect(result.wrapper).toHaveLength(1);
+      expect(result.wrapper[0]).toEqual({
+        variant: 'map',
+        keyType: 'string',
+        valueType: 'string',
+        converter: converters.get('string')
+      });
+    });
 
-    // Then
-    expect(result).toEqual({
-      converter: converters.get('MyType'),
-      wrapper: [
-        {
-          variant: 'array',
-          length: 0
-        }
-      ]
+    it('should throw error for invalid map syntax', () => {
+      expect(() => parseType('mock{', converters))
+        .toThrow('Invalid map syntax');
+    });
+
+    it('should throw error for unknown key type', () => {
+      expect(() => parseType('mock{unknown}', converters))
+        .toThrow('Unknown type: unknown');
     });
   });
 
+  describe('complex type combinations', () => {
+    it('should parse array of maps', () => {
+      const result = parseType('mock{string}[3]', converters);
 
-  it('should parsea simple complex type with array notation and a length of 1 and with converters parameter', () => {
-    // Given
-    const typeStr = "MyType[1]";
+      expect(result.wrapper).toHaveLength(2);
+      expect(result.wrapper[0]).toEqual({
+        variant: 'map',
+        keyType: 'string',
+        valueType: 'string',
+        converter: converters.get('string')
+      });
+      expect(result.wrapper[1]).toEqual({
+        variant: 'array',
+        length: 3,
+        elementType: 'mock'
+      });
+    });
 
-    // When
-    const result = parseType(typeStr, converters);
+    it('should parse map with array values', () => {
+      const result = parseType('mock[3]{string}', converters);
 
-    // Then
-    expect(result).toEqual({
-      converter: converters.get('MyType'),
-
-      wrapper: [
-        {
-          variant: 'array',
-          length: 1
-        }
-      ]
+      expect(result.wrapper).toHaveLength(2);
+      expect(result.wrapper[0]).toEqual({
+        variant: 'typed-array',
+        length: 3,
+        elementType: 'mock',
+        TypedArray: Float32Array
+      });
+      expect(result.wrapper[1]).toEqual({
+        variant: 'map',
+        keyType: 'string',
+        valueType: 'string',
+        converter: converters.get('string')
+      });
     });
   });
 
-  it('Should throw an error when encountering an unknown type with array notation', () => {
-    // Given
-    const typeStr = "UnknownType[5]";
-
-
-    // When
-    const parseTypeWrapper = () => parseType(typeStr, converters);
-
-    // Then
-    expect(parseTypeWrapper).toThrowError("Unknown type: UnknownType, if is complex type you must define before the struct.");
-  });
-
-
-  it('should parsea simple complex type with array notation and with a SubType and with converters parameter', () => {
-    // Given
-    const typeStr = "MyType[10][20][30]";
-
-    // When
-    const result = parseType(typeStr, converters);
-
-    // Then
-    expect(result).toEqual({
-      converter: converters.get('MyType'),
-
-      wrapper: [
-        {
-          variant: 'array',
-          length: 10
-        },
-        {
-          variant: 'array',
-          length: 20
-        },
-        {
-          variant: 'array',
-          length: 30
-        }
-      ]
+  describe('error cases', () => {
+    it('should throw error for invalid characters in type string', () => {
+      expect(() => parseType('mock@', converters)).toThrow('Unknown type: mock@');
     });
-  });
-  it('should throw an error when an unknown type is encountered', () => {
-    // Given
-    const typeStr = 'int32[5]{invalidType}';
 
-    // Then
-    expect(() => {
-      // When
-      parseType(typeStr, converters);
-    }).toThrowError(`Unknown type: invalidType, if is complex type you must define before the struct.`);
-  });
+    it('should throw error for incomplete type definition', () => {
+      expect(() => parseType('mock[3', converters)).toThrow('Invalid array syntax');
+    });
 
-  it('should parse complex type with multiple massive and cartographic notations', () => {
-    const typeStr = 'MyType[10]{int32}[5]';
-
-    const result = parseType(typeStr, converters);
-
-    expect(result).toEqual({
-      converter: converters.get('MyType'),
-      wrapper: [
-        {
-          variant: 'array',
-          length: 10
-        },
-        {
-          variant: 'map',
-          converter: converters.get('int32'),
-        },
-        {
-          variant: 'array',
-          length: 5
-        }
-      ]
+    it('should throw error for invalid array length', () => {
+      expect(() => parseType('mock[a]', converters)).toThrow('Invalid array syntax');
     });
   });
 
-  it('should parse primitive type using array notation nested in map', () => {
-    const typeStr = 'int32[5]{int32}';
+  describe('::typed-array', () => {
+    it('should create typed array wrapper for base types with typedArray property', () => {
+      const result = parseType('mock[3]', converters);
 
-    const result = parseType(typeStr, converters);
+      expect(result.wrapper[0].variant).toBe('typed-array');
+      expect(result.wrapper[0]).toHaveProperty('TypedArray');
+    });
 
-    expect(result).toEqual(
-      {
-        converter: converters.get('int32'),
-        wrapper: [
-          {
-            variant: 'typed-array',
-            TypedArray: Int32Array,
-            length: 5
-          },
-          {
-            variant: 'map',
-            converter: converters.get('int32'),
+    it('should create regular array wrapper for non-typed array types', () => {
+      const result = parseType('string[3]', converters);
 
-          }
-        ]
-      }
-    );
-  });
-
-  it('should throw an error when an unknown type is encountered', () => {
-    // Given
-    const typeStr = 'int32[5]{invalidType}';
-
-    // When, Then
-    expect(() => {
-      parseType(typeStr, converters);
-    }).toThrowError('Unknown type: invalidType, if is complex type you must define before the struct.');
-  });
-
-  it('should throw an error when encountering an unknown type with array notation', () => {
-    // Given
-    const typeStr = 'UnknownType[5]';
-
-    // When, Then
-    expect(() => {
-      parseType(typeStr, converters);
-    }).toThrowError('Unknown type: UnknownType, if is complex type you must define before the struct.');
-  });
-
-  it('should throw an error when an unknown type is encountered', () => {
-    // Given
-    const typeStr = 'UnknownType';
-
-    // When, Then
-    expect(() => {
-      parseType(typeStr, converters);
-    }).toThrowError('Unknown type: UnknownType, if is complex type you must define before the struct.');
-
+      expect(result.wrapper[0].variant).toBe('array');
+      expect(result.wrapper[0]).not.toHaveProperty('TypedArray');
+    });
   });
 });
