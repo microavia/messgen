@@ -1,7 +1,8 @@
-import { Buffer } from "../Buffer";
-import { IType, TypedArray, TypedArrayConstructor, TypedArrayTypeDefinition } from "../types";
-import { Converter } from "./Converter";
-import { GetType } from "./ConverterFactory";
+import { Buffer } from "../../Buffer";
+import { SIZE_TYPE } from "../../config";
+import { IType, TypedArrayTypeDefinition } from "../../types";
+import { Converter } from "../Converter";
+import { GetType } from "../ConverterFactory";
 
 const TYPED_ARRAY_MAP = new Map<IType, TypedArrayConstructor>([
     ["int8", Int8Array],
@@ -25,7 +26,7 @@ export class TypedArrayConverter extends Converter {
     constructor(protocolName: string, typeDef: TypedArrayTypeDefinition, getType: GetType) {
         super(typeDef.type);
         this.converter = getType(protocolName, typeDef.elementType);
-        this.sizeConverter = getType(protocolName, "uint32");
+        this.sizeConverter = getType(protocolName, SIZE_TYPE);
         this.arraySize = typeDef.arraySize;
 
         const arrayConstructor = TYPED_ARRAY_MAP.get(typeDef.elementType);
@@ -83,4 +84,11 @@ export class TypedArrayConverter extends Converter {
 
         return totalSize;
     }
+
+    default(): TypedArray {
+        return new this.TypedArrayConstructor(this.arraySize ?? 0);
+    }
 }
+
+export type TypedArrayConstructor = Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor | BigUint64ArrayConstructor | BigInt64ArrayConstructor | Float64ArrayConstructor
+export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigUint64Array | BigInt64Array | Float64Array

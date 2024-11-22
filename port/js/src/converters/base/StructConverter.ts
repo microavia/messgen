@@ -1,7 +1,7 @@
-import { Buffer } from "../Buffer";
-import { IName, IValue, StructTypeDefinition } from "../types";
-import { Converter } from "./Converter";
-import { GetType } from "./ConverterFactory";
+import { Buffer } from "../../Buffer";
+import { IName, IValue, StructTypeDefinition } from "../../types";
+import { Converter } from "../Converter";
+import { GetType } from "../ConverterFactory";
 
 export class StructConverter extends Converter {
   convertorsList: { converter: Converter, name: string }[] = [];

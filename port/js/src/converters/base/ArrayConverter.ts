@@ -1,7 +1,8 @@
-import { Buffer } from "../Buffer";
-import { ArrayTypeDefinition, IValue } from "../types";
-import { Converter } from "./Converter";
-import { GetType } from "./ConverterFactory";
+import { Buffer } from "../../Buffer";
+import { SIZE_TYPE } from "../../config";
+import { ArrayTypeDefinition, IValue } from "../../types";
+import { Converter } from "../Converter";
+import { GetType } from "../ConverterFactory";
 
 export class ArrayConverter extends Converter {
     private converter: Converter;
@@ -11,7 +12,7 @@ export class ArrayConverter extends Converter {
     constructor(protocolName: string, typeDef: ArrayTypeDefinition, getType: GetType) {
         super(typeDef.type + typeDef.elementType);
         this.converter = getType(protocolName, typeDef.elementType);
-        this.sizeConverter = getType(protocolName, "uint32");
+        this.sizeConverter = getType(protocolName, SIZE_TYPE);
         this.arraySize = typeDef.arraySize;
     }
 
@@ -50,5 +51,9 @@ export class ArrayConverter extends Converter {
         const size = this.arraySize === undefined ? this.sizeConverter.size(arraySize) : 0;
 
         return size + value.reduce((acc, item) => acc + this.converter.size(item), 0);
+    }
+
+    default(): Array<IValue> {
+        return [];
     }
 }

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { execSync } from "child_process";
 import { Codec } from "../src/Codec";
-import { ProtocolJSON, } from "../src/types";
 import { uploadShema } from './utils';
+import { ProtocolJSON } from '../src/protocol/types';
 
 
 describe('Codec', () => {

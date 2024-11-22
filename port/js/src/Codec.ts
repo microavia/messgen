@@ -1,13 +1,13 @@
-import { ProtocolJSON, ExtractPayload, GenericConfig, ProtocolId, MessageId, ProtocolName } from "./types";
-import { Buffer } from "./Buffer";
-import { Protocols } from "./converters/Protocols";
+import { ExtractPayload, ProtocolId, MessageId, ProtocolName } from "./types";
+import { Protocols } from "./protocol/Protocols";
+import { ProtocolJSON } from "./protocol/types";
 import { Converter } from "./converters/Converter";
 import { ConverterFactory } from "./converters/ConverterFactory";
+import { Buffer } from "./Buffer";
 
 export class Codec<Config extends GenericConfig = GenericConfig> {
-
-  private typesByName = new Map<ProtocolName, Map<string, Converter>>();
-  private typesById = new Map<ProtocolId, Map<MessageId, Converter>>();
+  private typesByName: TypeToNameMap = new Map();
+  private typesById: TypeToIdMap = new Map();
   private protocols: Protocols;
 
   constructor(schema: ProtocolJSON[]) {
@@ -48,6 +48,7 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
     if (!types) {
       throw new Error(`Protocol not found: ${name as string}`);
     }
+
     const converter = types.get(type as string);
     if (!converter) {
       throw new Error(`Converter not found for type: ${type as string}`);
@@ -68,6 +69,7 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
     if (!types) {
       throw new Error(`Protocol not found with ID: ${protocolId}`);
     }
+
     const converter = types.get(messageId);
     if (!converter) {
       throw new Error(`Converter not found for message ID: ${messageId}`);
@@ -76,3 +78,8 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
     return converter.deserialize(new Buffer(arrayBuffer)) as ExtractPayload<Config, N, T>;
   }
 }
+
+
+type GenericConfig = Record<string, Record<string, any>>;
+type TypeToNameMap = Map<ProtocolName, Map<string, Converter>>;
+type TypeToIdMap = Map<ProtocolId, Map<MessageId, Converter>>;

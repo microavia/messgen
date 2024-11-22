@@ -1,54 +1,3 @@
-import { Converter } from "./converters/Converter";
-
-
-export interface Field {
-  name: IName
-  type: IType
-  comment?: string;
-}
-
-export interface TypeClass {
-  type_class: "struct";
-  comment?: string;
-  fields: Field[] | null;
-}
-
-export interface EnumValue {
-  name: IName;
-  value: number;
-  comment?: string;
-}
-
-export interface EnumTypeClass {
-  type_class: "enum";
-  comment?: string;
-  base_type: INumberType;
-  values: EnumValue[];
-}
-
-export interface Types {
-  [key: string]: TypeClass | EnumTypeClass;
-}
-
-export interface ProtocolJSON {
-  proto_id: ProtocolId;
-  proto_name: ProtocolName;
-  types: Types;
-  messages: Record<string, unknown>;
-  types_map?: Record<MessageId, IName>;
-  version: string;
-}
-
-export type SchemaObj = TypeClass
-
-export type ConverterMap = Map<IType, Converter>
-
-export type Protocol = {
-  typesMap: Map<MessageId, Converter>
-  typesNameToId: Record<IName, MessageId>
-  converters: ConverterMap
-}
-
 
 /*
     ____,-------------------------------------,____
@@ -101,7 +50,19 @@ type SubType = ArrayDynamicSize | ArrayFixSize | MapType | '';
 
 export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 
-export type GenericConfig = Record<string, any>
+
+export interface Field {
+  name: IName
+  type: IType
+  comment?: string;
+}
+
+export interface EnumValue {
+  name: IName;
+  value: number;
+  comment?: string;
+}
+
 
 export type ExtractPayload<
   ProtocolSchema extends Record<string, Record<string, any>>,
@@ -109,8 +70,6 @@ export type ExtractPayload<
   MessageType extends keyof ProtocolSchema[ProtocolName]
 > = ProtocolSchema[ProtocolName][MessageType];
 
-export type TypedArrayConstructor = Int8ArrayConstructor | Uint8ArrayConstructor | Int16ArrayConstructor | Uint16ArrayConstructor | Int32ArrayConstructor | Uint32ArrayConstructor | Float32ArrayConstructor | Float64ArrayConstructor | BigUint64ArrayConstructor | BigInt64ArrayConstructor | Float64ArrayConstructor
-export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigUint64Array | BigInt64Array | Float64Array
 
 export type ScalarTypeDefinition = {
   type: IBasicType;
@@ -159,3 +118,4 @@ export type TypeDefinition =
   MapTypeDefinition |
   StructTypeDefinition |
   EnumTypeDefinition
+

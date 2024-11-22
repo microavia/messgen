@@ -1,12 +1,12 @@
 import { ProtocolName } from "../types";
 import { Converter } from "./Converter";
-import { EnumConverter } from "./EnumConverter";
-import { Protocols } from "./Protocols";
-import { ScalarConverter } from "./ScalarConverter";
-import { StructConverter } from "./StructConverter";
-import { ArrayConverter } from "./ArrayConverter";
-import { TypedArrayConverter } from "./TypedArrayConverter";
-import { MapConverter } from "./MapConverter";
+import { EnumConverter } from "./base/EnumConverter";
+import { Protocols } from "../protocol/Protocols";
+import { ScalarConverter } from "./base/ScalarConverter";
+import { StructConverter } from "./base/StructConverter";
+import { ArrayConverter } from "./base/ArrayConverter";
+import { TypedArrayConverter } from "./base/TypedArrayConverter";
+import { MapConverter } from "./base/MapConverter";
 import { ASSERT_EXHAUSTIVE } from "../utils/ASSERT_EXHAUSTIVE";
 
 export class ConverterFactory {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { ProtocolJSON, } from "../src/types";
-import { Protocols } from "../src/converters/Protocols";
+import { Protocols } from "../src/protocol/Protocols";
+import { ProtocolJSON } from '../src/protocol/types';
 
 
 describe('Protocols', () => {

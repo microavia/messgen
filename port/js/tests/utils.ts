@@ -3,7 +3,7 @@ import fs from "fs";
 import { execSync } from "child_process";
 import { ProtocolJSON } from "../src/types";
 import { ConverterFactory } from "../src/converters/ConverterFactory";
-import { Protocols } from "../src/converters/Protocols";
+import { Protocols } from "../src/protocol/Protocols";
 
 export function uploadShema(filePath: string): ProtocolJSON {
     const protocolPath = path.resolve(__dirname, filePath);

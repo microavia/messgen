@@ -1,11 +1,6 @@
-import { EnumTypeClass, EnumValue, Field, IBasicType, IName, INumberType, IType, MessageId, ProtocolId, ProtocolJSON, ProtocolName, TypeClass, TypeDefinition } from "../types";
+import { IBasicType, IName, IType, ProtocolName, TypeDefinition } from "../types";
+import { Protocol, ProtocolJSON, StructureType } from "./types";
 
-export interface Protocol {
-    id: ProtocolId;
-    name: ProtocolName;
-    types: Map<string, TypeDefinition>;
-    messageIds: Map<string, MessageId>;
-}
 
 const SCALAR_TYPES_INFO = new Map<string, boolean>([
     ["int8", true],
@@ -26,7 +21,6 @@ const SCALAR_TYPES_INFO = new Map<string, boolean>([
 
 export class Protocols {
     private static SEPARATOR = "/";
-
     private protocols = new Map<ProtocolName, Protocol>();
 
     constructor(jsons: ProtocolJSON[]) {
@@ -49,7 +43,7 @@ export class Protocols {
         return this.protocols;
     }
 
-    private resiolveHeadtypes(name: IName, definition: TypeClass | EnumTypeClass): TypeDefinition {
+    private resiolveHeadtypes(name: IName, definition: StructureType): TypeDefinition {
         if (definition.type_class === "struct") {
             return {
                 typeClass: 'struct',

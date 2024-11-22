@@ -1,9 +1,8 @@
-import { i } from "vitest/dist/reporters-LqC_WI4d";
-import { Buffer } from "../Buffer";
-import { IValue, TypedArrayConstructor, IBasicType } from "../types";
-import { Converter } from "./Converter";
+import { Buffer } from "../../Buffer";
+import { IValue, IBasicType } from "../../types";
+import { Converter } from "./../Converter";
+import { IS_LITTLE_ENDIAN } from "../../config";
 
-const IS_LITTLE_ENDIAN = true;
 
 export const SCALAR_TYPES = new Map<IBasicType, ScalarTypeConfig>([
     ["int8", {

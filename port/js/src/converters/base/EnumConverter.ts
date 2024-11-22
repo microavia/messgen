@@ -1,8 +1,7 @@
-import { Converter } from "./Converter";
-import { EnumTypeClass, IValue, ConverterMap, EnumTypeDefinition } from "../types";
-import { Buffer } from "../Buffer";
-import { GetType } from "./ConverterFactory";
-import { get } from "http";
+import { Converter } from "../Converter";
+import { IValue, EnumTypeDefinition } from "../../types";
+import { Buffer } from "../../Buffer";
+import { GetType } from "./../ConverterFactory";
 
 
 export class EnumConverter extends Converter {

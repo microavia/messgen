@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Field, StructTypeDefinition } from "../src/types";
-import { StructConverter } from "../src/converters/StructConverter";
+import { StructConverter } from "../src/converters/base/StructConverter";
 import { Buffer } from "../src/Buffer";
 import { initGetType } from './utils';
 

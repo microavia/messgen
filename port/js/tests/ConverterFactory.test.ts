@@ -3,7 +3,7 @@ import { ConverterFactory } from "../src/converters/ConverterFactory";
 import { IType } from "../src/types";
 import { Converter } from "../src/converters/Converter";
 import { Buffer } from "../src/Buffer";
-import { Protocols } from '../src/converters/Protocols';
+import { Protocols } from '../src/protocol/Protocols';
 
 describe('ConverterFactory', () => {
   it('should serialize scalar correctly', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EnumConverter } from "../src/converters/EnumConverter";
+import { EnumConverter } from "../src/converters/base/EnumConverter";
 import { EnumTypeDefinition, EnumValue, IBasicType } from "../src/types";
 import { Buffer } from "../src/Buffer";
 import { initGetType } from './utils';

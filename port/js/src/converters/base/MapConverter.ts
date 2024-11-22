@@ -1,7 +1,8 @@
-import { IValue, MapTypeDefinition, } from "../types";
-import { Converter } from "./Converter";
-import { Buffer } from "../Buffer";
-import { GetType } from "./ConverterFactory";
+import { IValue, MapTypeDefinition, } from "../../types";
+import { Converter } from "../Converter";
+import { Buffer } from "../../Buffer";
+import { GetType } from "../ConverterFactory";
+import { SIZE_TYPE } from "../../config";
 
 export class MapConverter extends Converter {
     protected keyConverter: Converter;
@@ -12,7 +13,7 @@ export class MapConverter extends Converter {
         super(typeDef.typeClass);
         this.keyConverter = getType(protocolName, typeDef.keyType);
         this.valueConverter = getType(protocolName, typeDef.valueType);
-        this.dynamicSizeConverter = getType(protocolName, "uint32");
+        this.dynamicSizeConverter = getType(protocolName, SIZE_TYPE);
     }
 
     serialize(value: Map<IValue, IValue> | Record<string, IValue>, buffer: Buffer): void {
@@ -48,5 +49,9 @@ export class MapConverter extends Converter {
         }
 
         return totalSize;
+    }
+
+    default(): Map<IValue, IValue> {
+        return new Map();
     }
 }

@@ -1,14 +1,15 @@
 import { describe, it, expect, beforeAll, } from 'vitest';
 import { execSync } from 'child_process';
-import { ProtocolJSON } from "../src/types";
 import { Codec } from "../src/Codec";
 import { uploadShema, uploadBinary } from "./utils";
+import { ProtocolJSON } from '../src/protocol/types';
 
-let protocolData: ProtocolJSON;
-let codec: Codec;
-let bigint = BigInt('0x1234567890abcdef');
 
 describe('integration', () => {
+  let protocolData: ProtocolJSON;
+  let codec: Codec;
+  const bigint = BigInt('0x1234567890abcdef');
+
   beforeAll(() => {
     execSync(' npm run generate-bit')
     execSync(' npm run gen-json')
