@@ -93,11 +93,8 @@ export const SCALAR_TYPES = new Map<IBasicType, ScalarTypeConfig>([
         write: (v, s, a: string) => {
             const size = a.length;
             v.setUint32(s, size, IS_LITTLE_ENDIAN);
-
             const uint8View = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
-            const encode = encodeUTF8(a)
-
-            uint8View.set(encode, s + 4);
+            uint8View.set(encodeUTF8(a), s + 4);
 
             return size + 4;
         },
@@ -106,7 +103,7 @@ export const SCALAR_TYPES = new Map<IBasicType, ScalarTypeConfig>([
     ["bytes", {
         size: (value: IValue) => {
             const length = (value as Uint8Array).length;
-            return 4 + length; // 4 bytes for length prefix
+            return 4 + length;
         },
         read: (v, o) => {
             const length = v.getUint32(o, IS_LITTLE_ENDIAN);
@@ -138,14 +135,15 @@ export class ScalarConverter extends Converter {
     }
 
     serialize(value: IValue, buffer: Buffer): void {
-        const dataView = buffer.dataView;
-        const offset = buffer.offset;
+        const config = this.config;
 
-        const size = typeof this.config.size === 'number' ? this.config.size : this.config.size(value);
+        this.config.write(buffer.dataView, buffer.offset, value);
 
-        this.config.write(dataView, offset, value);
-
-        buffer.offset += size;
+        if (typeof config.size === 'number') {
+            buffer.offset += config.size;
+        } else {
+            buffer.offset += config.size(value);
+        }
     }
 
     deserialize(buffer: Buffer): IValue {
@@ -163,9 +161,8 @@ export class ScalarConverter extends Converter {
     size(value: IValue): number {
         if (typeof this.config.size === 'number') {
             return this.config.size;
-        } else {
-            return this.config.size(value);
         }
+        return this.config.size(value);
     }
 
     default(): IValue {

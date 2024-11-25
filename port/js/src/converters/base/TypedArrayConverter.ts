@@ -57,32 +57,24 @@ export class TypedArrayConverter extends Converter {
     deserialize(buffer: Buffer): TypedArray {
         const length = this.arraySize ?? this.sizeConverter.deserialize(buffer);
         const TypedArray = this.TypedArrayConstructor;
-        const result = new TypedArray(length);
 
-        for (let i = 0; i < length; i++) {
-            result[i] = this.converter.deserialize(buffer);
-        }
+        const typedArray = new TypedArray(buffer.dataView.buffer.slice(
+            buffer.offset,
+            buffer.offset + length * TypedArray.BYTES_PER_ELEMENT
+        ));
 
-        return result;
+        buffer.offset += typedArray.byteLength
+        return typedArray
     }
+
     size(value: TypedArray): number {
         const length = value.length;
-
         if (this.arraySize !== undefined && length !== this.arraySize) {
             throw new Error(`Array length mismatch: ${length} !== ${this.arraySize}`);
         }
 
-        let totalSize = 0;
-
-        if (this.arraySize === undefined) {
-            totalSize += this.sizeConverter.size(length);
-        }
-
-        for (let i = 0; i < length; i++) {
-            totalSize += this.converter.size(value[i]);
-        }
-
-        return totalSize;
+        const size = this.arraySize === undefined ? this.sizeConverter.size(length) : 0;
+        return size + this.converter.size(value) * length;
     }
 
     default(): TypedArray {

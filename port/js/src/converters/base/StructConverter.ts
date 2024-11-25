@@ -5,18 +5,20 @@ import { GetType } from "../ConverterFactory";
 
 export class StructConverter extends Converter {
   convertorsList: { converter: Converter, name: string }[] = [];
-  reservedWords: string[] = Object.getOwnPropertyNames(Object.prototype);
+  private static RESERVED_WORDS: Set<string> = new Set(Object.getOwnPropertyNames(Object.prototype));
   parentObject: Record<IName, IValue>
 
   constructor(protocolName: string, typeDef: StructTypeDefinition, getType: GetType) {
     super(typeDef.typeName);
+    const fieldsSet = new Set<string>();
 
     typeDef.fields?.forEach((field, index) => {
-      if (typeDef.fields?.slice(index + 1).some((f) => f.name === field.name)) {
+      if (fieldsSet.has(field.name)) {
         throw new Error(`Field ${field.name} is duplicated in ${this.name}`);
       }
+      fieldsSet.add(field.name);
 
-      if (this.reservedWords.includes(field.name)) {
+      if (StructConverter.RESERVED_WORDS.has(field.name)) {
         throw new Error(`Field ${field.name} is a reserved word in JavaScript`);
       }
 

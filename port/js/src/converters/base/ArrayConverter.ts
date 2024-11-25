@@ -33,7 +33,7 @@ export class ArrayConverter extends Converter {
 
     deserialize(buffer: Buffer): Array<IValue> {
         const length = this.arraySize ?? this.sizeConverter.deserialize(buffer);
-        const result = new Array(length);
+        const result = [];
 
         for (let i = 0; i < length; i++) {
             result[i] = this.converter.deserialize(buffer);
