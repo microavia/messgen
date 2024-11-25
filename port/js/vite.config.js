@@ -20,7 +20,9 @@ export default defineConfig({
     }
   },
   test: {
-    globals: true,
+    coverage: {
+      provider: 'v8'
+    },
   },
   benchmark: {
     globals: true,

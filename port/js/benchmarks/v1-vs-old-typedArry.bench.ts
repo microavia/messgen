@@ -130,29 +130,30 @@ const getType = initGetType();
 const structConverter = new StructConverter('testStruct', schema, getType);
 const size = structConverter.size(srcData);
 const buffer = new Buffer(new ArrayBuffer(size));
-const data = srcDataFn();
 
 describe('calculate size with typedArray', () => {
   bench('old', () => {
     // @ts-ignore
-    Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, data));
+    Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcDataFn()));
   }, { time: 1000 })
 
   bench('v1', () => {
-    structConverter.size(data);
+    structConverter.size(srcDataFn());
   })
 })
 describe('serialize Obj with typedArray', () => {
   bench('Old', () => {
-    Buffer.serializeObj(srcStruct.schema.fields, data);
+    Buffer.serializeObj(srcStruct.schema.fields, srcDataFn());
   }, { time: 1000 })
   bench('v1', () => {
     buffer.offset = 0;
-    structConverter.serialize(data, buffer);
+    structConverter.serialize(srcDataFn(), buffer);
   })
 })
 
 describe('deserialize object with typedArray', () => {
+
+
   bench('Old', () => {
     new Buffer(b).deserialize(srcStruct);
   }, { time: 1000 })

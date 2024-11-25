@@ -1,10 +1,7 @@
-import { performance } from 'perf_hooks';
+import { bench, describe } from 'vitest';
 import { Codec } from "../src/Codec";
 import { uploadShema, uploadBinary } from "../tests/utils";
 import { MessageId } from '../src/types';
-import { bench, describe } from 'vitest';
-
-
 
 const serializedMsgs = [
     [0, uploadBinary('../../../tests/serialized_data/bin/simple_struct.bin')],
@@ -18,26 +15,17 @@ const serializedMsgs = [
 
 
 const protoId = 1;
-const iterations = 10000;
-const totalMessages = iterations * serializedMsgs.length;
-
 
 describe('Codec deserialization benchmark', () => {
     const protocolData = uploadShema('./messgen/test_proto/protocol.json');
     const codec = new Codec([protocolData]);
+
     bench('deserialize 10,000 iterations', () => {
-        const t0 = performance.now();
-
-        for (let i = 0; i < iterations; i++) {
-            for (const [msgId, msgData] of serializedMsgs) {
-                codec.deserialize(protoId, msgId, new Uint8Array(msgData).buffer);
-            }
+        for (const [msgId, msgData] of serializedMsgs) {
+            codec.deserialize(protoId, msgId, new Uint8Array(msgData).buffer);
         }
-
-        const t1 = performance.now();
-        const duration = (t1 - t0) / 1000;
-        console.log(`Time taken: ${duration.toFixed(2)} seconds`);
-        console.log(`Messages per second: ${(totalMessages / duration).toFixed(0)} msg/s`);
+    }, {
+        iterations: 1000
     });
 });
 
