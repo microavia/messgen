@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { Protocol } from "../src/protocol/Protocol";
-import { ProtocolJSON } from '../src/protocol/Protocol.types';
+import { Protocols } from "../src/protocol/Protocols";
+import { ProtocolJSON } from '../src/protocol/Protocols.types';
 
 
-describe('Protocol', () => {
+describe('Protocols', () => {
     let testProtoData: ProtocolJSON;
-    let protocols: Protocol
+    let protocols: Protocols
 
     beforeAll(() => {
         testProtoData = {
@@ -33,13 +33,13 @@ describe('Protocol', () => {
                 "1": "simple_enum"
             }
         } as unknown as ProtocolJSON;
-        protocols = new Protocol([testProtoData]);
+        protocols = new Protocols([testProtoData]);
     })
 
-    describe('constructor', () => {
+    describe('#constructor', () => {
         it('should correctly initialize protocols from JSON', () => {
             const protoMap = protocols.getProtocols();
-            const proto = protoMap.get("messgen/test_proto");
+            const [, proto] = protoMap.find(([name]) => name === 'messgen/test_proto') || [];
 
             expect(proto).toBeDefined();
             expect(proto?.id).toBe(1);
@@ -49,7 +49,7 @@ describe('Protocol', () => {
         });
     });
 
-    describe('getType', () => {
+    describe('#getType', () => {
         it('should resolve scalar types', () => {
             const type = protocols.getType("messgen/test_proto", "uint64");
             expect(type).toEqual({

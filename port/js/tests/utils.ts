@@ -2,8 +2,8 @@ import * as path from 'path';
 import { readFileSync } from "fs";
 import { execSync } from "child_process";
 import { ConverterFactory } from "../src/converters/ConverterFactory";
-import { ProtocolJSON } from "../src/protocol/Protocol.types";
-import { Protocol } from "../src/protocol/Protocol";
+import { ProtocolJSON } from "../src/protocol/Protocols.types";
+import { Protocols } from "../src/protocol/Protocols";
 
 export function uploadShema(filePath: string): ProtocolJSON {
     const protocolPath = path.resolve(__dirname, filePath);
@@ -21,7 +21,7 @@ export function generateTestData() {
 }
 
 export function initGetType() {
-    const protocol = new Protocol([]);
+    const protocol = new Protocols([]);
     const factory = new ConverterFactory(protocol);
     return factory.toConverter.bind(factory);
 }

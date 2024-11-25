@@ -1,5 +1,5 @@
 import { IBasicType, IName, IType, ProtocolName, TypeDefinition } from "../types";
-import { ProtocolConfig, ProtocolJSON, StructureType } from "./Protocol.types";
+import { ProtocolConfig, ProtocolJSON, StructureType } from "./Protocols.types";
 
 
 const SCALAR_TYPES_INFO = new Map<string, boolean>([
@@ -19,7 +19,7 @@ const SCALAR_TYPES_INFO = new Map<string, boolean>([
     ["bool", false]
 ]);
 
-export class Protocol {
+export class Protocols {
     private static SEPARATOR = "/";
     private protocols = new Map<ProtocolName, ProtocolConfig>();
 
@@ -39,8 +39,8 @@ export class Protocol {
         }
     }
 
-    getProtocols() {
-        return this.protocols;
+    getProtocols(): [ProtocolName, ProtocolConfig][] {
+        return Array.from(this.protocols.entries());
     }
 
     private resiolveHeadtypes(name: IName, definition: StructureType): TypeDefinition {
@@ -119,10 +119,10 @@ export class Protocol {
     }
 
     private resolveType(currProtoName: string, typeName: string): [ProtocolConfig, TypeDefinition | undefined] {
-        if (typeName.includes(Protocol.SEPARATOR)) {
-            const parts = typeName.split(Protocol.SEPARATOR);
+        if (typeName.includes(Protocols.SEPARATOR)) {
+            const parts = typeName.split(Protocols.SEPARATOR);
             const localType = parts.pop()!;
-            const protoName = parts.join(Protocol.SEPARATOR);
+            const protoName = parts.join(Protocols.SEPARATOR);
             const proto = this.protocols.get(protoName);
 
             if (!proto) {
