@@ -7,7 +7,6 @@ import { StructConverter } from "./base/StructConverter";
 import { ArrayConverter } from "./base/ArrayConverter";
 import { TypedArrayConverter } from "./base/TypedArrayConverter";
 import { MapConverter } from "./base/MapConverter";
-import { ASSERT_EXHAUSTIVE } from "../utils/ASSERT_EXHAUSTIVE";
 
 export class ConverterFactory {
     constructor(private protocols: Protocols) { }

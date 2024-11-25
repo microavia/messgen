@@ -8,12 +8,13 @@ import { ProtocolJSON } from '../src/protocol/Protocols.types';
 describe('Codec', () => {
   let testProtoData: ProtocolJSON;
   let anotherProtoData: ProtocolJSON;
+  let codec: Codec;
 
   beforeAll(() => {
     execSync('npm run gen-json')
     testProtoData = uploadShema('./messgen/test_proto/protocol.json')
     anotherProtoData = uploadShema('./another_proto/protocol.json')
-
+    codec = new Codec([testProtoData, anotherProtoData]);
   })
   describe('init example', () => {
     it('should initialize the messages', () => {
@@ -24,9 +25,7 @@ describe('Codec', () => {
     })
 
     it('should serialize and deserialize a message', () => {
-      // Given
-      const codec = new Codec([testProtoData, anotherProtoData]);
-      let bigint = BigInt('0x1234567890abcdef');
+      const bigint = BigInt('0x1234567890abcdef');
       const rawData = {
         "f0": bigint,
         "f1": bigint,
@@ -41,35 +40,27 @@ describe('Codec', () => {
         "f9": true,
       }
 
-      // When
       const message = codec.serialize('messgen/test_proto', 'simple_struct', rawData);
-      const result = codec.deserialize(1, 0, message.buffer);
 
-      // Then
-      expect(result).toEqual({
+      expect(codec.deserialize(1, 0, message.buffer)).toEqual({
         ...rawData,
         f5: expect.closeTo(rawData.f5, 5),
       });
     })
 
     it('should surialize and deserialize a message with cors', () => {
-      // Given
-      const messgen = new Codec([testProtoData, anotherProtoData]);
       const rawData = {
         f0: BigInt('0x1234567890abcdef'),
         cross0: 1,
       }
 
-      // When
-      const message = messgen.serialize(
+      const message = codec.serialize(
         'another_proto',
         'cross_proto',
         rawData
       );
-      const result = messgen.deserialize(2, 0, message.buffer);
 
-      // Then
-      expect(result).toEqual(rawData);
+      expect(codec.deserialize(2, 0, message.buffer)).toEqual(rawData);
     })
   })
 });

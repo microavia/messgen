@@ -125,6 +125,4 @@ describe('Protocols', () => {
             expect(type.typeClass).toBe("struct");
         });
     });
-
-
 });
