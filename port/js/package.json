@@ -15,6 +15,7 @@
     "gen-md": "npm run gen -- --lang md",
     "generate-bit": "cd ../.. && python3 tests/python/generate_serialized_data.py",
     "benchmark": "vitest bench",
+    "perf": "node --inspect=9229 --require ts-node/register ./src/index.ts",
     "coverage": "vitest run --coverage"
   },
   "author": "",

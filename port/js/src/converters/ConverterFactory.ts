@@ -30,7 +30,6 @@ export class ConverterFactory {
             case "map":
                 return new MapConverter(protocolName, typeDef, getType,);
             default:
-                ASSERT_EXHAUSTIVE(typeDef)
                 throw new Error(`Unsupported type class ${typeName}`);
         }
     }
