@@ -48,7 +48,7 @@ describe('integration', () => {
     expect((new Uint8Array(buffer.dataView.buffer))).toEqual((new Uint8Array(rawDataBit)))
   })
 
-  it('shut be parse var_size_struct.bin', () => {
+  it('should parse var_size_struct.bin', () => {
     const rawData = {
       "f0": bigint,
       "f1_vec": new BigInt64Array([-bigint, BigInt(5), BigInt(1)]),

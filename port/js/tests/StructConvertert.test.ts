@@ -131,14 +131,12 @@ describe('StructConverter', () => {
   });
 
   it('should handles input object with reserved prototype method names as fields', () => {
-    // When
     const serializeFn = () => createStructConverter([
       { name: "toString", type: "string" },
       { name: "valueOf", type: "int32" },
       { name: "hasOwnProperty", type: "bool" }
     ]);
 
-    // Then
     expect(serializeFn).toThrow();
   });
 

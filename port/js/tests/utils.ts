@@ -1,5 +1,5 @@
-import path from "path";
-import fs from "fs";
+import * as path from 'path';
+import { readFileSync } from "fs";
 import { execSync } from "child_process";
 import { ConverterFactory } from "../src/converters/ConverterFactory";
 import { ProtocolJSON } from "../src/protocol/Protocol.types";
@@ -7,13 +7,13 @@ import { Protocol } from "../src/protocol/Protocol";
 
 export function uploadShema(filePath: string): ProtocolJSON {
     const protocolPath = path.resolve(__dirname, filePath);
-    const rawData = fs.readFileSync(protocolPath, 'utf8');
+    const rawData = readFileSync(protocolPath, 'utf8');
     return JSON.parse(rawData) as ProtocolJSON;
 }
 
 export function uploadBinary(filePath: string): Buffer {
     const binaryPath = path.resolve(__dirname, filePath);
-    return fs.readFileSync(binaryPath);
+    return readFileSync(binaryPath);
 }
 
 export function generateTestData() {

@@ -2,6 +2,7 @@ import { Buffer } from "../../Buffer";
 import { IValue, IBasicType } from "../../types";
 import { Converter } from "./../Converter";
 import { IS_LITTLE_ENDIAN } from "../../config";
+import { decodeUTF8, encodeUTF8 } from "../../utils/utf8";
 
 interface ScalarTypeConfig {
     size: number | ((value: IValue) => number);
@@ -85,24 +86,22 @@ export const SCALAR_TYPES = new Map<IBasicType, ScalarTypeConfig>([
         default: ' ',
     }],
     ["string", {
-        size: (value: IValue) => {
-            const length = (value as string).length;
-            return 4 + length; // 4 bytes for length prefix
+        size: (value: string) => value.length + 4,
+        read: (v, s) => {
+            return decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN)));
         },
-        read: (v, o) => {
-            const length = v.getUint32(o, IS_LITTLE_ENDIAN);
-            o += 4;
-            const bytes = new Uint8Array(v.buffer, v.byteOffset + o, length);
-            return new TextDecoder().decode(bytes);
+        write: (v, s, a: string) => {
+            const size = a.length;
+            v.setUint32(s, size, IS_LITTLE_ENDIAN);
+
+            const uint8View = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+            const encode = encodeUTF8(a)
+
+            uint8View.set(encode, s + 4);
+
+            return size + 4;
         },
-        write: (v, o, a) => {
-            const str = a as string;
-            const encoded = new TextEncoder().encode(str);
-            v.setUint32(o, encoded.length, IS_LITTLE_ENDIAN);
-            o += 4;
-            new Uint8Array(v.buffer, v.byteOffset + o, encoded.length).set(encoded);
-        },
-        default: '',
+        default: () => ''
     }],
     ["bytes", {
         size: (value: IValue) => {
