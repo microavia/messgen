@@ -1,29 +1,28 @@
-import { Converter } from "./Converter";
-import { Buffer } from "../Buffer";
-import { IName, TypeClass, IType, IValue } from "../types";
+import { Buffer } from "../../Buffer";
+import { IName, IValue, StructTypeDefinition } from "../../types";
+import { Converter } from "../Converter";
+import { GetType } from "../ConverterFactory";
 
 export class StructConverter extends Converter {
   convertorsList: { converter: Converter, name: string }[] = [];
-  reservedWords: string[] = Object.getOwnPropertyNames(Object.prototype);
+  private static RESERVED_WORDS: Set<string> = new Set(Object.getOwnPropertyNames(Object.prototype));
   parentObject: Record<IName, IValue>
 
-  constructor(
-    name: IName,
-    schema: TypeClass,
-    private converters: Map<IType, Converter>
-  ) {
-    super(name);
+  constructor(protocolName: string, typeDef: StructTypeDefinition, getType: GetType) {
+    super(typeDef.typeName);
+    const fieldsSet = new Set<string>();
 
-    schema.fields?.forEach((field, index) => {
-      if (schema.fields?.slice(index + 1).some((f) => f.name === field.name)) {
+    typeDef.fields?.forEach((field, index) => {
+      if (fieldsSet.has(field.name)) {
         throw new Error(`Field ${field.name} is duplicated in ${this.name}`);
       }
+      fieldsSet.add(field.name);
 
-      if (this.reservedWords.includes(field.name)) {
+      if (StructConverter.RESERVED_WORDS.has(field.name)) {
         throw new Error(`Field ${field.name} is a reserved word in JavaScript`);
       }
 
-      let converter = this.converters.get(field.type);
+      const converter = getType(protocolName, field.type);
       if (!converter) {
         throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
       }
@@ -39,27 +38,12 @@ export class StructConverter extends Converter {
 
   serialize(value: IValue, buffer: Buffer) {
     this.convertorsList.forEach(({ converter, name }) => {
-      let data = value[name];
-      if (
-        data === null || data === undefined
-      ) {
+      const data = value[name];
+      if (data === null || data === undefined) {
         throw new Error(`Field ${name} is not found in ${this.name}`);
       }
       converter.serialize(data, buffer);
     })
-  }
-
-  size(value: IValue): number {
-    return this.convertorsList.reduce((acc, { converter, name }) => {
-      let data = value[name];
-      if (
-        data === null || data === undefined
-      ) {
-        throw new Error(`Field ${name} is not found in ${this.name}`);
-      }
-
-      return acc + converter.size(data);
-    }, 0)
   }
 
   deserialize(buffer: Buffer): IValue {
@@ -67,7 +51,17 @@ export class StructConverter extends Converter {
       acc[name] = converter.deserialize(buffer);
       return acc;
     }, {} as Record<IName, IValue>)
+  }
 
+  size(value: IValue): number {
+    return this.convertorsList.reduce((acc, { converter, name }) => {
+      const data = value[name];
+      if (data === null || data === undefined) {
+        throw new Error(`Field ${name} is not found in ${this.name}`);
+      }
+
+      return acc + converter.size(data);
+    }, 0)
   }
 
   default(): IValue {

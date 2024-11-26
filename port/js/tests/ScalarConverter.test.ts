@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
-import { BasicConverter, basicTypes , IS_LITTLE_ENDIAN} from "../src/converters/BasicConverter";
+import { describe, it, expect } from 'vitest';
 import { Buffer } from "../src/Buffer";
+import { ScalarConverter } from '../src/converters/base/ScalarConverter';
+import { IBasicType } from '../src/types';
+import { IS_LITTLE_ENDIAN } from '../src/config';
 
-describe('BasicConverter', () => {
-
+describe('ScalarConverter', () => {
   describe('::primitive', () => {
     it('should serialize int8', () => {
       const converter = getConverter('int8');
@@ -264,8 +265,8 @@ describe('BasicConverter', () => {
 
       converter.serialize(value, buffer);
 
-      expect(buffer.dataView.getFloat32(0, IS_LITTLE_ENDIAN)).toBeCloseTo(value, 5); 
-     });
+      expect(buffer.dataView.getFloat32(0, IS_LITTLE_ENDIAN)).toBeCloseTo(value, 5);
+    });
 
     it('should deserialize float32', () => {
       const value = 31231.14;
@@ -319,7 +320,7 @@ describe('BasicConverter', () => {
 
       expect(result).toBe(value);
     });
-    
+
     it('should serialize bool', () => {
       const converter = getConverter('bool');
       const buffer = getBuffer(1);
@@ -369,11 +370,11 @@ describe('BasicConverter', () => {
       const buffer = getBuffer(converter.size(value));
       buffer.dataView.setUint32(0, value.length, IS_LITTLE_ENDIAN);
       for (let i = 0; i < value.length; i++) {
-          buffer.dataView.setUint8(4 + i, value[i]);
+        buffer.dataView.setUint8(4 + i, value[i]);
       }
-  
+
       const result = converter.deserialize(buffer);
-  
+
       expect(result).toEqual(value);
     });
   });
@@ -382,162 +383,162 @@ describe('BasicConverter', () => {
     it('should calculate size of int8', () => {
       const converter = getConverter('int8');
       const value = 3;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(1);
     });
-  
+
     it('should calculate size of negative int8', () => {
       const converter = getConverter('int8');
       const value = -3;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(1);
     });
-  
+
     it('should calculate size of int16', () => {
       const converter = getConverter('int16');
       const value = 32233;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(2);
     });
-  
+
     it('should calculate size of negative int16', () => {
       const converter = getConverter('int16');
       const value = 32233;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(2);
     });
-  
+
     it('should calculate size of int32', () => {
       const converter = getConverter('int32');
       const value = 322332;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(4);
     });
-  
+
     it('should calculate size of negative int32', () => {
       const converter = getConverter('int32');
       const value = -322332;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(4);
     });
-  
+
     it('should calculate size of int64', () => {
       const converter = getConverter('int64');
       const value = 322332n;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(8);
     });
-  
+
     it('should calculate size of negative int64', () => {
       const converter = getConverter('int64');
       const value = -322332n;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(8);
     });
-    
+
     it('should calculate size of uint8', () => {
       const converter = getConverter('uint8');
       const value = 3;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(1);
     });
 
     it('should calculate size of uint16', () => {
       const converter = getConverter('uint16');
       const value = 32233;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(2);
     });
 
     it('should calculate size of uint32', () => {
       const converter = getConverter('uint32');
       const value = 322332;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(4);
     });
 
     it('should calculate size of uint64', () => {
       const converter = getConverter('uint64');
       const value = 322332n;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(8);
     });
 
     it('should calculate size of float32', () => {
       const converter = getConverter('float32');
       const value = 3233.14;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(4);
     });
 
     it('should calculate size of float64', () => {
       const converter = getConverter('float64');
       const value = 3233.14;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(8);
     });
 
     it('should calculate size of char', () => {
       const converter = getConverter('char');
       const value = 'a';
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(1);
     });
 
     it('should calculate size of bool', () => {
       const converter = getConverter('bool');
       const value = true;
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(1);
     });
 
     it('should calculate size of string', () => {
       const converter = getConverter('string');
       const value = 'test';
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(8);
     });
 
     it('should calculate size of bytes', () => {
       const converter = getConverter('bytes');
       const value = new Uint8Array([1, 2, 3, 4]);
-  
+
       const result = converter.size(value);
-  
+
       expect(result).toBe(8);
     });
   })
@@ -559,8 +560,8 @@ describe('BasicConverter', () => {
     expect(deserializedValue2).toBe(value2);
   });
 
-  function getConverter(name: string) {
-    return new BasicConverter(basicTypes.find(type => type.name === name)!);
+  function getConverter(name: IBasicType) {
+    return new ScalarConverter(name);
   }
 
   function getBuffer(size: number) {

@@ -2,8 +2,7 @@
   "name": "messgenjs",
   "version": "1.0.0",
   "description": "",
-  "main": "src/Messgen.ts",
-  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
     "build": "vite build",
     "test": "vitest",
@@ -15,18 +14,22 @@
     "gen-cpp": "npm run gen -- --lang cpp",
     "gen-md": "npm run gen -- --lang md",
     "generate-bit": "cd ../.. && python3 tests/python/generate_serialized_data.py",
-    "benchmark": "vitest bench"
+    "benchmark": "vitest bench",
+    "perf": "node --inspect=9229 --require ts-node/register ./src/index.ts",
+    "coverage": "vitest run --coverage"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
     "@types/node": "^20.12.7",
-    "@vitest/ui": "^1.5.0",
+    "@vitest/coverage-v8": "2.1.5",
     "prettier": "3.2.5",
     "tinybench": "^2.7.0",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.8",
-    "vitest": "^1.5.0"
+    "ts-node": "10.9.2",
+    "tslib": "2.8.1",
+    "typescript": "5.7.2",
+    "vite": "5.4.11",
+    "vitest": "2.1.5"
   }
 }

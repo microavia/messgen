@@ -2,3 +2,9 @@ proto_id: 1
 types_map:
   0: "simple_struct"
   1: "complex_struct"
+  2: "var_size_struct"
+  3: "struct_with_enum"
+  4: "empty_struct"
+  5: "complex_struct_with_empty"
+  6: "complex_struct_nostl"
+  7: "flat_struct"

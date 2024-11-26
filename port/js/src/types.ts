@@ -1,54 +1,3 @@
-import { Converter } from "./converters/Converter";
-
-
-export interface Field {
-  name: IName
-  type: IType
-  comment?: string;
-}
-
-export interface TypeClass {
-  type_class: "struct";
-  comment?: string;
-  fields: Field[] | null;
-}
-
-export interface EnumValue {
-  name: IName;
-  value: number;
-  comment?: string;
-}
-
-export interface EnumTypeClass {
-  type_class: "enum";
-  comment?: string;
-  base_type: INumberType;
-  values: EnumValue[];
-}
-
-export interface Types {
-  [key: string]: TypeClass | EnumTypeClass;
-}
-
-export interface ProtocolJSON {
-  proto_id: IProtocolId;
-  proto_name: IProtocolName;
-  types: Types;
-  messages: Record<string, unknown>;
-  types_map?: Record<ITypeId, IName>;
-  version: string;
-}
-
-export type SchemaObj = TypeClass
-
-
-export type Protocol = {
-  typesMap: Map<ITypeId, Converter>
-  typesNameToId: Record<IName, ITypeId>
-  converters: Map<IType, Converter>
-  protocol: ProtocolJSON
-}
-
 
 /*
     ____,-------------------------------------,____
@@ -67,10 +16,10 @@ export type Nominal<NAME extends string | number, Type = string> = Type & { [Nom
 
 
 export type IName = string
-export type ITypeId = Nominal<'TypeId', number>
 export type IValue = Nominal<'Value', any>
-export type IProtocolId = Nominal<'ProtocolId', number>
-export type IProtocolName = Nominal<'IProtocolName', string>
+export type ProtocolId = Nominal<'ProtocolId', number>
+export type MessageId = Nominal<'MessageId', number>
+export type ProtocolName = Nominal<'ProtocolName', string>
 
 
 export type INumberType =
@@ -96,15 +45,69 @@ type ArrayDynamicSize = '[]';
 type ArrayFixSize = `[${number}]`;
 type MapType = `{${IBasicType}}`;
 
-type SubType = `${ArrayDynamicSize | ArrayFixSize | MapType}` | '';
+type SubType = ArrayDynamicSize | ArrayFixSize | MapType | '';
 
 
 export type IType = `${IName | IBasicType}${SubType}${SubType}${SubType}`
 
-export type GetProtocolPayload<
-  ProtocolMap extends Record<string, Record<string, any>>,
-  Name extends keyof ProtocolMap,
-  Type extends keyof ProtocolMap[Name]
-> = ProtocolMap[Name][Type];
 
-export type BaseProtocolMap = Record<string, any>
+export interface Field {
+  name: IName
+  type: IType
+}
+
+export interface EnumValue {
+  name: IName;
+  value: number;
+  comment?: string;
+}
+
+
+export type ScalarTypeDefinition = {
+  type: IBasicType;
+  typeClass: "scalar";
+}
+
+export type TypedArrayTypeDefinition = {
+  type: IType;
+  typeClass: "typed-array";
+  elementType: IType;
+  arraySize?: number;
+}
+
+export type ArrayTypeDefinition = {
+  type: IType;
+  typeClass: "array";
+  elementType: IType;
+  arraySize?: number;
+  size?: number;
+}
+
+export type MapTypeDefinition = {
+  type: IType;
+  typeClass: "map";
+  keyType: IType;
+  valueType: IType;
+}
+
+export type StructTypeDefinition = {
+  typeClass: "struct";
+  fields: Field[] | null;
+  typeName: IName;
+}
+
+export type EnumTypeDefinition = {
+  type: IType;
+  typeClass: "enum";
+  values: EnumValue[];
+  typeName: IName;
+}
+
+export type TypeDefinition =
+  ScalarTypeDefinition |
+  TypedArrayTypeDefinition |
+  ArrayTypeDefinition |
+  MapTypeDefinition |
+  StructTypeDefinition |
+  EnumTypeDefinition
+

@@ -1,9 +1,9 @@
 import { bench, describe } from 'vitest'
 // @ts-ignore
 import { Buffer, Struct } from "./deserialize-variant/messgen-old.js";
-import { TypeClass } from "../src/types.js";
-import { StructConverter } from "../src/converters/StructConverter.js";
-import { initializeBasicConverter } from '../tests/utils.js';
+import { StructConverter } from '../src/converters/base/StructConverter.js';
+import { StructTypeDefinition } from '../src/types.js';
+import { initGetType } from '../tests/utils.js';
 
 let srcStruct = new Struct({
   id: 2,
@@ -38,9 +38,9 @@ srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, src
 let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
 
 
-const converters = initializeBasicConverter();
-const schema: TypeClass = {
-  type_class: 'struct',
+const schema: StructTypeDefinition = {
+  typeClass: 'struct',
+  typeName: 'testStruct',
   fields: [
     { name: 'type_Int8', type: 'int8' },
     { name: 'type_Uint8', type: 'uint8' },
@@ -54,8 +54,9 @@ const schema: TypeClass = {
     { name: 'type_Double', type: 'float64' },
   ]
 };
-const name = 'testStruct';
-const structConverter = new StructConverter(name, schema, converters);
+
+const getType = initGetType();
+const structConverter = new StructConverter('testStruct', schema, getType);
 const size = structConverter.size(srcData);
 const buffer = new Buffer(new ArrayBuffer(size));
 
@@ -85,7 +86,7 @@ describe('deserialize object', () => {
   }, { time: 1000 })
   bench('v1', () => {
     buffer.offset = 0;
-    let res = structConverter.deserialize(buffer);
+    structConverter.deserialize(buffer);
   })
 })
 
