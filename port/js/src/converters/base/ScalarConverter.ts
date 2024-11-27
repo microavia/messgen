@@ -87,9 +87,7 @@ export const SCALAR_TYPES = new Map<IBasicType, ScalarTypeConfig>([
   }],
   ['string', {
     size: (value: string) => value.length + 4,
-    read: (v, s) => {
-      return decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN)));
-    },
+    read: (v, s) => decodeUTF8(new Uint8Array(v.buffer, s + 4, v.getUint32(s, IS_LITTLE_ENDIAN))),
     write: (v, s, a: string) => {
       const size = a.length;
       v.setUint32(s, size, IS_LITTLE_ENDIAN);

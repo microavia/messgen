@@ -3,7 +3,8 @@
   "include": [
     "src",
     "tests",
-    "benchmarks"
+    "benchmarks",
+    "./tsup.config.js"
   ],
   "exclude": []
 }
