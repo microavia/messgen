@@ -4,21 +4,6 @@ import terser from '@rollup/plugin-terser'
 
 
 export default defineConfig({
-  build: {
-    lib: {
-      entry: 'src/Codec.ts',
-      name: pkg.name,
-      fileName: `messgen`
-
-    },
-    rollupOptions: {
-      output: {
-        format: 'umd',
-        name: pkg.name,
-        sourcemap: true
-      }
-    }
-  },
   test: {
     coverage: {
       provider: 'v8',

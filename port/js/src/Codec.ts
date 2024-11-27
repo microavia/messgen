@@ -1,4 +1,4 @@
-import { ProtocolId, MessageId, ProtocolName } from "./types";
+import { ProtocolId, MessageId } from "./types";
 import { Protocols } from "./protocol/Protocols";
 import { ProtocolJSON } from "./protocol/Protocols.types";
 import { Converter } from "./converters/Converter";
