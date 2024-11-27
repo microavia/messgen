@@ -11,7 +11,7 @@ describe('Codec', () => {
   let codec: Codec;
 
   beforeAll(() => {
-    execSync('npm run gen-json')
+    execSync('npm run gen:json')
     testProtoData = uploadShema('./messgen/test_proto/protocol.json')
     anotherProtoData = uploadShema('./another_proto/protocol.json')
     codec = new Codec([testProtoData, anotherProtoData]);

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, } from 'vitest';
 import { execSync } from 'child_process';
 import { Codec } from "../src/Codec";
 import { uploadShema, uploadBinary } from "./utils";
-import { ProtocolJSON } from '../src/protocol/Protocol.types';
+import { ProtocolJSON } from '../src/protocol/Protocols.types';
 
 
 describe('integration', () => {
@@ -12,7 +12,7 @@ describe('integration', () => {
 
   beforeAll(() => {
     execSync(' npm run generate-bit')
-    execSync(' npm run gen-json')
+    execSync(' npm run gen:json')
     protocolData = uploadShema('./messgen/test_proto/protocol.json')
     codec = new Codec([protocolData])
   })

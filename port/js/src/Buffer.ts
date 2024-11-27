@@ -1,7 +1,9 @@
 export class Buffer {
-  size: number
+  size: number;
   buffer: ArrayBuffer;
   dataView: DataView;
+
+  private _offset: number;
 
   constructor(arrayBuffer: ArrayBuffer) {
     this.buffer = arrayBuffer;
@@ -9,9 +11,6 @@ export class Buffer {
     this._offset = 0;
     this.size = arrayBuffer.byteLength;
   }
-
-  private _offset: number;
-
 
   get offset(): number {
     return this._offset;
