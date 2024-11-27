@@ -29,9 +29,7 @@ module.exports = {
     'import/external-module-folders': ['node_modules'],
   },
   rules: {
-    // imports
     'import/no-default-export': 'error',
-    '@typescript-eslint/no-restricted-imports': ['error', { paths: ['lodash'] }],
     'import/no-cycle': 'off',
     'import/no-duplicates': 'off',
     'import/no-unused-modules': 'off',
@@ -53,14 +51,12 @@ module.exports = {
     'multiline-ternary': ['error', 'never'],
     'no-nested-ternary': ['error'],
     'no-else-return': ['error', { allowElseIf: true }],
-    'no-prototype-builtins': 'off',
     'no-plusplus': 'off',
     '@typescript-eslint/no-unused-expressions': ['error'],
     '@typescript-eslint/no-unused-vars': ['error', {
       varsIgnorePattern: '^(_[0-9a-zA-Z]*)$',
       argsIgnorePattern: '^(_[0-9a-zA-Z]*)$',
     }],
-
     '@typescript-eslint/no-use-before-define': ['error', { functions: false }],
 
     '@typescript-eslint/consistent-type-imports': ['error'],
@@ -81,7 +77,6 @@ module.exports = {
     'no-param-reassign': 'off',
 
     'prefer-arrow-callback': ['error', { allowNamedFunctions: true, allowUnboundThis: true }],
-    'arrow-body-style': 'off',
     'no-confusing-arrow': 'off',
 
     '@typescript-eslint/space-infix-ops': 'error',

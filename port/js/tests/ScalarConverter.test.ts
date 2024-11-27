@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { Buffer } from "../src/Buffer";
+import { Buffer } from '../src/Buffer';
 import { ScalarConverter } from '../src/converters/base/ScalarConverter';
-import { IBasicType } from '../src/types';
+import type { IBasicType } from '../src/types';
 import { IS_LITTLE_ENDIAN } from '../src/config';
 
 describe('ScalarConverter', () => {
@@ -35,7 +35,7 @@ describe('ScalarConverter', () => {
       converter.serialize(value, buffer);
 
       expect(buffer.dataView.getInt8(0)).toBe(value);
-    })
+    });
 
     it('should deserialize negative int8', () => {
       const value = -3;
@@ -541,7 +541,7 @@ describe('ScalarConverter', () => {
 
       expect(result).toBe(8);
     });
-  })
+  });
 
   it('should deserialize multiple types from the same buffer', () => {
     const value1 = 3; // int8
