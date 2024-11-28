@@ -211,4 +211,22 @@ struct vector {
     }
 };
 
+template <class Msg>
+concept serializable = requires(Msg msg, uint8_t *buf, Allocator &allocator) {
+    { msg.serialized_size() } -> std::same_as<size_t>;
+    { msg.serialize(buf) } -> std::same_as<size_t>;
+    { msg.deserialize(buf, allocator) } -> std::same_as<size_t>;
+};
+
+template <class Msg>
+concept message = serializable<Msg> && requires {
+    { Msg::PROTO_ID } -> std::convertible_to<int>;
+    { Msg::TYPE_ID } -> std::convertible_to<int>;
+    { Msg::NAME } -> std::convertible_to<const char *>;
+    { Msg::IS_FLAT } -> std::convertible_to<bool>;
+};
+
+template <class Msg>
+concept flat_message = message<Msg> && Msg::IS_FLAT;
+
 } // namespace messgen

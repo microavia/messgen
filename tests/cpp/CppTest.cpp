@@ -249,7 +249,7 @@ TEST_F(CppTest, EnumReflection) {
     EXPECT_STREQ(enum_name.data(), "simple_enum");
 }
 
-TEST_F(CppTest, DispatchMessage1) {
+TEST_F(CppTest, DispatchMessage) {
     using namespace messgen;
 
     auto expected = test_proto::simple_struct{
@@ -262,7 +262,7 @@ TEST_F(CppTest, DispatchMessage1) {
     auto invoked = false;
     auto handler = [&](auto &&actual) {
         using ActualType = std::decay_t<decltype(actual)>;
-        
+
         if constexpr (std::is_same_v<ActualType, test_proto::simple_struct>) {
             EXPECT_EQ(expected.f0, actual.f0);
             EXPECT_EQ(expected.f1, actual.f1);
@@ -274,4 +274,22 @@ TEST_F(CppTest, DispatchMessage1) {
     test_proto::dispatch_message(test_proto::simple_struct::TYPE_ID, _buf.data(), handler);
 
     EXPECT_TRUE(invoked);
+}
+
+TEST_F(CppTest, MessageConcept) {
+    using namespace messgen;
+
+    struct not_a_message {};
+
+    EXPECT_TRUE(message<test_proto::simple_struct>);
+    EXPECT_FALSE(message<not_a_message>);
+    EXPECT_FALSE(message<int>);
+}
+
+TEST_F(CppTest, FlatMessageConcept) {
+    using namespace messgen;
+
+    EXPECT_TRUE(flat_message<test_proto::flat_struct>);
+    EXPECT_FALSE(flat_message<test_proto::complex_struct>);
+    EXPECT_FALSE(flat_message<int>);
 }
