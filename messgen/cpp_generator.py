@@ -328,7 +328,7 @@ class CppGenerator:
         code_ser.append("return _size;")
 
         code_ser = ["",
-                    "size_t serialize(uint8_t *_buf) const {",
+                    "size_t serialize([[maybe_unused]] uint8_t *_buf) const {",
                     ] + _indent(code_ser) + [
                        "}"]
         code.extend(_indent(code_ser))
@@ -361,7 +361,7 @@ class CppGenerator:
         if self._get_mode() == "nostl":
             alloc = ", messgen::Allocator &_alloc"
         code_deser = ["",
-                      "size_t deserialize(const uint8_t *_buf%s) {" % alloc,
+                      "size_t deserialize([[maybe_unused]] const uint8_t *_buf%s) {" % alloc,
                       ] + _indent(code_deser) + [
                          "}"]
         code.extend(_indent(code_deser))
@@ -386,7 +386,7 @@ class CppGenerator:
         code_ss.append("return _size;")
 
         code_ss = ["",
-                   "size_t serialized_size() const {",
+                   "[[nodiscard]] size_t serialized_size() const {",
                    _indent("// %s" % ", ".join(fixed_fields)),
                    _indent("size_t _size = %d;" % fixed_size),
                    "",
