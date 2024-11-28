@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es2015",
+    "target": "ES2020",
     "outDir": "dist",
     "allowJs": false,
     "noEmit": false,
@@ -33,8 +33,7 @@
     "node_modules"
   ],
   "include": [
-    "src",
-    "etc",
-    "benchmarks/perf-process/index.ts"
+    "src/**/*.ts",
+    "benchmarks/perf-process/index.ts",
   ]
 }

@@ -1,35 +1,63 @@
 {
-  "name": "messgenjs",
-  "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "name": "messgen",
+  "version": "0.0.1",
   "scripts": {
-    "build": "vite build",
+    "build": "bunchee",
     "test": "vitest",
-    "test-ui": "vitest --watch --ui",
-    "prettier": "prettier --write  \"src/**/*.js\" \"tests/**/*.js\" \"*.js\"",
-    "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto  --protocol another_proto --outdir ./tests",
-    "gen-json": "npm run gen -- --lang json",
-    "gen-ts": "npm run gen-json && npm run gen -- --lang ts",
-    "gen-cpp": "npm run gen -- --lang cpp",
-    "gen-md": "npm run gen -- --lang md",
-    "generate-bit": "cd ../.. && python3 tests/python/generate_serialized_data.py",
     "benchmark": "vitest bench",
-    "perf": "node --inspect=9229 --require ts-node/register ./src/index.ts",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto  --protocol another_proto --outdir ./tests",
+    "gen:json": "npm run gen -- --lang json",
+    "gen:ts": "npm run gen-json && npm run gen -- --lang ts",
+    "gen:cpp": "npm run gen -- --lang cpp",
+    "gen:md": "npm run gen -- --lang md",
+    "generate-bit": "cd ../.. && python3 tests/python/generate_serialized_data.py",
+    "check:lint": "eslint --ext .ts src",
+    "check:types": "tsc --noEmit"
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
     "@types/node": "^20.12.7",
     "@vitest/coverage-v8": "2.1.5",
+    "bunchee": "5.6.1",
     "prettier": "3.2.5",
     "tinybench": "^2.7.0",
     "ts-node": "10.9.2",
     "tslib": "2.8.1",
+    "tsup": "8.3.5",
     "typescript": "5.7.2",
     "vite": "5.4.11",
-    "vitest": "2.1.5"
-  }
+    "vitest": "2.1.5",
+    "eslint": "8.57.0",
+    "eslint-config-airbnb": "19.0.4",
+    "eslint-config-airbnb-typescript": "17.1.0",
+    "eslint-import-resolver-typescript": "3.6.1",
+    "eslint-plugin-eslint-comments": "3.2.0",
+    "eslint-plugin-import": "2.26.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/es/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/types/index.d.ts"
+      ],
+      "specs": [
+        "dist/types/specs.d.ts"
+      ]
+    }
+  },
+  "keywords": [
+    "messgen",
+    "messaging",
+    "protocol"
+  ],
+  "files": [
+    "dist",
+    "src"
+  ]
 }

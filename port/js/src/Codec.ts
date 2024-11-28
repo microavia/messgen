@@ -1,10 +1,10 @@
-import { ProtocolId, MessageId, ProtocolName } from "./types";
-import { Protocols } from "./protocol/Protocols";
-import { ProtocolJSON } from "./protocol/Protocols.types";
-import { Converter } from "./converters/Converter";
-import { ConverterFactory } from "./converters/ConverterFactory";
-import { Buffer } from "./Buffer";
-import { ExtractPayload, GenericConfig, TypeToIdMap, TypeToNameMap } from "./Codec.types";
+import { Protocols } from './protocol/Protocols';
+import type { ProtocolJSON } from './protocol/Protocols.types';
+import type { Converter } from './converters/Converter';
+import { ConverterFactory } from './converters/ConverterFactory';
+import type { ExtractPayload, GenericConfig, TypeToIdMap, TypeToNameMap } from './Codec.types';
+import type { ProtocolId, MessageId } from './types';
+import { Buffer } from './Buffer';
 
 export class Codec<Config extends GenericConfig = GenericConfig> {
   private typesByName: TypeToNameMap = new Map();
@@ -28,7 +28,7 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
         const messageId = proto.messageIds.get(typeName);
 
         if (messageId !== undefined) {
-          idMap.set(messageId, converter)
+          idMap.set(messageId, converter);
         }
       }
 
@@ -37,11 +37,10 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
     }
   }
 
-
   public serialize<N extends keyof Config, T extends keyof Config[N]>(
     name: N,
     type: T,
-    data: ExtractPayload<Config, N, T>
+    data: ExtractPayload<Config, N, T>,
   ): Buffer {
     const types = this.typesByName.get(name as string);
     if (!types) {
@@ -62,7 +61,7 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
   public deserialize<N extends keyof Config, T extends keyof Config[N]>(
     protocolId: ProtocolId,
     messageId: MessageId,
-    arrayBuffer: ArrayBufferLike
+    arrayBuffer: ArrayBufferLike,
   ): ExtractPayload<Config, N, T> {
     const types = this.typesById.get(protocolId);
     if (!types) {
@@ -77,5 +76,3 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
     return converter.deserialize(new Buffer(arrayBuffer)) as ExtractPayload<Config, N, T>;
   }
 }
-
-

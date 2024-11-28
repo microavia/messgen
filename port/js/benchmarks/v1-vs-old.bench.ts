@@ -1,11 +1,11 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vitest';
 // @ts-ignore
-import { Buffer, Struct } from "./deserialize-variant/messgen-old.js";
+import { Buffer, Struct } from './deserialize-variant/messgen-old.js';
 import { StructConverter } from '../src/converters/base/StructConverter.js';
-import { StructTypeDefinition } from '../src/types.js';
+import type { StructTypeDefinition } from '../src/types.js';
 import { initGetType } from '../tests/utils.js';
 
-let srcStruct = new Struct({
+const srcStruct = new Struct({
   id: 2,
   fields: [
     { name: 'type_Int8', type: 'Int8' },
@@ -18,10 +18,10 @@ let srcStruct = new Struct({
     { name: 'type_Uint64', type: 'Uint64' },
     { name: 'type_String', type: 'String' },
     { name: 'type_Double', type: 'Double' },
-  ]
+  ],
 });
 
-let srcData = {
+const srcData = {
   type_Int8: 8,
   type_Uint8: 8,
   type_Int16: 8,
@@ -35,8 +35,7 @@ let srcData = {
 };
 // @ts-ignore
 srcData.__SIZE__ = Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
-let b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
-
+const b = Buffer.serializeObj(srcStruct.schema.fields, srcData);
 
 const schema: StructTypeDefinition = {
   typeClass: 'struct',
@@ -52,7 +51,7 @@ const schema: StructTypeDefinition = {
     { name: 'type_Uint64', type: 'uint64' },
     { name: 'type_String', type: 'string' },
     { name: 'type_Double', type: 'float64' },
-  ]
+  ],
 };
 
 const getType = initGetType();
@@ -64,29 +63,28 @@ describe('calculate size', () => {
   bench('old', () => {
     // @ts-ignore
     Buffer.calcSize(Buffer.createValueArray(srcStruct.fields, srcData));
-  }, { time: 1000 })
+  }, { time: 1000 });
 
   bench('v1', () => {
     structConverter.size(srcData);
-  })
-})
+  });
+});
 describe('serialize Obj', () => {
   bench('Old', () => {
     Buffer.serializeObj(srcStruct.schema.fields, srcData);
-  }, { time: 1000 })
+  }, { time: 1000 });
   bench('v1', () => {
     buffer.offset = 0;
     structConverter.serialize(srcData, buffer);
-  })
-})
+  });
+});
 
 describe('deserialize object', () => {
   bench('Old', () => {
     new Buffer(b).deserialize(srcStruct);
-  }, { time: 1000 })
+  }, { time: 1000 });
   bench('v1', () => {
     buffer.offset = 0;
     structConverter.deserialize(buffer);
-  })
-})
-
+  });
+});
