@@ -361,7 +361,7 @@ class CppGenerator:
         if self._get_mode() == "nostl":
             alloc = ", messgen::Allocator &_alloc"
         code_deser = ["",
-                      "size_t deserialize(const uint8_t *" + ("_buf" if not is_empty else "") + alloc,") {",
+                      "size_t deserialize(const uint8_t *" + ("_buf" if not is_empty else "") + alloc + ") {",
                       ] + _indent(code_deser) + [
                       "}"]
         code.extend(_indent(code_deser))
