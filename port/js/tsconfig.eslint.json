@@ -6,5 +6,7 @@
     "benchmarks",
     "./tsup.config.js"
   ],
-  "exclude": []
+  "exclude": [
+    ".eslintrc.js",
+  ]
 }
