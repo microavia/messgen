@@ -1,10 +1,8 @@
-import { Protocols } from './protocol/Protocols';
-import type { ProtocolJSON } from './protocol/Protocols.types';
-import type { Converter } from './converters/Converter';
-import { ConverterFactory } from './converters/ConverterFactory';
+import { type ProtocolJSON, Protocols } from './protocol';
+import { type Converter, ConverterFactory } from './converters';
 import type { ExtractPayload, GenericConfig, TypeToIdMap, TypeToNameMap } from './Codec.types';
-import type { ProtocolId, MessageId } from './types';
 import { Buffer } from './Buffer';
+import type { ProtocolId, MessageId } from './types';
 
 export class Codec<Config extends GenericConfig = GenericConfig> {
   private typesByName: TypeToNameMap = new Map();

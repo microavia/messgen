@@ -1,12 +1,14 @@
 import type { ProtocolName } from '../types';
 import type { Converter } from './Converter';
-import { EnumConverter } from './base/EnumConverter';
 import type { Protocols } from '../protocol/Protocols';
-import { ScalarConverter } from './base/ScalarConverter';
-import { StructConverter } from './base/StructConverter';
-import { ArrayConverter } from './base/ArrayConverter';
-import { TypedArrayConverter } from './base/TypedArrayConverter';
-import { MapConverter } from './base/MapConverter';
+import {
+  ScalarConverter,
+  StructConverter,
+  ArrayConverter,
+  TypedArrayConverter,
+  MapConverter,
+  EnumConverter,
+} from './base';
 
 export class ConverterFactory {
   constructor(private protocols: Protocols) { }
