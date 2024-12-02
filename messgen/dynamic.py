@@ -1,5 +1,6 @@
 import struct
 from .protocols import Protocols
+from .common import SIZE_TYPE
 
 STRUCT_TYPES_MAP = {
     "uint8": "B",
@@ -149,7 +150,7 @@ class VectorType(Type):
     def __init__(self, protos, curr_proto_name, type_name):
         super().__init__(protos, curr_proto_name, type_name)
         assert self.type_class == "vector"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
+        self.size_type = get_type(protos, curr_proto_name, SIZE_TYPE)
         self.element_type = get_type(protos, curr_proto_name, self.type_def["element_type"])
 
     def serialize(self, data):
@@ -179,7 +180,7 @@ class MapType(Type):
     def __init__(self, protos, curr_proto_name, type_name):
         super().__init__(protos, curr_proto_name, type_name)
         assert self.type_class == "map"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
+        self.size_type = get_type(protos, curr_proto_name, SIZE_TYPE)
         self.key_type = get_type(protos, curr_proto_name, self.type_def["key_type"])
         self.value_type = get_type(protos, curr_proto_name, self.type_def["value_type"])
 
@@ -212,7 +213,7 @@ class StringType(Type):
     def __init__(self, protos, curr_proto_name, type_name):
         super().__init__(protos, curr_proto_name, type_name)
         assert self.type_class == "string"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
+        self.size_type = get_type(protos, curr_proto_name, SIZE_TYPE)
         self.struct_fmt = "<%is"
 
     def serialize(self, data):
@@ -233,7 +234,7 @@ class BytesType(Type):
     def __init__(self, protos, curr_proto_name, type_name):
         super().__init__(protos, curr_proto_name, type_name)
         assert self.type_class == "bytes"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
+        self.size_type = get_type(protos, curr_proto_name, SIZE_TYPE)
         self.struct_fmt = "<%is"
 
     def serialize(self, data):
