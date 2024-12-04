@@ -1,25 +1,28 @@
 import argparse
-from messgen.protocols import Protocols
+import os
+
+from messgen.types import parse_types
 from messgen import generator
 
-import os
+
 print(os.getcwd())
 print(os.path.dirname(os.path.realpath(__file__)))
-def generate(args):
-    if not args.protocol:
-        raise RuntimeError("No protocols to generate (--protocol)")
 
 
-    protos = Protocols()
-    protos.load(args.basedir, args.protocol)
+def generate(args: argparse.Namespace):
+    if not args.protocols and not args.types:
+        raise RuntimeError("No types or protocols to generate (--types or --protocols)")
 
     print("Options:")
     opts = {}
     for a in args.options.split(","):
         p = a.split("=")
         if len(p) == 2:
-            print("  %s = %s" % (p[0], p[1]))
+            print("  %s = %s", p[0], p[1])
             opts[p[0]] = p[1]
+
+    types = parse_types(args.types)
+    print(types)
 
     g = generator.get_generator(args.lang, protos, opts)
     if g is None:
@@ -30,13 +33,16 @@ def generate(args):
 
     print("Successfully generated to %s" % args.outdir)
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--basedir", action='append', help="Base directory for searching for protocol definitions, may repeat")
-    parser.add_argument("--protocol", action='append', help="Protocol to load, may repeat")
+    parser.add_argument("--types", action='append', help="Type directories to load, may repeat")
+    parser.add_argument("--protocols", action='append', help="Protocol files to load, may repeat")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--options", default="", help="Generator options")
-    args = parser.parse_args()
+    generate(parser.parse_args())
 
-    generate(args)
+
+if __name__ == "__main__":
+    main()
