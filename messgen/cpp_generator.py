@@ -304,9 +304,11 @@ class CppGenerator:
         self._add_include("cstring")
         self._add_include("messgen/messgen.h")
 
+        unqual_name = _unqual_name(type_name)
+
         code = []
         code.extend(self._generate_comment_type(type_def))
-        code.append("struct %s {" % type_name)
+        code.append(f"struct {unqual_name} {{")
 
         groups = self._field_groups(fields)
         if len(groups) > 1 and self._all_fields_scalar(fields):
@@ -328,7 +330,7 @@ class CppGenerator:
         for field in type_def.fields:
             field_def = self._types[field.type]
             field_c_type = self._cpp_type(field.type)
-            code.append(f"{field_c_type} {field.name} {_inline_comment(field_def)}")
+            code.append(_indent(f"{field_c_type} {field.name}; {_inline_comment(field_def)}"))
 
         # Serialize function
         code_ser = []
@@ -418,10 +420,12 @@ class CppGenerator:
                       "}"]
         code.extend(_indent(code_ss))
 
+
+
         if self._get_cpp_standard() >= 20:
             # Operator <=>
             code.append("")
-            code.append(_indent("auto operator<=>(const %s&) const = default;" % type_name))
+            code.append(_indent("auto operator<=>(const %s&) const = default;" % unqual_name))
 
         code.append("};")
 
@@ -440,7 +444,7 @@ class CppGenerator:
 
             code.extend([
                             "",
-                            "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
+                            f"bool operator==(const {unqual_name}& l, const {unqual_name}& r) {{",
                         ] + _indent(code_eq) + [
                             "}"
                         ])
