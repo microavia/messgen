@@ -31,7 +31,7 @@ def _qual_name(type_name: str) -> str:
 def _namespace(type_name: str, code:list[str]):
     ns_name = None
     try:
-        ns_name = _qual_name(str(PosixPath(type_name).parent))
+        ns_name = _qual_name(SEPARATOR.join(type_name.split(SEPARATOR)[:-1]))
         if ns_name:
             code.append(f"namespace {ns_name} {{")
             code.append("")
