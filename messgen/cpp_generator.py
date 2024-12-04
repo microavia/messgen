@@ -110,13 +110,13 @@ class CppGenerator:
         for type_name, type_def in types.items():
             if type_def.type_class not in ["struct", "enum"]:
                 continue
-            file_name = out_dir / 'types' / (type_name + self._EXT_HEADER)
+            file_name = out_dir / (type_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
             write_file_if_diff(file_name, self._generate_type_file(type_name, type_def))
 
     def generate_protocols(self, out_dir: Path, protocols: dict[str, dict[str, Protocol]], types: dict[str, MessgenType] = None) -> None:
         for proto_name, proto_def in protocols.items():
-            file_name = out_dir / 'protocols' / (proto_name + self._EXT_HEADER)
+            file_name = out_dir / (proto_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
             write_file_if_diff(file_name, self._generate_proto_file(proto_name, proto_def))
 
@@ -163,14 +163,16 @@ class CppGenerator:
         self._add_include("messgen/messgen.h")
 
         with _namespace(proto_name, code):
+            for type_name in proto_def.types.values():
+                self._add_include(type_name + self._EXT_HEADER)
+
             proto_id = proto_def.proto_id
             if proto_id is not None:
                 code.append(f"static constexpr int PROTO_ID = {proto_id};")
                 code.append("")
 
-            for type_name in proto_def.types.values():
-                self._add_include(type_name + self._EXT_HEADER)
-
+            code.extend(self._generate_proto_ids(proto_name, proto_def))
+            code.append("")
             code.extend(self._generate_reflect_type(proto_name, proto_def))
             code.append("")
             code.extend(self._generate_dispatcher(proto_name, proto_def))
@@ -178,17 +180,24 @@ class CppGenerator:
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
         return code
 
+    def _generate_proto_ids(self, proto_name: str, proto: dict) -> list[str]:
+        code: list[str] = []
+        code.append("template <class Msg> inline constexpr int TYPE_ID;")
+        for type_id, type_name in proto.types.items():
+            code.append(f"template <> inline constexpr int TYPE_ID<{_qual_name(type_name)}> = {type_id};")
+        code.append("")
+        return code
+
     def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
         code: list[str] = []
         code.append("template <class Fn>")
         code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
         code.append("    switch (type_id) {")
-        for type_id, type_name in proto.types.items():
+        for type_name in proto.types.values():
             qual_name = _qual_name(type_name)
-            if type_id is not None:
-                code.append(f"        case {type_id}:")
-                code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
-                code.append(f"            return;")
+            code.append(f"        case TYPE_ID<{qual_name}>:")
+            code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
+            code.append(f"            return;")
         code.append("    }")
         code.append("}")
         return code
@@ -310,9 +319,9 @@ class CppGenerator:
         if is_flat:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
-        code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
-        code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
-        code.append(_indent("static constexpr const char* SCHEMA = \"%s\";" % json.dumps(asdict(type_def)).replace('"', '\\"')))
+        code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
+        code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
+        code.append(_indent(f"static constexpr const char* SCHEMA = \"%s\";" % json.dumps(asdict(type_def)).replace('"', '\\"')))
         code.append("")
 
         for field in type_def.fields:
@@ -684,12 +693,12 @@ class CppGenerator:
                     c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                     c.append("}")
             elif mode == "nostl":
-                el_type_def = self._types.get(field_type_def["element_type"])
-                el_c_type = self._cpp_type(field_type_def["element_type"])
+                el_type_def = self._types.get(field_type_def.element_type)
+                el_c_type = self._cpp_type(field_type_def.element_type)
                 el_size = el_type_def.size
                 el_align = self._get_alignment(el_type_def)
                 c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
-                c.append("%s = {_alloc.alloc<%s>(_field_size), _field_size};" % (field_name, el_c_type))
+                c.append(f"{field_name} = {{_alloc.alloc<{el_c_type}>(_field_size), _field_size}};")
                 c.append("_size += sizeof(messgen::size_type);")
                 if el_size == 0:
                     pass
