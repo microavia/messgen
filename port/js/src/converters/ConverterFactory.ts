@@ -1,6 +1,6 @@
 import type { ProtocolName } from '../types';
 import type { Converter } from './Converter';
-import type { Protocols } from '../protocol/Protocols';
+import { Protocols } from '../protocol/Protocols';
 import {
   ScalarConverter,
   StructConverter,
@@ -11,7 +11,7 @@ import {
 } from './base';
 
 export class ConverterFactory {
-  constructor(private protocols: Protocols) { }
+  constructor(private protocols: Protocols = new Protocols([])) { }
 
   toConverter(protocolName: ProtocolName, typeName: string): Converter {
     const typeDef = this.protocols.getType(protocolName, typeName);
