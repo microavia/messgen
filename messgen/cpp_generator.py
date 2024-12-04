@@ -186,7 +186,7 @@ class CppGenerator:
         for type_id, type_name in proto.types.items():
             qual_name = _qual_name(type_name)
             if type_id is not None:
-                code.append(f"        case {qual_name}::TYPE_ID:")
+                code.append(f"        case {type_id}:")
                 code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
                 code.append(f"            return;")
         code.append("    }")
