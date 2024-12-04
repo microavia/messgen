@@ -79,60 +79,13 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> Me
     type_desc = type_descriptors.get(type_name)
     if not type_desc:
         raise RuntimeError(f"Invalid type: {type_name}")
-
     type_class = type_desc.get("type_class", None)
+
     if type_class == "enum":
-        dependency = _get_type(type_desc.get("base_type"), type_descriptors)
-        return EnumType(type=type_name,
-                        type_class="enum",
-                        base_type=type_desc.get("base_type", None),
-                        values=type_desc.get("values", {}),
-                        size=dependency.size)
+        return _get_enum_type(type_name, type_descriptors)
 
     if type_class == "struct":
-        struct_type = StructType(type=type_name,
-                                 type_class="struct",
-                                 fields=[],
-                                 size=None)
-
-        fields = (type_desc.get("fields")
-                  if isinstance(type_desc.get("fields"), list)
-                  else [])
-
-        sz = 0
-        fixed_size = True
-        seen_names = set()
-        for field in fields:
-            field_name = field.get("name")
-
-            if not is_valid_name(field_name):
-                raise RuntimeError(f"Invalid field '{field_name}' in {type_class}")
-
-            if field_name in seen_names:
-                raise RuntimeError(f"Duplicate field name '{field_name}' in {type_class}")
-
-            seen_names.add(field_name)
-
-            absolute_dep_name = field.get("type")
-            relative_dep_name = str(Path(type_name).parent / field.get("type"))
-
-            dependency = (_value_or_none(_get_type, absolute_dep_name, type_descriptors) or
-                          _value_or_none(_get_type, relative_dep_name, type_descriptors))
-            if not dependency:
-                raise RuntimeError(f"Invalid field '{type_name}.{field_name}' in {type_class}. "
-                                   f"Could not resolve type from {absolute_dep_name} or {relative_dep_name}")
-
-            struct_type.fields.append((field_name, dependency))
-
-            if (dsz := dependency.size) is not None:
-                sz += dsz
-            else:
-                fixed_size = False
-
-        if fixed_size:
-            struct_type.size = sz
-
-        return struct_type
+        return _get_struct_type(type_name, type_descriptors)
 
     raise RuntimeError("Invalid type class: %s" % type_class)
 
@@ -149,7 +102,7 @@ def _get_basic_type(type_name: str) -> BasicType:
                          size=None)
 
 
-def _get_vector_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) -> VectorType:
+def _get_vector_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> VectorType:
     assert _get_type(type_name[:-2], type_descriptors)
     return VectorType(type=type_name,
                       type_class="vector",
@@ -157,7 +110,7 @@ def _get_vector_type(type_name:str, type_descriptors: dict[str, dict[str, Any]])
                       size=None)
 
 
-def _get_array_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) -> ArrayType:
+def _get_array_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> ArrayType:
     p = type_name[:-1].split("[")
     el_type = "[".join(p[:-1])
 
@@ -181,7 +134,7 @@ def _get_array_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) 
     return res
 
 
-def _get_map_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) -> MapType:
+def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> MapType:
     p = type_name[:-1].split("{")
     value_type = "{".join(p[:-1])
     key_type = p[-1]
@@ -194,6 +147,67 @@ def _get_map_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) ->
                     key_type=key_type,
                     value_type=value_type,
                     size=None)
+
+
+def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> MapType:
+    type_desc = type_descriptors.get(type_name)
+    dependency = _get_type(type_desc.get("base_type"), type_descriptors)
+    assert dependency
+
+    return EnumType(type=type_name,
+                    type_class="enum",
+                    base_type=type_desc.get("base_type", None),
+                    values=type_desc.get("values", {}),
+                    size=dependency.size)
+
+
+def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> StructType:
+    type_desc = type_descriptors.get(type_name)
+    type_class = type_desc.get("type_class", None)
+
+    struct_type = StructType(type=type_name,
+                             type_class="struct",
+                             fields=[],
+                             size=None)
+
+    fields = (type_desc.get("fields")
+                if isinstance(type_desc.get("fields"), list)
+                else [])
+
+    sz = 0
+    fixed_size = True
+    seen_names = set()
+    for field in fields:
+        field_name = field.get("name")
+
+        if not is_valid_name(field_name):
+            raise RuntimeError(f"Invalid field '{field_name}' in {type_class}")
+
+        if field_name in seen_names:
+            raise RuntimeError(f"Duplicate field name '{field_name}' in {type_class}")
+
+        seen_names.add(field_name)
+
+        absolute_dep_name = field.get("type")
+        relative_dep_name = str(Path(type_name).parent / field.get("type"))
+
+        dependency = (_value_or_none(_get_type, absolute_dep_name, type_descriptors) or
+                      _value_or_none(_get_type, relative_dep_name, type_descriptors))
+        if not dependency:
+            raise RuntimeError(f"Invalid field '{type_name}.{field_name}' in {type_class}. "
+                                f"Could not resolve type from {absolute_dep_name} or {relative_dep_name}")
+
+        struct_type.fields.append((field_name, dependency))
+
+        if (dsz := dependency.size) is not None:
+            sz += dsz
+        else:
+            fixed_size = False
+
+    if fixed_size:
+        struct_type.size = sz
+
+    return struct_type
 
 
 def _value_or_none(func, *args, **kwargs):
