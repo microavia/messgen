@@ -2,12 +2,23 @@ import os
 import yaml
 import traceback
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, Any
+from typing import Any
 
 from .common import SEPARATOR
-from .validation import is_valid_name, validate_yaml_item
+from .model import (
+    ArrayType,
+    BasicType,
+    EnumType,
+    MapType,
+    MessgenType,
+    StructType,
+    VectorType,
+)
+from .validation import (
+    is_valid_name,
+    validate_yaml_item,
+)
 
 
 _CONFIG_EXT = ".yaml"
@@ -26,63 +37,7 @@ _SCALAR_TYPES_INFO = {
 }
 
 
-@dataclass
-class BasicType:
-    type: str
-    type_class: str
-    size: int
-
-
-@dataclass
-class ArrayType:
-    type: str
-    type_class: str
-    element_type: str
-    array_size: int
-    size: int
-
-
-@dataclass
-class VectorType:
-    type: str
-    type_class: str
-    element_type: str
-    size: int
-
-
-@dataclass
-class MapType:
-    type: str
-    type_class: str
-    key_type: str
-    value_type: str
-    size: int
-
-
-@dataclass
-class EnumType:
-    type: str
-    type_class: str
-    base_type: str
-    values: dict[str, Union[int, str]]
-    size: int
-
-
-FieldType = Union[BasicType, ArrayType, VectorType, MapType]
-
-
-@dataclass
-class StructType:
-    type: str
-    type_class: str
-    fields: list[tuple[str, FieldType]]
-    size: int
-
-
-MessgenType = Union[StructType, BasicType, ArrayType, VectorType, MapType]
-
-
-def parse_types(base_dirs: list[str]) -> dict[str, Union[BasicType, ArrayType, VectorType, MapType]]:
+def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
     type_descriptors = {}
     for directory in base_dirs:
         base_dir = Path.cwd() / directory
@@ -198,6 +153,8 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> Me
                 raise RuntimeError(f"Invalid field '{type_name}.{field_name}' in {type_class}. "
                                    f"Could not resolve type from {absolute_dep_name} or {relative_dep_name}")
 
+            struct_type.fields.append((field_name, dependency))
+
             if (dsz := dependency.size) is not None:
                 sz += dsz
             else:
@@ -215,5 +172,4 @@ def _value_or_none(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except Exception as ex:
-        print(traceback.format_exc())
         return None

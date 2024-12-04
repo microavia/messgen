@@ -1,7 +1,27 @@
+import json
 import os
+import textwrap
 
+from contextlib import contextmanager
 from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
 from .protocols import Protocols
+
+
+def _qualname(proto_name: str) -> str:
+    return proto_name.replace(SEPARATOR, "::")
+
+
+@contextmanager
+def _namespace(proto_name: str, code:list[str]):
+    try:
+        name = _qualname(proto_name)
+        code.append(f"namespace {_qualname(name)} {{")
+        code.append("")
+        yield
+
+    finally:
+        code.append("")
+        code.append(f"}} // namespace {name}")
 
 
 def _inline_comment(comment):
@@ -22,10 +42,6 @@ def _indent(c):
         return r
     else:
         raise RuntimeError("Unsupported type for indent: %s" % type(c))
-
-
-def _cpp_namespace(proto_name: str) -> str:
-    return proto_name.replace(SEPARATOR, "::")
 
 
 class FieldsGroup:
@@ -92,22 +108,15 @@ class CppGenerator:
     def _generate_type_file(self, type_name, type_def) -> list:
         proto_name = self._ctx["proto_name"]
         print("Generate type: %s/%s" % (proto_name, type_name))
-        namespace = _cpp_namespace(proto_name)
-
         self._reset_file()
         code = []
 
-        code.append("namespace %s {" % namespace)
-        code.append("")
-
-        if type_def["type_class"] == "enum":
-            code.extend(self._generate_type_enum(type_name, type_def))
-        elif type_def["type_class"] == "struct":
-            code.extend(self._generate_type_struct(type_name))
-            code.extend(self._generate_members_of(type_name))
-
-        code.append("")
-        code.append("} // namespace %s" % namespace)
+        with _namespace(proto_name, code):
+            if type_def["type_class"] == "enum":
+                code.extend(self._generate_type_enum(type_name, type_def))
+            elif type_def["type_class"] == "struct":
+                code.extend(self._generate_type_struct(type_name))
+                code.extend(self._generate_members_of(type_name))
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
 
@@ -116,49 +125,43 @@ class CppGenerator:
     def _generate_proto_file(self, proto_name):
         print("Generate protocol file: %s" % proto_name)
 
-        namespace = _cpp_namespace(proto_name)
-
         self._reset_file()
         code = []
 
         self._add_include("cstdint")
         self._add_include("messgen/messgen.h")
 
-        code.append("namespace %s {" % namespace)
-        code.append("")
+        with _namespace(proto_name, code):
 
-        proto = self._protocols.proto_map[proto_name]
+            proto = self._protocols.proto_map[proto_name]
 
-        proto_id = proto["proto_id"]
-        if proto_id is not None:
-            code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+            proto_id = proto["proto_id"]
+            if proto_id is not None:
+                code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+                code.append("")
+
+            for type_name in proto.get("types"):
+                type_def = self._protocols.get_type(proto_name, type_name)
+                type_id = type_def.get("id")
+                if type_id is not None:
+                    self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+
+            code.extend(self._generate_reflect_type(proto_name, proto))
             code.append("")
+            code.extend(self._generate_dispatcher(proto_name, proto))
 
-        for type_name in proto.get("types"):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
-
-        code.extend(self._generate_reflect_type(proto_name, proto))
-        code.append("")
-        code.extend(self._generate_dispatcher(proto_name, proto))
-
-        for type_name in proto.get("types"):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
-
-        code.append("")
-        code.append("} // namespace %s" % namespace)
+            for type_name in proto.get("types"):
+                type_def = self._protocols.get_type(proto_name, type_name)
+                type_id = type_def.get("id")
+                if type_id is not None:
+                    self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
         return code
 
     def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
         code: list[str] = []
-        code.append("template <typename Fn>")
+        code.append("template <class Fn>")
         code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
         code.append("    switch (type_id) {")
         for type_name in proto.get("types", []):
@@ -173,22 +176,21 @@ class CppGenerator:
         return code
 
     def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
-        code: list[str] = []
-        code.append("template <class T>")
-        code.append("bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {")
-        code.append("   auto result = false;")
-        code.append("   reflect_message(msg_id, [&]<class R>(R) {")
-        code.append("       using message_type = messgen::splice_t<R>;")
-        code.append("       if constexpr (requires(message_type msg) { handler(msg); }) {")
-        code.append("           message_type msg;")
-        code.append("           msg.deserialize(payload);")
-        code.append("           handler(std::move(msg));")
-        code.append("       }")
-        code.append("       result = true;")
-        code.append("   });")
-        code.append("   return result;")
-        code.append("};")
-        return code
+        return textwrap.dedent("""
+            template <class T>
+            bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {
+                auto result = false;
+                reflect_message(msg_id, [&]<class R>(R) {
+                    using message_type = messgen::splice_t<R>;
+                    if constexpr (requires(message_type msg) { handler(msg); }) {
+                        message_type msg;
+                        msg.deserialize(payload);
+                        handler(std::move(msg));
+                        result = true;
+                    }
+                });
+                return result;
+            }""").splitlines()
 
     def _generate_comment_type(self, type_def):
         if "comment" not in type_def:
@@ -211,7 +213,7 @@ class CppGenerator:
 
         code.append("")
         code.append(f"[[nodiscard]] inline constexpr std::string_view name_of(::messgen::reflect_t<{type_name}>) noexcept {{")
-        code.append("    return \"%s\";" % type_name)
+        code.append(f"    return \"{type_name}\";")
         code.append("}")
 
         return code
@@ -297,6 +299,7 @@ class CppGenerator:
             is_flat_str = "true"
         code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
         code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
+        code.append(_indent("static constexpr const char* SCHEMA = \"%s\";" % json.dumps(type_def).replace('"', '\\"')))
         code.append("")
 
         for field in type_def["fields"]:
@@ -465,7 +468,7 @@ class CppGenerator:
 
         elif t["type_class"] == "array":
             self._add_include("array")
-            el_type_name = _cpp_namespace(t["element_type"])
+            el_type_name = _qualname(t["element_type"])
             el_c_type = self._cpp_type(el_type_name)
             return "std::array<%s, %d>" % (el_c_type, t["array_size"])
 
@@ -517,7 +520,7 @@ class CppGenerator:
             else:
                 scope = "local"
             self._add_include("%s.h" % type_name, scope)
-            return _cpp_namespace(type_name)
+            return _qualname(type_name)
 
         else:
             raise RuntimeError("Can't get c++ type for %s" % type_name)

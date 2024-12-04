@@ -1,8 +1,9 @@
 import argparse
 import os
+import json
 
-from messgen.types import parse_types
-from messgen import generator
+from messgen import generator, yaml_parser
+from dataclasses import asdict
 
 
 print(os.getcwd())
@@ -21,8 +22,10 @@ def generate(args: argparse.Namespace):
             print("  %s = %s", p[0], p[1])
             opts[p[0]] = p[1]
 
-    types = parse_types(args.types)
-    print(types)
+    types = yaml_parser.parse_types(args.types)
+    for type_name, type_repr in types.items():
+        print(f"{type_name}:")
+        print(json.dumps(asdict(type_repr), indent=2))
 
     g = generator.get_generator(args.lang, protos, opts)
     if g is None:
