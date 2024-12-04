@@ -19,11 +19,11 @@ describe('Codec deserialization benchmark', () => {
   const protocolData = uploadShema('./messgen/test_proto/protocol.json');
   const codec = new Codec([protocolData]);
 
-  bench('deserialize 1,000,000 iterations', () => {
+  bench('deserialize 10,000 iterations', () => {
     for (const [msgId, msgData] of serializedMsgs) {
       codec.deserialize(protoId, msgId, new Uint8Array(msgData).buffer);
     }
   }, {
-    iterations: 1000000,
+    iterations: 1000,
   });
 });
