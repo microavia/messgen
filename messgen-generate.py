@@ -4,6 +4,7 @@ import json
 
 from messgen import generator, yaml_parser
 from dataclasses import asdict
+from pathlib import Path
 
 
 print(os.getcwd())
@@ -23,16 +24,17 @@ def generate(args: argparse.Namespace):
             opts[p[0]] = p[1]
 
     types = yaml_parser.parse_types(args.types)
-    for type_name, type_repr in types.items():
-        print(f"{type_name}:")
-        print(json.dumps(asdict(type_repr), indent=2))
+    #for type_name, type_repr in types.items():
+    #    print(f"{type_name}:")
+    #    print(json.dumps(asdict(type_repr), indent=2))
 
-    g = generator.get_generator(args.lang, protos, opts)
-    if g is None:
+    if (gen := generator.get_generator(args.lang, None, opts)) is not None:
+        gen.generate_types(Path(args.outdir), types)
+
+        #for proto_name, proto in protos.proto_map.items():
+        #   g.generate(args.outdir, proto_name, proto)
+    else:
         raise RuntimeError("Unsupported language \"%s\"" % args.lang)
-
-    for proto_name, proto in protos.proto_map.items():
-        g.generate(args.outdir, proto_name, proto)
 
     print("Successfully generated to %s" % args.outdir)
 

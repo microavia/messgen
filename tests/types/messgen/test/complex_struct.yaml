@@ -4,14 +4,14 @@ fields:
   - { name: "f0", type: "uint64", comment: "Some integer field" }
   - { name: "f1", type: "uint32", comment: "Some integer field" }
   - { name: "f2", type: "uint64", comment: "Some integer field" }
-  - { name: "s_arr", type: "simple_struct[2]" }
+  - { name: "s_arr", type: "messgen/test/simple_struct[2]" }
   - { name: "f1_arr", type: "int64[4]", comment: "Another integer field" }
-  - { name: "v_arr", type: "var_size_struct[2]" }
+  - { name: "v_arr", type: "messgen/test/var_size_struct[2]" }
   - { name: "f2_vec", type: "float64[]" }
-  - { name: "e_vec", type: "simple_enum[]" }
-  - { name: "s_vec", type: "simple_struct[]" }
-  - { name: "v_vec0", type: "var_size_struct[][]" }
-  - { name: "v_vec1", type: "var_size_struct[][4]" }
+  - { name: "e_vec", type: "messgen/test/simple_enum[]" }
+  - { name: "s_vec", type: "messgen/test/simple_struct[]" }
+  - { name: "v_vec0", type: "messgen/test/var_size_struct[][]" }
+  - { name: "v_vec1", type: "messgen/test/var_size_struct[][4]" }
   - { name: "v_vec2", type: "int16[][4][]" }
   - { name: "str", type: "string" }
   - { name: "bs", type: "bytes" }

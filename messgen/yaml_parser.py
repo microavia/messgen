@@ -1,6 +1,5 @@
 import os
 import yaml
-import traceback
 
 from pathlib import Path
 from typing import Any
@@ -10,6 +9,7 @@ from .model import (
     ArrayType,
     BasicType,
     EnumType,
+    FieldType,
     MapType,
     MessgenType,
     StructType,
@@ -48,17 +48,27 @@ def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
                 validate_yaml_item(type_file.stem, item)
                 type_descriptors[_type_name(type_file, base_dir)] = item
 
-    return {
-        type_name: _get_type(type_name, type_descriptors)
+    type_dependencies = set()
+    parsed_types = {
+        type_name: _get_type(type_name, type_descriptors, type_dependencies)
         for type_name in type_descriptors
     }
+
+    ignore_dependencies = set()
+    type_dependencies -= set(parsed_types.keys())
+    parsed_types.update({
+        type_name: _get_type(type_name, type_descriptors, ignore_dependencies)
+        for type_name in type_dependencies
+    })
+
+    return parsed_types
 
 
 def _type_name(type_file: Path, base_dir: Path) -> str:
     return type_file.relative_to(base_dir).with_suffix("").as_posix().replace(os.sep, SEPARATOR)
 
 
-def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> MessgenType:
+def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> MessgenType:
     # Scalar
     if scalar_type := _SCALAR_TYPES_INFO.get(type_name):
         return _get_scalar_type(type_name, scalar_type)
@@ -68,13 +78,13 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> Me
 
     if len(type_name) > 2:
         if type_name.endswith("[]"):
-            return _get_vector_type(type_name, type_descriptors)
+            return _get_vector_type(type_name, type_descriptors, type_dependencies)
 
         if type_name.endswith("]"):
-            return _get_array_type(type_name, type_descriptors)
+            return _get_array_type(type_name, type_descriptors, type_dependencies)
 
         if type_name.endswith("}"):
-            return _get_map_type(type_name, type_descriptors)
+            return _get_map_type(type_name, type_descriptors, type_dependencies)
 
     type_desc = type_descriptors.get(type_name)
     if not type_desc:
@@ -82,10 +92,10 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> Me
     type_class = type_desc.get("type_class", None)
 
     if type_class == "enum":
-        return _get_enum_type(type_name, type_descriptors)
+        return _get_enum_type(type_name, type_descriptors, type_dependencies)
 
     if type_class == "struct":
-        return _get_struct_type(type_name, type_descriptors)
+        return _get_struct_type(type_name, type_descriptors, type_dependencies)
 
     raise RuntimeError("Invalid type class: %s" % type_class)
 
@@ -102,17 +112,22 @@ def _get_basic_type(type_name: str) -> BasicType:
                          size=None)
 
 
-def _get_vector_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> VectorType:
-    assert _get_type(type_name[:-2], type_descriptors)
+def _get_vector_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> VectorType:
+    assert _get_type(type_name[:-2], type_descriptors, type_dependencies)
+
+    element_type = type_name[:-2]
+    type_dependencies.add(element_type)
+
     return VectorType(type=type_name,
                       type_class="vector",
-                      element_type=type_name[:-2],
+                      element_type=element_type,
                       size=None)
 
 
-def _get_array_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> ArrayType:
+def _get_array_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> ArrayType:
     p = type_name[:-1].split("[")
-    el_type = "[".join(p[:-1])
+    element_type = "[".join(p[:-1])
+    type_dependencies.add(element_type)
 
     array_size = int(p[-1])
     if array_size > 0x10000:
@@ -120,27 +135,30 @@ def _get_array_type(type_name: str, type_descriptors: dict[str, dict[str, Any]])
 
     res = ArrayType(type=type_name,
                     type_class="array",
-                    element_type=el_type,
+                    element_type=element_type,
                     array_size=array_size,
                     size=None)
 
-    el_type_def = _get_type(el_type, type_descriptors)
-    assert el_type_def
+    element_type_def = _get_type(element_type, type_descriptors, type_dependencies)
+    assert element_type_def
 
-    sz = el_type_def.size
+    sz = element_type_def.size
     if sz is not None:
         res.size = sz * array_size
 
     return res
 
 
-def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> MapType:
+def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> MapType:
     p = type_name[:-1].split("{")
     value_type = "{".join(p[:-1])
     key_type = p[-1]
 
-    assert _get_type(key_type, type_descriptors)
-    assert _get_type(value_type, type_descriptors)
+    assert _get_type(key_type, type_descriptors, type_dependencies)
+    assert _get_type(value_type, type_descriptors, type_dependencies)
+
+    type_dependencies.add(key_type)
+    type_dependencies.add(value_type)
 
     return MapType(type=type_name,
                     type_class="map",
@@ -149,30 +167,36 @@ def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -
                     size=None)
 
 
-def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> MapType:
+def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> MapType:
     type_desc = type_descriptors.get(type_name)
-    dependency = _get_type(type_desc.get("base_type"), type_descriptors)
-    assert dependency
+    base_type = type_desc.get("base_type")
+
+    if base_type:
+        type_dependencies.add(base_type)
+        dependency = _get_type(base_type, type_descriptors, type_dependencies)
+        assert dependency
 
     return EnumType(type=type_name,
                     type_class="enum",
-                    base_type=type_desc.get("base_type", None),
+                    base_type=base_type,
+                    comment=type_desc.get("comment"),
                     values=type_desc.get("values", {}),
                     size=dependency.size)
 
 
-def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> StructType:
+def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> StructType:
     type_desc = type_descriptors.get(type_name)
     type_class = type_desc.get("type_class", None)
 
     struct_type = StructType(type=type_name,
                              type_class="struct",
+                             comment=type_desc.get("comment"),
                              fields=[],
                              size=None)
 
     fields = (type_desc.get("fields")
-                if isinstance(type_desc.get("fields"), list)
-                else [])
+              if isinstance(type_desc.get("fields"), list)
+              else [])
 
     sz = 0
     fixed_size = True
@@ -187,17 +211,16 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
             raise RuntimeError(f"Duplicate field name '{field_name}' in {type_class}")
 
         seen_names.add(field_name)
+        dependency = None
 
         absolute_dep_name = field.get("type")
-        relative_dep_name = str(Path(type_name).parent / field.get("type"))
+        if dependency := _value_or_none(_get_type, absolute_dep_name, type_descriptors, type_dependencies):
+            struct_type.fields.append(FieldType(name=field_name, type=absolute_dep_name))
+            type_dependencies.add(absolute_dep_name)
 
-        dependency = (_value_or_none(_get_type, absolute_dep_name, type_descriptors) or
-                      _value_or_none(_get_type, relative_dep_name, type_descriptors))
         if not dependency:
             raise RuntimeError(f"Invalid field '{type_name}.{field_name}' in {type_class}. "
-                                f"Could not resolve type from {absolute_dep_name} or {relative_dep_name}")
-
-        struct_type.fields.append((field_name, dependency))
+                               f"Could not resolve type from {absolute_dep_name}")
 
         if (dsz := dependency.size) is not None:
             sz += dsz

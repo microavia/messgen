@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Union
 
+
 @dataclass
 class BasicType:
     type: str
@@ -39,18 +40,23 @@ class EnumType:
     type: str
     type_class: str
     base_type: str
+    comment: str
     values: dict[str, Union[int, str]]
     size: int
 
 
-FieldType = Union[BasicType, ArrayType, VectorType, MapType]
+@dataclass
+class FieldType:
+    name: str
+    type: str
 
 
 @dataclass
 class StructType:
     type: str
     type_class: str
-    fields: list[tuple[str, FieldType]]
+    comment: str
+    fields: list[FieldType]
     size: int
 
 
