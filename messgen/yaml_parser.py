@@ -61,51 +61,20 @@ def _type_name(type_file: Path, base_dir: Path) -> str:
 def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> MessgenType:
     # Scalar
     if scalar_type := _SCALAR_TYPES_INFO.get(type_name):
-        return BasicType(type=type_name,
-                         type_class="scalar",
-                         size=scalar_type["size"])
-
-    if len(type_name) > 2:
-        # Vector
-        if type_name.endswith("[]"):
-            return VectorType(type=type_name,
-                              type_class="vector",
-                              element_type=type_name[:-2],
-                              size=None)
-
-        # Array
-        if type_name.endswith("]"):
-            p = type_name[:-1].split("[")
-            el_type = "[".join(p[:-1])
-            array_size = int(p[-1])
-            if array_size > 0x10000:
-                print("Warn: %s array size is too large and may cause SIGSEGV on init" % type_name)
-            res = ArrayType(type=type_name,
-                            type_class="array",
-                            element_type=el_type,
-                            array_size=array_size,
-                            size=None)
-            el_type_def = _get_type(el_type, type_descriptors)
-            sz = el_type_def.size
-            if sz is not None:
-                res.size = sz * array_size
-            return res
-
-        # Map
-        if type_name.endswith("}"):
-            p = type_name[:-1].split("{")
-            value_type = "{".join(p[:-1])
-            key_type = p[-1]
-            return MapType(type=type_name,
-                           type_class="map",
-                           key_type=key_type,
-                           value_type=value_type,
-                           size=None)
+        return _get_scalar_type(type_name, scalar_type)
 
     if type_name in ["string", "bytes"]:
-        return BasicType(type=type_name,
-                         type_class=type_name,
-                         size=None)
+        return _get_basic_type(type_name)
+
+    if len(type_name) > 2:
+        if type_name.endswith("[]"):
+            return _get_vector_type(type_name, type_descriptors)
+
+        if type_name.endswith("]"):
+            return _get_array_type(type_name, type_descriptors)
+
+        if type_name.endswith("}"):
+            return _get_map_type(type_name, type_descriptors)
 
     type_desc = type_descriptors.get(type_name)
     if not type_desc:
@@ -168,8 +137,67 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]) -> Me
     raise RuntimeError("Invalid type class: %s" % type_class)
 
 
+def _get_scalar_type(type_name: str, scalar_type: dict[str, Any]) -> BasicType:
+        return BasicType(type=type_name,
+                         type_class="scalar",
+                         size=scalar_type["size"])
+
+
+def _get_basic_type(type_name: str) -> BasicType:
+        return BasicType(type=type_name,
+                         type_class=type_name,
+                         size=None)
+
+
+def _get_vector_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) -> VectorType:
+    assert _get_type(type_name[:-2], type_descriptors)
+    return VectorType(type=type_name,
+                      type_class="vector",
+                      element_type=type_name[:-2],
+                      size=None)
+
+
+def _get_array_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) -> ArrayType:
+    p = type_name[:-1].split("[")
+    el_type = "[".join(p[:-1])
+
+    array_size = int(p[-1])
+    if array_size > 0x10000:
+        print("Warn: %s array size is too large and may cause SIGSEGV on init" % type_name)
+
+    res = ArrayType(type=type_name,
+                    type_class="array",
+                    element_type=el_type,
+                    array_size=array_size,
+                    size=None)
+
+    el_type_def = _get_type(el_type, type_descriptors)
+    assert el_type_def
+
+    sz = el_type_def.size
+    if sz is not None:
+        res.size = sz * array_size
+
+    return res
+
+
+def _get_map_type(type_name:str, type_descriptors: dict[str, dict[str, Any]]) -> MapType:
+    p = type_name[:-1].split("{")
+    value_type = "{".join(p[:-1])
+    key_type = p[-1]
+
+    assert _get_type(key_type, type_descriptors)
+    assert _get_type(value_type, type_descriptors)
+
+    return MapType(type=type_name,
+                    type_class="map",
+                    key_type=key_type,
+                    value_type=value_type,
+                    size=None)
+
+
 def _value_or_none(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except Exception as ex:
+    except Exception:
         return None
