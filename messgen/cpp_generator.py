@@ -321,7 +321,7 @@ class CppGenerator:
             is_flat_str = "true"
         code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
         code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
-        code.append(_indent(f"static constexpr const char* SCHEMA = \"%s\";" % json.dumps(asdict(type_def)).replace('"', '\\"')))
+        code.append(_indent(f"static constexpr const char* SCHEMA = \"{self._generate_schema(type_def)}\";"))
         code.append("")
 
         for field in type_def.fields:
@@ -447,6 +447,10 @@ class CppGenerator:
                         ])
 
         return code
+
+    @staticmethod
+    def _generate_schema(type_def: MessgenType):
+        return json.dumps(asdict(type_def)).replace('"', '\\"').replace(" ", "")
 
     def _add_include(self, inc, scope="global"):
         self._includes.add((inc, scope))
