@@ -9,6 +9,7 @@ from .model import (
     ArrayType,
     BasicType,
     EnumType,
+    EnumValue,
     FieldType,
     MapType,
     MessgenType,
@@ -176,11 +177,16 @@ def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], 
         dependency = _get_type(base_type, type_descriptors, type_dependencies)
         assert dependency
 
+    values = [ EnumValue(name=item.get("name"),
+                         value=item.get("value"),
+                         comment=item.get("comment"))
+               for item in type_desc.get("values", {}) ]
+
     return EnumType(type=type_name,
                     type_class="enum",
                     base_type=base_type,
                     comment=type_desc.get("comment"),
-                    values=type_desc.get("values", {}),
+                    values=values,
                     size=dependency.size)
 
 

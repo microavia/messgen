@@ -36,12 +36,19 @@ class MapType:
 
 
 @dataclass
+class EnumValue:
+    name: str
+    value: int
+    comment: str
+
+
+@dataclass
 class EnumType:
     type: str
     type_class: str
     base_type: str
     comment: str
-    values: dict[str, Union[int, str]]
+    values: dict[str, EnumValue]
     size: int
 
 

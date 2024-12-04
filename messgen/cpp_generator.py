@@ -241,8 +241,8 @@ class CppGenerator:
         code = []
         code.extend(self._generate_comment_type(type_def))
         code.append(f"enum class {unqual_name}: {self._cpp_type(type_def.base_type)} {{")
-        for item in type_def.values:
-            code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
+        for enum_value in type_def.values:
+            code.append("    %s = %s,%s" % (enum_value.name, enum_value.value, _inline_comment(enum_value.comment)))
         code.append("};")
 
         code.append("")
