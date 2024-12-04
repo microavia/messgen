@@ -31,8 +31,10 @@ def is_valid_name(s):
 def validate_yaml_item(item_name, item):
     if not is_valid_name(item_name):
         raise RuntimeError("Invalid message name %s" % item_name)
+
     if "type_class" not in item:
         raise RuntimeError("type_class missing in '%s': %s" % (item_name, item))
+
     type_class = item.get("type_class", "")
     if type_class not in ["struct", "enum", "variant"]:
         raise RuntimeError("type_class '%s' in '%s' is not supported %s" % (type_class, item_name, item))

@@ -1,10 +1,10 @@
 proto_id: 1
 types_map:
-  0: "simple_struct"
-  1: "complex_struct"
-  2: "var_size_struct"
-  3: "struct_with_enum"
-  4: "empty_struct"
-  5: "complex_struct_with_empty"
-  6: "complex_struct_nostl"
-  7: "flat_struct"
+  0: "messgen/test/simple_struct"
+  1: "messgen/test/complex_struct"
+  2: "messgen/test/var_size_struct"
+  3: "messgen/test/struct_with_enum"
+  4: "messgen/test/empty_struct"
+  5: "messgen/test/complex_struct_with_empty"
+  6: "messgen/test/complex_struct_nostl"
+  7: "messgen/test/flat_struct"

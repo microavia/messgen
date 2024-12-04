@@ -13,6 +13,7 @@ from .model import (
     FieldType,
     MapType,
     MessgenType,
+    Protocol,
     StructType,
     VectorType,
 )
@@ -38,7 +39,38 @@ _SCALAR_TYPES_INFO = {
 }
 
 
+def parse_protocols(base_dirs: list[str]) -> dict[str, dict[str, Any]]:
+    if not base_dirs:
+        return {}
+
+    protocol_descriptors = {}
+    for directory in base_dirs:
+        base_dir = Path.cwd() / directory
+        protocol_files = base_dir.rglob(f'*{_CONFIG_EXT}')
+        for protocol_file in protocol_files:
+            with open(protocol_file, "r") as f:
+                item = yaml.safe_load(f)
+                item_name = protocol_file.stem
+                if not is_valid_name(item_name):
+                    raise RuntimeError(f"Invalid message name {item_name}")
+                protocol_descriptors[item_name] = item
+
+    return {
+        proto_name: _get_protocol(proto_name, proto_desc)
+        for proto_name, proto_desc in protocol_descriptors.items()
+    }
+
+
+def _get_protocol(proto_name, protocol_desc: dict[str, Any]) -> Protocol:
+    return Protocol(name=proto_name,
+                    proto_id=protocol_desc.get("proto_id"),
+                    types=protocol_desc.get("types_map", {}))
+
+
 def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
+    if not base_dirs:
+        return {}
+
     type_descriptors = {}
     for directory in base_dirs:
         base_dir = Path.cwd() / directory

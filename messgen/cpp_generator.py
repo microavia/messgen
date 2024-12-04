@@ -13,6 +13,7 @@ from .model import (
     EnumType,
     MapType,
     MessgenType,
+    Protocol,
     StructType,
     VectorType,
 )
@@ -27,11 +28,15 @@ def _qual_name(type_name: str) -> str:
     return type_name.replace(SEPARATOR, "::")
 
 
+def _strip_last_name(type_name) -> str:
+    return SEPARATOR.join(type_name.split(SEPARATOR)[:-1])
+
+
 @contextmanager
-def _namespace(type_name: str, code:list[str]):
+def _namespace(name: str, code:list[str]):
     ns_name = None
     try:
-        ns_name = _qual_name(SEPARATOR.join(type_name.split(SEPARATOR)[:-1]))
+        ns_name = _qual_name(name)
         if ns_name:
             code.append(f"namespace {ns_name} {{")
             code.append("")
@@ -105,25 +110,22 @@ class CppGenerator:
         for type_name, type_def in types.items():
             if type_def.type_class not in ["struct", "enum"]:
                 continue
-            file_name = out_dir / (type_name + self._EXT_HEADER)
+            file_name = out_dir / 'types' / (type_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
             write_file_if_diff(file_name, self._generate_type_file(type_name, type_def))
 
-    def generate(self, out_dir, proto_name, proto):
-        self._ctx["proto_name"] = proto_name
-        proto_out_dir = out_dir + os.path.sep + proto_name.replace(SEPARATOR, os.path.sep)
+    def generate_protocols(self, out_dir: Path, protocols: dict[str, dict[str, Protocol]], types: dict[str, MessgenType] = None) -> None:
+        for proto_name, proto_def in protocols.items():
+            file_name = out_dir / 'protocols' / (proto_name + self._EXT_HEADER)
+            file_name.parent.mkdir(parents=True, exist_ok=True)
+            write_file_if_diff(file_name, self._generate_proto_file(proto_name, proto_def))
 
-        try:
-            os.makedirs(proto_out_dir)
-        except:
-            pass
+            if not types:
+                continue
 
-        for type_name, type_def in proto["types"].items():
-            fn = os.path.join(proto_out_dir, type_name) + self._EXT_HEADER
-            write_file_if_diff(fn, self._generate_type_file(type_name, type_def))
-
-        proto_fn = proto_out_dir + self._EXT_HEADER
-        write_file_if_diff(proto_fn, self._generate_proto_file(proto_name))
+            for type_name in proto_def.types.values():
+                if type_name not in types:
+                    raise RuntimeError(f"Type {type_name} required by {proto_name} protocol not found")
 
     def _get_mode(self):
         return self._options.get("mode", "stl")
@@ -139,7 +141,7 @@ class CppGenerator:
         self._reset_file()
         code = []
 
-        with _namespace(type_name, code):
+        with _namespace(_strip_last_name(type_name), code):
             if type_def.type_class == "enum":
                 code.extend(self._generate_type_enum(type_name, type_def))
 
@@ -151,7 +153,7 @@ class CppGenerator:
 
         return code
 
-    def _generate_proto_file(self, proto_name):
+    def _generate_proto_file(self, proto_name: str, proto_def: Protocol) -> list[str]:
         print("Generate protocol file: %s" % proto_name)
 
         self._reset_file()
@@ -161,29 +163,17 @@ class CppGenerator:
         self._add_include("messgen/messgen.h")
 
         with _namespace(proto_name, code):
-
-            proto = self._protocols.proto_map[proto_name]
-
-            proto_id = proto["proto_id"]
+            proto_id = proto_def.proto_id
             if proto_id is not None:
-                code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+                code.append(f"static constexpr int PROTO_ID = {proto_id};")
                 code.append("")
 
-            for type_name in proto.get("types"):
-                type_def = self._protocols.get_type(proto_name, type_name)
-                type_id = type_def.get("id")
-                if type_id is not None:
-                    self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+            for type_name in proto_def.types.values():
+                self._add_include(type_name + self._EXT_HEADER)
 
-            code.extend(self._generate_reflect_type(proto_name, proto))
+            code.extend(self._generate_reflect_type(proto_name, proto_def))
             code.append("")
-            code.extend(self._generate_dispatcher(proto_name, proto))
-
-            for type_name in proto.get("types"):
-                type_def = self._protocols.get_type(proto_name, type_name)
-                type_id = type_def.get("id")
-                if type_id is not None:
-                    self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+            code.extend(self._generate_dispatcher(proto_name, proto_def))
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
         return code
@@ -193,9 +183,7 @@ class CppGenerator:
         code.append("template <class Fn>")
         code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
         code.append("    switch (type_id) {")
-        for type_name in proto.get("types", []):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
+        for type_id, type_name in proto.types.items():
             qual_name = _qual_name(type_name)
             if type_id is not None:
                 code.append(f"        case {qual_name}::TYPE_ID:")

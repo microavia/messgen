@@ -68,3 +68,10 @@ class StructType:
 
 
 MessgenType = Union[StructType, BasicType, ArrayType, VectorType, MapType]
+
+
+@dataclass
+class Protocol:
+    name: str
+    proto_id: int
+    types: dict[int, MessgenType]

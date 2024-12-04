@@ -1,9 +1,7 @@
 import argparse
 import os
-import json
 
 from messgen import generator, yaml_parser
-from dataclasses import asdict
 from pathlib import Path
 
 
@@ -24,15 +22,19 @@ def generate(args: argparse.Namespace):
             opts[p[0]] = p[1]
 
     types = yaml_parser.parse_types(args.types)
-    #for type_name, type_repr in types.items():
-    #    print(f"{type_name}:")
-    #    print(json.dumps(asdict(type_repr), indent=2))
+    protocols = yaml_parser.parse_protocols(args.protocols)
 
     if (gen := generator.get_generator(args.lang, None, opts)) is not None:
-        gen.generate_types(Path(args.outdir), types)
+        if protocols and types:
+            gen.generate_types(Path(args.outdir), types)
+            gen.generate_protocols(Path(args.outdir), protocols, types)
 
-        #for proto_name, proto in protos.proto_map.items():
-        #   g.generate(args.outdir, proto_name, proto)
+        elif types:
+            gen.generate_types(Path(args.outdir), types)
+
+        elif protocols:
+            gen.generate_protocols(Path(args.outdir), protocols)
+
     else:
         raise RuntimeError("Unsupported language \"%s\"" % args.lang)
 
