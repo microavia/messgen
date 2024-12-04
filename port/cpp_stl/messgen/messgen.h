@@ -153,9 +153,8 @@ concept serializable = requires(std::remove_cvref_t<Msg> msg, uint8_t *buf) {
 
 template <class Msg>
 concept message = serializable<Msg> && requires(std::remove_cvref_t<Msg> msg) {
-    { msg.PROTO_ID } -> std::convertible_to<int>;
-    { msg.TYPE_ID } -> std::convertible_to<int>;
     { msg.NAME } -> std::convertible_to<const char *>;
+    { msg.SCHEMA } -> std::convertible_to<const char *>;
     { msg.IS_FLAT } -> std::convertible_to<bool>;
 };
 
