@@ -2,17 +2,14 @@ name: C++ CI
 
 on:
   push:
-    branches: [ "master", "v1" ]
+    branches: ["master", "v1"]
   pull_request:
-    branches: [ "master", "v1" ]
+    branches: ["master", "v1"]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-
     - uses: actions/checkout@v3
 
     - uses: awalsh128/cache-apt-pkgs-action@latest
@@ -20,9 +17,20 @@ jobs:
         packages: libgtest-dev cmake ninja-build gcc g++
         version: 1.0
 
-    - name: Build & run tests
+    - name: Build Debug
       run: |
-        mkdir -p build
-        cmake -Bbuild -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
-        cmake --build build
-        ctest --test-dir build/tests/ --output-on-failure
+        mkdir -p build_debug
+        cmake -Bbuild_debug -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
+        cmake --build build_debug
+
+    - name: Test Debug
+      run: ctest --test-dir build_debug/tests/ --output-on-failure
+
+    - name: Build Release
+      run: |
+        mkdir -p build_release
+        cmake -Bbuild_release -S. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build_release
+
+    - name: Test Release
+      run: ctest --test-dir build_release/tests/ --output-on-failure
