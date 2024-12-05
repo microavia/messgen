@@ -1,3 +1,3 @@
 export * from './base';
-export { ConverterFactory } from './ConverterFactory';
+export { type GetType, ConverterFactory } from './ConverterFactory';
 export { Converter } from './Converter';

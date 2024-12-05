@@ -11,7 +11,8 @@ import {
 } from './base';
 
 export class ConverterFactory {
-  constructor(private protocols: Protocols = new Protocols([])) { }
+  constructor(private protocols: Protocols = new Protocols([])) {
+  }
 
   toConverter(protocolName: ProtocolName, typeName: string): Converter {
     const typeDef = this.protocols.getType(protocolName, typeName);
