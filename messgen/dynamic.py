@@ -253,28 +253,27 @@ class BytesConverter(Converter):
     def default_value(self):
         return b""
 
+
 def get_type(types: dict[str, MessgenType], type_name:str) -> Converter:
     type_def = types[type_name]
     type_class = type_def.type_class
     if type_class == TypeClass.scalar:
-        t = ScalarConverter(types, type_name)
+        return ScalarConverter(types, type_name)
     elif type_class == TypeClass.enum:
-        t = EnumConverter(types, type_name)
+        return EnumConverter(types, type_name)
     elif type_class == TypeClass.struct:
-        t = StructConverter(types, type_name)
+        return StructConverter(types, type_name)
     elif type_class == TypeClass.array:
-        t = ArrayConverter(types, type_name)
+        return ArrayConverter(types, type_name)
     elif type_class == TypeClass.vector:
-        t = VectorConverter(types, type_name)
+        return VectorConverter(types, type_name)
     elif type_class == TypeClass.map:
-        t = MapConverter(types, type_name)
+        return MapConverter(types, type_name)
     elif type_class == TypeClass.string:
-        t = StringConverter(types, type_name)
+        return StringConverter(types, type_name)
     elif type_class == TypeClass.bytes:
-        t = BytesConverter(types, type_name)
-    else:
-        raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_def.type))
-    return t
+        return BytesConverter(types, type_name)
+    raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_def.type))
 
 
 class Codec:
