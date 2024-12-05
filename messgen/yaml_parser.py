@@ -40,26 +40,47 @@ _SCALAR_TYPES_INFO = {
 }
 
 
-def parse_protocols(base_dirs: list[str]) -> dict[str, dict[str, Any]]:
-    if not base_dirs:
+def parse_protocols(protocol_dirs: list[str | Path], protocols: list[str] = None) -> dict[str, dict[str, Any]]:
+    if not protocol_dirs:
         return {}
 
-    protocol_descriptors = {}
-    for directory in base_dirs:
-        base_dir = Path.cwd() / directory
-        protocol_files = base_dir.rglob(f'*{_CONFIG_EXT}')
-        for protocol_file in protocol_files:
-            with open(protocol_file, "r") as f:
-                item = yaml.safe_load(f)
-                item_name = protocol_file.stem
-                if not is_valid_name(item_name):
-                    raise RuntimeError(f"Invalid message name {item_name}")
-                protocol_descriptors[item_name] = item
+    seen_names = set()
+    protocol_files = set()
+    for directory in protocol_dirs:
+        if not protocols:
+            protocol_files.update(list(Path(directory).rglob(f"*{_CONFIG_EXT}")))
+            continue
 
-    return {
-        proto_name: _get_protocol(proto_name, proto_desc)
-        for proto_name, proto_desc in protocol_descriptors.items()
-    }
+        for proto in protocols:
+            expected_file = Path(directory) / f"{proto}{_CONFIG_EXT}"
+            if not expected_file.exists():
+                continue
+
+            if proto in seen_names:
+                raise RuntimeError(f"Duplicate protocol: {proto}")
+
+            seen_names.add(proto)
+            protocol_files.add(expected_file)
+
+    if missing_names := set(protocols or []) - seen_names:
+        raise RuntimeError(f"Missing protocols: {missing_names}")
+
+    protocol_descriptors = {}
+    for protocol_file in protocol_files:
+        proto_name, proto_def = _parse_protocol(protocol_file)
+        protocol_descriptors[proto_name] = proto_def
+
+    return protocol_descriptors
+
+
+def _parse_protocol(protocol_file: str | Path) -> tuple[str, Protocol]:
+    with open(protocol_file, "r") as f:
+        item = yaml.safe_load(f)
+        item_name = protocol_file.stem
+        if not is_valid_name(item_name):
+            raise RuntimeError(f"Invalid message name {item_name}")
+        return item_name, _get_protocol(item_name, item)
+    raise RuntimeError(f"Failed to open file: {protocol_file}")
 
 
 def _get_protocol(proto_name, protocol_desc: dict[str, Any]) -> Protocol:
@@ -75,7 +96,7 @@ def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
     type_descriptors = {}
     for directory in base_dirs:
         base_dir = Path.cwd() / directory
-        type_files = base_dir.rglob(f'*{_CONFIG_EXT}')
+        type_files = base_dir.rglob(f"*{_CONFIG_EXT}")
         for type_file in type_files:
             with open(type_file, "r") as f:
                 item = yaml.safe_load(f)
@@ -250,16 +271,17 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
             raise RuntimeError(f"Duplicate field name '{field_name}' in {type_class}")
 
         seen_names.add(field_name)
+
+        dependency_name = field.get("type")
         dependency = None
 
-        absolute_dep_name = field.get("type")
-        if dependency := _value_or_none(_get_type, absolute_dep_name, type_descriptors, type_dependencies):
-            struct_type.fields.append(FieldType(name=field_name, type=absolute_dep_name))
-            type_dependencies.add(absolute_dep_name)
+        if dependency := _value_or_none(_get_type, dependency_name, type_descriptors, type_dependencies):
+            struct_type.fields.append(FieldType(name=field_name, type=dependency_name))
+            type_dependencies.add(dependency_name)
 
         if not dependency:
             raise RuntimeError(f"Invalid field '{type_name}.{field_name}' in {type_class}. "
-                               f"Could not resolve type from {absolute_dep_name}")
+                               f"Could not resolve type from {dependency_name}")
 
         if (dsz := dependency.size) is not None:
             sz += dsz

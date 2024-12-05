@@ -1,5 +1,7 @@
 import struct
 
+from pathlib import Path
+
 from .model import (
     MessgenType,
     TypeClass,
@@ -148,7 +150,7 @@ class ArrayConverter(Converter):
 
 
 class VectorConverter(Converter):
-    def __init__(self, types: dict[str, MessgenType], type_name:str):
+    def __init__(self, types: dict[str, MessgenType], type_name: str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.vector
         self.size_type = get_type(types, "uint32")
@@ -280,15 +282,15 @@ class Codec:
         self.types_by_name = {}
         self.types_by_id = {}
 
-    def load(self, type_dirs: list[str], protocol_dirs: list[str]):
-        types = parse_types(type_dirs)
-        protocols = parse_protocols(protocol_dirs)
+    def load(self, type_dirs: list[str | Path], protocol_dirs: list[str | Path], protocols: list[str] = None):
+        parsed_types = parse_types(type_dirs)
+        parsed_protocols = parse_protocols(protocol_dirs, protocols)
 
-        for proto_name, proto_def in protocols.items():
+        for proto_name, proto_def in parsed_protocols.items():
             by_name = (proto_def.proto_id, {})
             by_id = (proto_name, {})
             for type_id, type_name in proto_def.types.items():
-                t = get_type(types, type_name)
+                t = get_type(parsed_types, type_name)
                 by_name[1][type_name] = t
                 if type_id is not None:
                     by_id[1][type_id] = t
