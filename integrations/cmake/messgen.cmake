@@ -66,8 +66,7 @@ function(messgen_generate_protocol BASE_DIR PROTOCOL OUT_DIR OUT_FILES_VAR)
     set(PROTO_FILE "${BASE_DIR}/${PROTOCOL}.yaml")
     set(OUT_FILE "${OUT_DIR}/${PROTOCOL}.h")
 
-    list(APPEND MESSGEN_ARGS "--protocols" "${BASE_DIR}/${PROTOCOL}")
-    message(STATUS "Generating protocol from ${PROTO_FILE} to ${OUT_FILE}")
+    list(APPEND MESSGEN_ARGS "--protocol" "${BASE_DIR}/${PROTOCOL}")
 
     file(GLOB_RECURSE GENERATOR_DEPS ${MESSGEN_DIR}/*.py)
     add_custom_command(

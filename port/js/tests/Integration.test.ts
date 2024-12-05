@@ -36,7 +36,7 @@ describe('integration', () => {
       f8: -0x12,
       f9: true,
     };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/simple_struct.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/simple_struct.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'simple_struct', rawData);
     const result = codec.deserialize(1, 0, new Uint8Array(rawDataBit).buffer);
@@ -52,7 +52,7 @@ describe('integration', () => {
       f1_vec: new BigInt64Array([-bigint, BigInt(5), BigInt(1)]),
       str: 'Hello messgen!',
     };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/var_size_struct.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/var_size_struct.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'var_size_struct', rawData);
     const result = codec.deserialize(1, 2, new Uint8Array(rawDataBit).buffer);
@@ -64,7 +64,7 @@ describe('integration', () => {
 
   it('should parse enum struct_with_enum', () => {
     const rawData = { f0: bigint, f1: bigint, e0: 1 };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/struct_with_enum.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/struct_with_enum.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'struct_with_enum', rawData);
     const result = codec.deserialize(1, 3, new Uint8Array(rawDataBit).buffer);
@@ -76,7 +76,7 @@ describe('integration', () => {
 
   it('should parse empty structure', () => {
     const rawData = {};
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/empty_struct.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/empty_struct.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'empty_struct', rawData);
     const result = codec.deserialize(1, 4, new Uint8Array(rawDataBit).buffer);
@@ -108,7 +108,7 @@ describe('integration', () => {
       ]),
       array_of_size_zero: new Int32Array(0),
     };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/complex_struct_with_empty.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/complex_struct_with_empty.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'complex_struct_with_empty', rawData);
     const result = codec.deserialize(1, 5, new Uint8Array(rawDataBit).buffer);
@@ -165,7 +165,7 @@ describe('integration', () => {
       str: 'Example String',
       str_vec: ['string1', 'string2', 'string3'],
     };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/complex_struct_nostl.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/complex_struct_nostl.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'complex_struct_nostl', rawData);
     const result = codec.deserialize(1, 6, new Uint8Array(rawDataBit).buffer);
@@ -223,7 +223,7 @@ describe('integration', () => {
       map_str_by_int: new Map(Array.from({ length: 3 }, (_, i) => [i, `string${i}`])),
       map_vec_by_str: new Map(Array.from({ length: 3 }, (_, i) => [`key${i}`, new Int32Array(3).fill(0x1234)])),
     };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/complex_struct.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/complex_struct.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'complex_struct', rawData);
     const result = codec.deserialize(1, 1, new Uint8Array(rawDataBit).buffer);
@@ -248,7 +248,7 @@ describe('integration', () => {
       f7: 0x12,
       f8: -0x12,
     };
-    const rawDataBit = uploadBinary('../../../tests/serialized_data/bin/flat_struct.bin');
+    const rawDataBit = uploadBinary('../../../tests/data/serialized/bin/flat_struct.bin');
 
     const buffer = codec.serialize('messgen/test_proto', 'flat_struct', rawData);
     const result = codec.deserialize(1, 7, new Uint8Array(rawDataBit).buffer);

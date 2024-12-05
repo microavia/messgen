@@ -10,7 +10,7 @@ print(os.path.dirname(os.path.realpath(__file__)))
 
 
 def generate(args: argparse.Namespace):
-    if not args.protocols and not args.types:
+    if not args.protocol and not args.types:
         raise RuntimeError("No types or protocols to generate (--types or --protocols)")
 
     print("Options:")
@@ -22,7 +22,7 @@ def generate(args: argparse.Namespace):
             opts[p[0]] = p[1]
 
     types = yaml_parser.parse_types(args.types)
-    protocols = yaml_parser.parse_protocols(args.protocols)
+    protocols = yaml_parser.parse_protocols(args.protocol)
 
     if (gen := generator.get_generator(args.lang, opts)) is not None:
         if protocols and types:
@@ -44,7 +44,7 @@ def generate(args: argparse.Namespace):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--types", action='append', help="Type directory to load, may repeat")
-    parser.add_argument("--protocols", action='append', help="Protocol file to load, may repeat")
+    parser.add_argument("--protocol", action='append', help="Protocol file to load, may repeat")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--options", default="", help="Generator options")
