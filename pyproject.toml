@@ -1,0 +1,18 @@
+[tool.pylint.master]
+disable = ["C0114", "C0115", "C0116"]
+
+[tool.pylint.format]
+max-line-length = 150
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "- [%(asctime)s] - [%(levelname)s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%H:%M:%S"
+pythonpath = ["messgen"]
+
+[tool.mypy]
+mypy_path = ["messgen", "tests/python"]
+ignore_missing_imports = true
+explicit_package_bases = true
