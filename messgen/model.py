@@ -60,7 +60,7 @@ class EnumType:
     type_class: TypeClass
     base_type: str
     comment: str
-    values: dict[str, EnumValue]
+    values: list[EnumValue]
     size: int
 
 
@@ -86,4 +86,4 @@ MessgenType = Union[StructType, BasicType, ArrayType, VectorType, MapType]
 class Protocol:
     name: str
     proto_id: int
-    types: dict[int, MessgenType]
+    types: dict[int, str]

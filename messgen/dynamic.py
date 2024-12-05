@@ -3,8 +3,13 @@ import struct
 from pathlib import Path
 
 from .model import (
+    ArrayType,
+    EnumType,
+    MapType,
     MessgenType,
+    StructType,
     TypeClass,
+    VectorType,
 )
 from .yaml_parser import (
     parse_protocols,
@@ -66,6 +71,7 @@ class EnumConverter(Converter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.enum
+        assert isinstance(self.type_def, EnumType)
         self.base_type = self.type_def.base_type
         self.struct_fmt = STRUCT_TYPES_MAP.get(self.base_type, None)
         if self.struct_fmt is None:
@@ -93,6 +99,7 @@ class StructConverter(Converter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.struct
+        assert isinstance(self.type_def, StructType)
         self.fields = [(field.name, get_type(types, field.type))
                        for field in self.type_def.fields]
 
@@ -123,6 +130,7 @@ class ArrayConverter(Converter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.array
+        assert isinstance(self.type_def, ArrayType)
         self.element_type = get_type(types, self.type_def.element_type)
         self.array_size = self.type_def.array_size
 
@@ -153,6 +161,7 @@ class VectorConverter(Converter):
     def __init__(self, types: dict[str, MessgenType], type_name: str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.vector
+        assert isinstance(self.type_def, VectorType)
         self.size_type = get_type(types, "uint32")
         self.element_type = get_type(types, self.type_def.element_type)
 
@@ -183,6 +192,7 @@ class MapConverter(Converter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.map
+        assert isinstance(self.type_def, MapType)
         self.size_type = get_type(types, "uint32")
         self.key_type = get_type(types, self.type_def.key_type)
         self.value_type = get_type(types, self.type_def.value_type)
@@ -281,13 +291,14 @@ class Codec:
         self.types_by_name = {}
         self.types_by_id = {}
 
-    def load(self, type_dirs: list[str | Path], protocols: list[str] = None):
+    def load(self, type_dirs: list[str | Path], protocols: list[str] | None = None):
         parsed_types = parse_types(type_dirs)
-        parsed_protocols = parse_protocols(protocols)
+        if protocols:
+            parsed_protocols = parse_protocols(protocols)
 
         for proto_name, proto_def in parsed_protocols.items():
-            by_name = (proto_def.proto_id, {})
-            by_id = (proto_name, {})
+            by_name: tuple[int, dict] = (proto_def.proto_id, {})
+            by_id: tuple[str, dict] = (proto_name, {})
             for type_id, type_name in proto_def.types.items():
                 t = get_type(parsed_types, type_name)
                 by_name[1][type_name] = t
@@ -310,7 +321,7 @@ class Codec:
         payload = t.serialize(msg)
         return p[0], t.id, payload
 
-    def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> tuple[str, str, dict, int]:
+    def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> tuple[int, str, dict]:
         p = self.types_by_id.get(proto_id)
         if p is None:
             raise MessgenError("Unsupported proto_id in deserialization: proto_id=%s" % proto_id)

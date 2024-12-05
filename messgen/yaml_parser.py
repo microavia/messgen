@@ -75,7 +75,7 @@ def _get_protocol(proto_name, protocol_desc: dict[str, Any]) -> Protocol:
                     types=protocol_desc.get("types_map", {}))
 
 
-def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
+def parse_types(base_dirs: list[str | Path]) -> dict[str, MessgenType]:
     if not base_dirs:
         return {}
 
