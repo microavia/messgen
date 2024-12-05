@@ -26,9 +26,9 @@ if __name__ == "__main__":
         "f9": True,
     }
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/simple_struct.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/simple_struct.bin', 'wb') as f:
         f.write(b)
-    print("Successfully generated serialized data to tests/serialized_data/bin/simple_struct.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/simple_struct.bin")
 
     # var_size_struct
     t = codec.get_type_by_name("test_proto", "messgen/test/var_size_struct")
@@ -40,10 +40,10 @@ if __name__ == "__main__":
 
     b = t.serialize(msg1)
 
-    with open('tests/serialized_data/bin/var_size_struct.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/var_size_struct.bin', 'wb') as f:
         f.write(b)
 
-    print("Successfully generated serialized data to tests/serialized_data/bin/var_size_struct.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/var_size_struct.bin")
 
     # struct_with_enum
     t = codec.get_type_by_name("test_proto", "messgen/test/struct_with_enum")
@@ -53,18 +53,18 @@ if __name__ == "__main__":
         "e0": "another_value"
     }
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/struct_with_enum.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/struct_with_enum.bin', 'wb') as f:
         f.write(b)
 
-    print("Successfully generated serialized data to tests/serialized_data/bin/struct_with_enum.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/struct_with_enum.bin")
 
     # empty_struct
     t = codec.get_type_by_name("test_proto", "messgen/test/empty_struct")
     msg1 = {}
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/empty_struct.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/empty_struct.bin', 'wb') as f:
         f.write(b)
-    print("Successfully generated serialized data to tests/serialized_data/bin/empty_struct.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/empty_struct.bin")
 
     # complex_struct_with_empty
     t = codec.get_type_by_name("test_proto", "messgen/test/complex_struct_with_empty")
@@ -80,9 +80,9 @@ if __name__ == "__main__":
         "array_of_size_zero": [],  # empty list of int32
     }
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/complex_struct_with_empty.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/complex_struct_with_empty.bin', 'wb') as f:
         f.write(b)
-    print("Successfully generated serialized data to tests/serialized_data/bin/complex_struct_with_empty.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/complex_struct_with_empty.bin")
 
 
     # complex_struct_nostl
@@ -121,9 +121,9 @@ if __name__ == "__main__":
         "str_vec": ["string1", "string2", "string3"],
     }
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/complex_struct_nostl.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/complex_struct_nostl.bin', 'wb') as f:
         f.write(b)
-    print("Successfully generated serialized data to tests/serialized_data/bin/complex_struct_nostl.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/complex_struct_nostl.bin")
 
 
     # complex_struct
@@ -165,9 +165,9 @@ if __name__ == "__main__":
         "map_vec_by_str": {"key" + str(i): [0x1234 for _ in range(3)] for i in range(3)},
     }
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/complex_struct.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/complex_struct.bin', 'wb') as f:
         f.write(b)
-    print("Successfully generated serialized data to tests/serialized_data/bin/complex_struct.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/complex_struct.bin")
 
 
     # flat_struct
@@ -188,8 +188,8 @@ if __name__ == "__main__":
     }
 
     b = t.serialize(msg1)
-    with open('tests/serialized_data/bin/flat_struct.bin', 'wb') as f:
+    with open('tests/data/serialized/bin/flat_struct.bin', 'wb') as f:
         f.write(b)
-    print("Successfully generated serialized data to tests/serialized_data/bin/flat_struct.bin")
+    print("Successfully generated serialized data to tests/data/serialized/bin/flat_struct.bin")
 
     print("Successfully")
