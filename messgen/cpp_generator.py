@@ -6,17 +6,16 @@ from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import PosixPath, Path
 
-from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
+from .common import (
+    SEPARATOR,
+    SIZE_TYPE,
+    write_file_if_diff
+)
 from .model import (
-    ArrayType,
-    BasicType,
-    EnumType,
-    MapType,
     MessgenType,
     Protocol,
     StructType,
     TypeClass,
-    VectorType,
 )
 
 
