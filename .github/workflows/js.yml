@@ -7,7 +7,7 @@ on:
     branches: [master, "v1"]
 
 jobs:
-  if: false  # This disables the entire workflow
+  if: false  # disable the entire workflow
   build:
     runs-on: ubuntu-latest
     steps:
