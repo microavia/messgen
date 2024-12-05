@@ -7,8 +7,8 @@ on:
     branches: [master, "v1"]
 
 jobs:
-  if: false  # disable the entire workflow
   build:
+    if: false  # disable the entire workflow
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
