@@ -1,39 +1,47 @@
-from . import common
-from . import protocol_version
-#from .protocols import Protocols
 import json
 import os
 
+from dataclasses import asdict
+from pathlib import Path
+
+from .common import write_file_if_diff
+from .protocol_version import version_hash
+
+from .validation import validate_protocol
+
+from .model import (
+    MessgenType,
+    Protocol,
+    TypeClass,
+)
 
 class JsonGenerator:
-    _protocols: None
-    _options: dict
+    _FILE_EXT = ".json"
 
-    def __init__(self, protos, options):
-        self._protocols = protos
+    def __init__(self, options):
         self._options = options
 
-    def generate(self, out_dir, proto_name, proto):
-        current_dir = os.getcwd()
+    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
+        self.validate(types, protocols)
+        self.generate_types(out_dir, types)
+        self.generate_protocols(out_dir, protocols)
 
-        relative_proto_out_dir = str(os.path.join(out_dir, proto_name.replace(common.SEPARATOR, os.path.sep)))
+    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
+        for proto_def in protocols.values():
+            validate_protocol(proto_def, types)
 
-        proto_out_dir = os.path.abspath(os.path.join(current_dir, relative_proto_out_dir))
+    def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
+        for type_name, type_def in types.items():
+            if type_def.type_class not in [TypeClass.struct, TypeClass.enum]:
+                continue
+            file_name = out_dir / (type_name + self._FILE_EXT)
+            file_name.parent.mkdir(parents=True, exist_ok=True)
+            write_file_if_diff(file_name, json.dumps(asdict(type_def), indent=2).splitlines())
 
-        try:
-            os.makedirs(proto_out_dir)
-        except:
-            pass
-
-        data = proto
-        data['proto_name'] = proto_name
-        data["version"] = protocol_version.version_hash(proto)
-
-        enc = json.JSONEncoder()
-        enc.indent = 2
-        self.__write_file(proto_out_dir + os.path.sep + "protocol.json", enc.encode(data))
-
-    @staticmethod
-    def __write_file(fpath, code):
-        with open(fpath, "w") as f:
-            f.write(code)
+    def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
+        for proto_name, proto_def in protocols.items():
+            file_name = out_dir / (proto_name + self._FILE_EXT)
+            file_name.parent.mkdir(parents=True, exist_ok=True)
+            proto_dict = asdict(proto_def)
+            proto_dict["version"] = version_hash(proto_dict)
+            write_file_if_diff(file_name, json.dumps(asdict(proto_def), indent=2).splitlines())

@@ -26,12 +26,9 @@ def generate(args: argparse.Namespace):
 
     if (gen := generator.get_generator(args.lang, opts)) is not None:
         if protocols and types:
-            gen.generate_types(Path(args.outdir), types)
-            gen.generate_protocols(Path(args.outdir), protocols, types)
-
+            gen.generate(Path(args.outdir), types, protocols)
         elif types:
             gen.generate_types(Path(args.outdir), types)
-
         elif protocols:
             gen.generate_protocols(Path(args.outdir), protocols)
 

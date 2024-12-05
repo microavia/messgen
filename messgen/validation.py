@@ -1,10 +1,21 @@
+from .model import (
+    MessgenType,
+    Protocol,
+)
+
+def validate_protocol(protocol: Protocol, types: dict[str, MessgenType]):
+    for type_name in protocol.types.values():
+        if type_name not in types:
+            raise RuntimeError(f"Type {type_name} required by {protocol.name} protocol not found")
+
+
 # Checks if `s` is a valid name for a field or a message type
-def is_valid_name(s):
-    if not isinstance(s, str) or not s:
+def is_valid_name(name: str):
+    if not isinstance(name, str) or not name:
         return False
-    if not (s[0].isalpha() or s[0] == '_'):
+    if not (name[0].isalpha() or name[0] == '_'):
         return False
-    if not all(c.isalnum() or c == '_' for c in s[1:]):
+    if not all(c.isalnum() or c == '_' for c in name[1:]):
         return False
 
     cpp_keywords = {
@@ -19,16 +30,18 @@ def is_valid_name(s):
         "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union",
         "unsigned", "using", "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"
     }
-    if s in cpp_keywords:
+
+    if name in cpp_keywords:
         return False
 
     cpp_int_types = {"int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t"}
-    if s in cpp_int_types:
+    if name in cpp_int_types:
         return False
 
     return True
 
-def validate_yaml_item(item_name, item):
+
+def validate_type_dict(item_name: str, item: dict[str, any]) -> None:
     if not is_valid_name(item_name):
         raise RuntimeError("Invalid message name %s" % item_name)
 
@@ -36,6 +49,6 @@ def validate_yaml_item(item_name, item):
         raise RuntimeError("type_class missing in '%s': %s" % (item_name, item))
 
     type_class = item.get("type_class", "")
-    if type_class not in ["struct", "enum", "variant"]:
+    if type_class not in ["struct", "enum"]:
         raise RuntimeError("type_class '%s' in '%s' is not supported %s" % (type_class, item_name, item))
 

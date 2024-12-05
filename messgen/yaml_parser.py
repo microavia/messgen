@@ -20,7 +20,7 @@ from .model import (
 )
 from .validation import (
     is_valid_name,
-    validate_yaml_item,
+    validate_type_dict,
 )
 
 
@@ -86,7 +86,7 @@ def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
         for type_file in type_files:
             with open(type_file, "r") as f:
                 item = yaml.safe_load(f)
-                validate_yaml_item(type_file.stem, item)
+                validate_type_dict(type_file.stem, item)
                 type_descriptors[_type_name(type_file, base_dir)] = item
 
     type_dependencies = set()

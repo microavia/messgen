@@ -4,12 +4,17 @@ import textwrap
 
 from contextlib import contextmanager
 from dataclasses import asdict
-from pathlib import PosixPath, Path
+from pathlib import (
+    PosixPath,
+    Path,
+)
+
+from .validation import validate_protocol
 
 from .common import (
     SEPARATOR,
     SIZE_TYPE,
-    write_file_if_diff
+    write_file_if_diff,
 )
 from .model import (
     MessgenType,
@@ -103,6 +108,15 @@ class CppGenerator:
         self._ctx: dict = {}
         self._types = None
 
+    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
+        self.validate(protocols, types)
+        self.generate_types(out_dir, types)
+        self.generate_protocols(out_dir, protocols)
+
+    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
+        for proto_def in protocols.values():
+            validate_protocol(proto_def, types)
+
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         self._types = types
         for type_name, type_def in types.items():
@@ -112,18 +126,11 @@ class CppGenerator:
             file_name.parent.mkdir(parents=True, exist_ok=True)
             write_file_if_diff(file_name, self._generate_type_file(type_name, type_def))
 
-    def generate_protocols(self, out_dir: Path, protocols: dict[str, dict[str, Protocol]], types: dict[str, MessgenType] = None) -> None:
+    def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
         for proto_name, proto_def in protocols.items():
             file_name = out_dir / (proto_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
             write_file_if_diff(file_name, self._generate_proto_file(proto_name, proto_def))
-
-            if not types:
-                continue
-
-            for type_name in proto_def.types.values():
-                if type_name not in types:
-                    raise RuntimeError(f"Type {type_name} required by {proto_name} protocol not found")
 
     def _get_mode(self):
         return self._options.get("mode", "stl")
