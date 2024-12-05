@@ -18,7 +18,7 @@ class TypeClass(str, Enum):
 class BasicType:
     type: str
     type_class: TypeClass
-    size: int
+    size: int | None
 
 
 @dataclass
@@ -27,7 +27,7 @@ class ArrayType:
     type_class: TypeClass
     element_type: str
     array_size: int
-    size: int
+    size: int | None
 
 
 @dataclass
@@ -35,7 +35,7 @@ class VectorType:
     type: str
     type_class: TypeClass
     element_type: str
-    size: int
+    size: None
 
 
 @dataclass
@@ -44,7 +44,7 @@ class MapType:
     type_class: TypeClass
     key_type: str
     value_type: str
-    size: int
+    size: None
 
 
 @dataclass

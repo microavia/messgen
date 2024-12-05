@@ -1,7 +1,5 @@
 import os
 
-from messgen import MessgenException
-
 import re
 from pathlib import Path
 from string import Template
@@ -14,6 +12,11 @@ autogenPreamble = [
 ]
 
 defaultStringer = Template('fmt.Sprintf("%v", $varName)')
+
+
+class MessgenException(Exception):
+    pass
+
 
 def to_camelcase(str):
     if not any(c in "_" for c in str):

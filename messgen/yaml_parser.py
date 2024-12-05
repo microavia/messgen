@@ -40,7 +40,7 @@ _SCALAR_TYPES_INFO = {
 }
 
 
-def parse_protocols(protocols: list[str] = None) -> dict[str, Protocol]:
+def parse_protocols(protocols: list[str]) -> dict[str, Protocol]:
     if not protocols:
         return {}
 
@@ -51,7 +51,7 @@ def parse_protocols(protocols: list[str] = None) -> dict[str, Protocol]:
             raise RuntimeError(f"Protocol file not found: {expected_file}")
         protocol_files.add(expected_file)
 
-    protocol_descriptors = {}
+    protocol_descriptors: dict[str, Protocol] = {}
     for protocol_file in protocol_files:
         proto_name, proto_def = _parse_protocol(protocol_file)
         protocol_descriptors[proto_name] = proto_def
@@ -59,7 +59,7 @@ def parse_protocols(protocols: list[str] = None) -> dict[str, Protocol]:
     return protocol_descriptors
 
 
-def _parse_protocol(protocol_file: str | Path) -> tuple[str, Protocol]:
+def _parse_protocol(protocol_file: Path) -> tuple[str, Protocol]:
     with open(protocol_file, "r") as f:
         item = yaml.safe_load(f)
         item_name = protocol_file.stem
@@ -71,7 +71,7 @@ def _parse_protocol(protocol_file: str | Path) -> tuple[str, Protocol]:
 
 def _get_protocol(proto_name, protocol_desc: dict[str, Any]) -> Protocol:
     return Protocol(name=proto_name,
-                    proto_id=protocol_desc.get("proto_id"),
+                    proto_id=int(protocol_desc["proto_id"]),
                     types=protocol_desc.get("types_map", {}))
 
 
@@ -89,13 +89,13 @@ def parse_types(base_dirs: list[str]) -> dict[str, MessgenType]:
                 validate_type_dict(type_file.stem, item)
                 type_descriptors[_type_name(type_file, base_dir)] = item
 
-    type_dependencies = set()
+    type_dependencies: set[str] = set()
     parsed_types = {
         type_name: _get_type(type_name, type_descriptors, type_dependencies)
         for type_name in type_descriptors
     }
 
-    ignore_dependencies = set()
+    ignore_dependencies: set[str] = set()
     type_dependencies -= set(parsed_types.keys())
     parsed_types.update({
         type_name: _get_type(type_name, type_descriptors, ignore_dependencies)

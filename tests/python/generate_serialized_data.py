@@ -1,4 +1,6 @@
 import sys
+
+from typing import Any
 from pathlib import Path
 
 path_root = Path(__file__).parents[2]
@@ -12,7 +14,7 @@ if __name__ == "__main__":
 
     # simple_struct
     t = codec.get_type_by_name("test_proto", "messgen/test/simple_struct")
-    msg1 = {
+    msg1: dict[str, Any] = {
         "f0": 0x1234567890abcdef,
         "f1": 0x1234567890abcdef,
         "f1_pad": 0x12,

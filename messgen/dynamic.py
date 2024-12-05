@@ -46,7 +46,7 @@ class ScalarConverter(Converter):
             raise RuntimeError("Unsupported scalar type \"%s\"" % self.type_name)
         self.struct_fmt = "<" + self.struct_fmt
         self.size = struct.calcsize(self.struct_fmt)
-        self.def_value = 0
+        self.def_value: bool | float | int = 0
         if self.type_name == "bool":
             self.def_value = False
         elif self.type_name == "float32" or self.type_name == "float64":

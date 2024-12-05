@@ -48,8 +48,8 @@ class TypeScriptGenerator:
     _protocols: Protocols
     _options: dict
 
-    def __init__(self, protos, options):
-        self._protocols = protos
+    def __init__(self, options):
+        self._protocols = None # FIXME:
         self._reset_state()
         self._options = options
 

@@ -13,6 +13,6 @@ log_cli_date_format = "%H:%M:%S"
 pythonpath = ["messgen"]
 
 [tool.mypy]
-mypy_path = ["messgen", "tests/python"]
+mypy_path = ["tests/python"]
 ignore_missing_imports = true
 explicit_package_bases = true

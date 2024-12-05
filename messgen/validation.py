@@ -1,6 +1,10 @@
+from typing import Any
+
 from .model import (
+    EnumType,
     MessgenType,
     Protocol,
+    StructType,
 )
 
 _CPP_KEYWORDS = {
@@ -141,7 +145,7 @@ def is_valid_name(name: str):
     return True
 
 
-def validate_type_dict(item_name: str, item: dict[str, any]) -> None:
+def validate_type_dict(item_name: str, item: dict[str, StructType | EnumType]) -> None:
     if not is_valid_name(item_name):
         raise RuntimeError("Invalid message name %s" % item_name)
 
