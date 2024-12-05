@@ -15,9 +15,9 @@ from .model import (
     MessgenType,
     Protocol,
     StructType,
+    TypeClass,
     VectorType,
 )
-from .protocols import Protocols
 
 
 def _unqual_name(type_name: str) -> str:
@@ -98,8 +98,7 @@ class CppGenerator:
         "float64": "double",
     }
 
-    def __init__(self, protos: Protocols, options: dict):
-        self._protocols: Protocols = protos
+    def __init__(self, options: dict):
         self._options: dict = options
         self._includes: set = set()
         self._ctx: dict = {}
@@ -108,7 +107,7 @@ class CppGenerator:
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         self._types = types
         for type_name, type_def in types.items():
-            if type_def.type_class not in ["struct", "enum"]:
+            if type_def.type_class not in [TypeClass.struct, TypeClass.enum]:
                 continue
             file_name = out_dir / (type_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
@@ -142,10 +141,10 @@ class CppGenerator:
         code = []
 
         with _namespace(_strip_last_name(type_name), code):
-            if type_def.type_class == "enum":
+            if type_def.type_class == TypeClass.enum:
                 code.extend(self._generate_type_enum(type_name, type_def))
 
-            elif type_def.type_class == "struct":
+            elif type_def.type_class == TypeClass.struct:
                 code.extend(self._generate_type_struct(type_name, type_def))
                 code.extend(self._generate_members_of(type_name, type_def))
 
@@ -252,10 +251,10 @@ class CppGenerator:
     def _get_alignment(self, type_def: MessgenType):
         type_class = type_def.type_class
 
-        if type_class in ["scalar", "enum"]:
+        if type_class in [TypeClass.scalar, TypeClass.enum]:
             return type_def.size
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             # Alignment of struct is equal to max of the field alignments
             a_max = 0
             for field in type_def.fields:
@@ -265,25 +264,25 @@ class CppGenerator:
                     a_max = a
             return a_max
 
-        elif type_class == "array":
+        elif type_class == TypeClass.array:
             # Alignment of array is equal to alignment of element
             el_type_def = self._types.get(type_def.element_type)
             return self._get_alignment(el_type_def)
 
-        elif type_class == "vector":
+        elif type_class == TypeClass.vector:
             # Alignment of array is equal to max of size field alignment and alignment of element
             a_sz = self._get_alignment(self._types.get(SIZE_TYPE))
             a_el = self._get_alignment(self._types.get(type_def.element_type))
             return max(a_sz, a_el)
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             # Alignment of array is equal to max of size field alignment and alignment of element
             a_sz = self._get_alignment(self._types.get(SIZE_TYPE))
             a_key = self._get_alignment(self._types.get(type_def.key_type))
             a_value = self._get_alignment(self._types.get(type_def.value_type))
             return max(a_sz, a_key, a_value)
 
-        elif type_class in ["string", "bytes"]:
+        elif type_class in [TypeClass.string, TypeClass.bytes]:
             # Alignment of string is equal size field alignment
             return self._get_alignment(self._types.get(SIZE_TYPE))
 
@@ -486,17 +485,17 @@ class CppGenerator:
         type_def = self._types[type_name]
         mode = self._get_mode()
 
-        if type_def.type_class == "scalar":
+        if type_def.type_class == TypeClass.scalar:
             self._add_include("cstdint")
             return self._CPP_TYPES_MAP[type_name]
 
-        elif type_def.type_class == "array":
+        elif type_def.type_class == TypeClass.array:
             self._add_include("array")
             el_type_name = _qual_name(type_def.element_type)
             el_c_type = self._cpp_type(type_def.element_type)
             return "std::array<%s, %d>" % (el_c_type, type_def.array_size)
 
-        elif type_def.type_class == "vector":
+        elif type_def.type_class == TypeClass.vector:
             el_type_name = type_def.element_type
             el_c_type = self._cpp_type(type_def.element_type)
             if mode == "stl":
@@ -507,7 +506,7 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for vector: %s" % mode)
 
-        elif type_def.type_class == "map":
+        elif type_def.type_class == TypeClass.map:
             key_c_type = self._cpp_type(type_def.key_type)
             value_c_type = self._cpp_type(type_def.value_type)
             if mode == "stl":
@@ -519,7 +518,7 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
 
-        elif type_def.type_class == "string":
+        elif type_def.type_class == TypeClass.string:
             if mode == "stl":
                 self._add_include("string")
                 return "std::string"
@@ -529,7 +528,7 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for string: %s" % mode)
 
-        elif type_def.type_class == "bytes":
+        elif type_def.type_class == TypeClass.bytes:
             if mode == "stl":
                 self._add_include("vector")
                 return "std::vector<uint8_t>"
@@ -538,7 +537,7 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for bytes: %s" % mode)
 
-        elif type_def.type_class in ["enum", "struct"]:
+        elif type_def.type_class in [TypeClass.enum, TypeClass.struct]:
             if SEPARATOR in type_name:
                 scope = "global"
             else:
@@ -550,7 +549,7 @@ class CppGenerator:
             raise RuntimeError("Can't get c++ type for %s" % type_name)
 
     def _all_fields_scalar(self, fields: list[tuple[str, str]]):
-        return all(self._types[field.type].type_class != "scalar"
+        return all(self._types[field.type].type_class != TypeClass.scalar
                    for field in fields)
 
     def _field_groups(self, fields):
@@ -585,17 +584,17 @@ class CppGenerator:
         type_class = field_type_def.type_class
 
         c.append("// %s" % field_name)
-        if type_class in ["scalar", "enum"]:
+        if type_class in [TypeClass.scalar, TypeClass.enum]:
             c_type = self._cpp_type(field_type_def.type)
             size = field_type_def.size
             c.append("*reinterpret_cast<%s *>(&_buf[_size]) = %s;" % (c_type, field_name))
             c.append("_size += %s;" % size)
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             c.append("_size += %s.serialize(&_buf[_size]);" % field_name)
 
-        elif type_class in ["array", "vector"]:
-            if type_class == "vector":
+        elif type_class in [TypeClass.array, TypeClass.vector]:
+            if type_class == TypeClass.vector:
                 c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
                 c.append("_size += sizeof(messgen::size_type);")
             el_type_def = self._types.get(field_type_def.element_type)
@@ -614,7 +613,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             key_type_def = self._types.get(field_type_def.key_type)
@@ -626,13 +625,13 @@ class CppGenerator:
                 self._serialize_field("_i%d.second" % level_n, value_type_def, level_n + 1)))
             c.append("}")
 
-        elif type_class == "string":
+        elif type_class == TypeClass.string:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
             c.append("_size += %s.size();" % field_name)
 
-        elif type_class == "bytes":
+        elif type_class == TypeClass.bytes:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             c.append("std::copy(%s.begin(), %s.end(), &_buf[_size]);" % (field_name, field_name))
@@ -650,19 +649,19 @@ class CppGenerator:
         mode = self._get_mode()
 
         c.append("// %s" % field_name)
-        if type_class in ["scalar", "enum"]:
+        if type_class in [TypeClass.scalar, TypeClass.enum]:
             c_type = self._cpp_type(field_type_def.type)
             size = field_type_def.size
             c.append("%s = *reinterpret_cast<const %s *>(&_buf[_size]);" % (field_name, c_type))
             c.append("_size += %s;" % size)
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             alloc = ""
             if mode == "nostl":
                 alloc = ", _alloc"
             c.append("_size += %s.deserialize(&_buf[_size]%s);" % (field_name, alloc))
 
-        elif type_class == "array":
+        elif type_class == TypeClass.array:
             el_type_def = self._types.get(field_type_def.element_type)
             el_size = el_type_def.size
             el_align = self._get_alignment(el_type_def)
@@ -678,7 +677,7 @@ class CppGenerator:
                 c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "vector":
+        elif type_class == TypeClass.vector:
             if mode == "stl":
                 el_type_def = self._types.get(field_type_def.element_type)
                 el_size = el_type_def.size
@@ -717,7 +716,7 @@ class CppGenerator:
                     c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                     c.append("}")
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             c.append("{")
             c.append(_indent("size_t _map_size%d = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);" % level_n))
             c.append(_indent("_size += sizeof(messgen::size_type);"))
@@ -740,13 +739,13 @@ class CppGenerator:
             c.append(_indent("}"))
             c.append("}")
 
-        elif type_class == "string":
+        elif type_class == TypeClass.string:
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
 
-        elif type_class == "bytes":
+        elif type_class == TypeClass.bytes:
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.assign(&_buf[_size], &_buf[_size + _field_size]);" % field_name)
@@ -765,15 +764,15 @@ class CppGenerator:
         type_class = field_type_def.type_class
 
         c.append("// %s" % field_name)
-        if type_class == "scalar":
+        if type_class == TypeClass.scalar:
             size = field_type_def.size
             c.append("_size += %d;" % size)
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             c.append("_size += %s.serialized_size();" % field_name)
 
-        elif type_class in ["array", "vector"]:
-            if field_type_def.type_class == "vector":
+        elif type_class in [TypeClass.array, TypeClass.vector]:
+            if field_type_def.type_class == TypeClass.vector:
                 c.append("_size += sizeof(messgen::size_type);")
             el_type = self._types.get(field_type_def.element_type)
             el_size = el_type.size
@@ -786,7 +785,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d" % level_n, el_type, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             c.append("_size += sizeof(messgen::size_type);")
             key_type = self._types.get(field_type_def.key_type)
             value_type = self._types.get(field_type_def.value_type)
@@ -802,7 +801,7 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d.second" % level_n, value_type, level_n + 1)))
                 c.append("}")
 
-        elif type_class in ["string", "bytes"]:
+        elif type_class in [TypeClass.string, TypeClass.bytes]:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("_size += %s.size();" % field_name)
 

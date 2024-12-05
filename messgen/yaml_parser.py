@@ -15,6 +15,7 @@ from .model import (
     MessgenType,
     Protocol,
     StructType,
+    TypeClass,
     VectorType,
 )
 from .validation import (
@@ -122,12 +123,12 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_
     type_desc = type_descriptors.get(type_name)
     if not type_desc:
         raise RuntimeError(f"Invalid type: {type_name}")
-    type_class = type_desc.get("type_class", None)
+    type_class = TypeClass[type_desc.get("type_class", None)]
 
-    if type_class == "enum":
+    if type_class == TypeClass.enum:
         return _get_enum_type(type_name, type_descriptors, type_dependencies)
 
-    if type_class == "struct":
+    if type_class == TypeClass.struct:
         return _get_struct_type(type_name, type_descriptors, type_dependencies)
 
     raise RuntimeError("Invalid type class: %s" % type_class)
@@ -135,13 +136,13 @@ def _get_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_
 
 def _get_scalar_type(type_name: str, scalar_type: dict[str, Any]) -> BasicType:
         return BasicType(type=type_name,
-                         type_class="scalar",
+                         type_class=TypeClass.scalar,
                          size=scalar_type["size"])
 
 
 def _get_basic_type(type_name: str) -> BasicType:
         return BasicType(type=type_name,
-                         type_class=type_name,
+                         type_class=TypeClass[type_name],
                          size=None)
 
 
@@ -152,7 +153,7 @@ def _get_vector_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
     type_dependencies.add(element_type)
 
     return VectorType(type=type_name,
-                      type_class="vector",
+                      type_class=TypeClass.vector,
                       element_type=element_type,
                       size=None)
 
@@ -167,7 +168,7 @@ def _get_array_type(type_name: str, type_descriptors: dict[str, dict[str, Any]],
         print("Warn: %s array size is too large and may cause SIGSEGV on init" % type_name)
 
     res = ArrayType(type=type_name,
-                    type_class="array",
+                    type_class=TypeClass.array,
                     element_type=element_type,
                     array_size=array_size,
                     size=None)
@@ -194,7 +195,7 @@ def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], t
     type_dependencies.add(value_type)
 
     return MapType(type=type_name,
-                    type_class="map",
+                    type_class=TypeClass.map,
                     key_type=key_type,
                     value_type=value_type,
                     size=None)
@@ -215,7 +216,7 @@ def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], 
                for item in type_desc.get("values", {}) ]
 
     return EnumType(type=type_name,
-                    type_class="enum",
+                    type_class=TypeClass.enum,
                     base_type=base_type,
                     comment=type_desc.get("comment"),
                     values=values,
@@ -227,7 +228,7 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
     type_class = type_desc.get("type_class", None)
 
     struct_type = StructType(type=type_name,
-                             type_class="struct",
+                             type_class=TypeClass.struct,
                              comment=type_desc.get("comment"),
                              fields=[],
                              size=None)

@@ -1,18 +1,30 @@
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Union
+
+
+class TypeClass(str, Enum):
+    scalar = auto()
+    string = auto()
+    bytes = auto()
+    vector = auto()
+    array = auto()
+    map = auto()
+    enum = auto()
+    struct = auto()
 
 
 @dataclass
 class BasicType:
     type: str
-    type_class: str
+    type_class: TypeClass
     size: int
 
 
 @dataclass
 class ArrayType:
     type: str
-    type_class: str
+    type_class: TypeClass
     element_type: str
     array_size: int
     size: int
@@ -21,7 +33,7 @@ class ArrayType:
 @dataclass
 class VectorType:
     type: str
-    type_class: str
+    type_class: TypeClass
     element_type: str
     size: int
 
@@ -29,7 +41,7 @@ class VectorType:
 @dataclass
 class MapType:
     type: str
-    type_class: str
+    type_class: TypeClass
     key_type: str
     value_type: str
     size: int
@@ -45,7 +57,7 @@ class EnumValue:
 @dataclass
 class EnumType:
     type: str
-    type_class: str
+    type_class: TypeClass
     base_type: str
     comment: str
     values: dict[str, EnumValue]
@@ -61,7 +73,7 @@ class FieldType:
 @dataclass
 class StructType:
     type: str
-    type_class: str
+    type_class: TypeClass
     comment: str
     fields: list[FieldType]
     size: int

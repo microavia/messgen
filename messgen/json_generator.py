@@ -1,12 +1,12 @@
 from . import common
 from . import protocol_version
-from .protocols import Protocols
+#from .protocols import Protocols
 import json
 import os
 
 
 class JsonGenerator:
-    _protocols: Protocols
+    _protocols: None
     _options: dict
 
     def __init__(self, protos, options):

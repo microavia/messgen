@@ -24,7 +24,7 @@ def generate(args: argparse.Namespace):
     types = yaml_parser.parse_types(args.types)
     protocols = yaml_parser.parse_protocols(args.protocols)
 
-    if (gen := generator.get_generator(args.lang, None, opts)) is not None:
+    if (gen := generator.get_generator(args.lang, opts)) is not None:
         if protocols and types:
             gen.generate_types(Path(args.outdir), types)
             gen.generate_protocols(Path(args.outdir), protocols, types)
