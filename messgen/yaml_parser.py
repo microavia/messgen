@@ -40,30 +40,16 @@ _SCALAR_TYPES_INFO = {
 }
 
 
-def parse_protocols(protocol_dirs: list[str | Path], protocols: list[str] = None) -> dict[str, dict[str, Any]]:
-    if not protocol_dirs:
+def parse_protocols(protocols: list[str] = None) -> dict[str, Protocol]:
+    if not protocols:
         return {}
 
-    seen_names = set()
     protocol_files = set()
-    for directory in protocol_dirs:
-        if not protocols:
-            protocol_files.update(list(Path(directory).rglob(f"*{_CONFIG_EXT}")))
-            continue
-
-        for proto in protocols:
-            expected_file = Path(directory) / f"{proto}{_CONFIG_EXT}"
-            if not expected_file.exists():
-                continue
-
-            if proto in seen_names:
-                raise RuntimeError(f"Duplicate protocol: {proto}")
-
-            seen_names.add(proto)
-            protocol_files.add(expected_file)
-
-    if missing_names := set(protocols or []) - seen_names:
-        raise RuntimeError(f"Missing protocols: {missing_names}")
+    for proto_path in protocols:
+        expected_file = Path(f"{proto_path}{_CONFIG_EXT}")
+        if not expected_file.exists():
+            raise RuntimeError(f"Protocol file not found: {expected_file}")
+        protocol_files.add(expected_file)
 
     protocol_descriptors = {}
     for protocol_file in protocol_files:

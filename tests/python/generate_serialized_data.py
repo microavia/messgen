@@ -8,7 +8,7 @@ from messgen.dynamic import Codec
 
 if __name__ == "__main__":
     codec = Codec()
-    codec.load(type_dirs=['tests/types'], protocol_dirs=["tests/protocols"])
+    codec.load(type_dirs=['tests/types'], protocols=["tests/protocols/test_proto.yaml", "tests/protocols/another_proto.yaml"])
 
     # simple_struct
     t = codec.get_type_by_name("test_proto", "messgen/test/simple_struct")

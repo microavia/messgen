@@ -43,8 +43,8 @@ def generate(args: argparse.Namespace):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--types", action='append', help="Type directories to load, may repeat")
-    parser.add_argument("--protocols", action='append', help="Protocol files to load, may repeat")
+    parser.add_argument("--types", action='append', help="Type directory to load, may repeat")
+    parser.add_argument("--protocols", action='append', help="Protocol file to load, may repeat")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--options", default="", help="Generator options")
