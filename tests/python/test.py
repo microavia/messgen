@@ -7,9 +7,9 @@ from messgen.dynamic import Codec
 if __name__ == "__main__":
     print(Codec)
     codec = Codec()
-    codec.load(["tests/messages"], ["messgen/test_proto"])
+    codec.load(type_dirs=['tests/types'], protocol_dirs=["tests/protocols"])
 
-    t = codec.get_type_by_name("messgen/test_proto", "simple_struct")
+    t = codec.get_type_by_name("test_proto", "messgen/test/simple_struct")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f2": 1.2345678901234567890,
@@ -22,7 +22,6 @@ if __name__ == "__main__":
     }
     b = t.serialize(msg1)
     print("Type name:", t.type_name)
-    print("Type ID:", t.id)
     print("Original msg:", msg1)
     print(b)
     msg2, sz = t.deserialize(b)
@@ -31,7 +30,7 @@ if __name__ == "__main__":
     print("Deserialized msg:", msg2)
     print()
 
-    t = codec.get_type_by_name("messgen/test_proto", "var_size_struct")
+    t = codec.get_type_by_name("test_proto", "messgen/test/var_size_struct")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],
@@ -39,7 +38,6 @@ if __name__ == "__main__":
     }
     b = t.serialize(msg1)
     print("Type name:", t.type_name)
-    print("Type ID:", t.id)
     print("Original msg:", msg1)
     print(b)
     msg2, sz = t.deserialize(b)

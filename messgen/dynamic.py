@@ -1,5 +1,13 @@
 import struct
-from .protocols import Protocols
+
+from .model import (
+    MessgenType,
+    TypeClass,
+)
+from .yaml_parser import (
+    parse_protocols,
+    parse_types
+)
 
 STRUCT_TYPES_MAP = {
     "uint8": "B",
@@ -20,20 +28,18 @@ class MessgenError(Exception):
     pass
 
 
-class Type:
-    def __init__(self, protos, curr_proto_name, type_name):
-        self.proto_name = curr_proto_name
+class Converter:
+    def __init__(self, types: dict[str, MessgenType], type_name: str):
         self.type_name = type_name
-        self.type_def = protos.get_type(curr_proto_name, type_name)
-        self.type_class = self.type_def["type_class"]
-        self.id = self.type_def.get("id", None)
+        self.type_def = types[type_name]
+        self.type_class = self.type_def.type_class
 
 
-class ScalarType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "scalar"
-        self.struct_fmt = STRUCT_TYPES_MAP.get(type_name, None)
+class ScalarConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.scalar
+        self.struct_fmt = STRUCT_TYPES_MAP.get(type_name)
         if self.struct_fmt is None:
             raise RuntimeError("Unsupported scalar type \"%s\"" % self.type_name)
         self.struct_fmt = "<" + self.struct_fmt
@@ -54,19 +60,19 @@ class ScalarType(Type):
         return self.def_value
 
 
-class EnumType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "enum"
-        self.base_type = self.type_def["base_type"]
+class EnumConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.enum
+        self.base_type = self.type_def.base_type
         self.struct_fmt = STRUCT_TYPES_MAP.get(self.base_type, None)
         if self.struct_fmt is None:
             raise RuntimeError("Unsupported base type \"%s\" in %s" % (self.base_type, self.type_name))
         self.struct_fmt = "<" + self.struct_fmt
         self.size = struct.calcsize(self.struct_fmt)
         self.mapping = {}
-        for item in self.type_def["values"]:
-            self.mapping[item["value"]] = item["name"]
+        for item in self.type_def.values:
+            self.mapping[item.value] = item.name
         self.rev_mapping = {v: k for k, v in self.mapping.items()}
 
     def serialize(self, data):
@@ -78,17 +84,15 @@ class EnumType(Type):
         return self.mapping[v], self.size
 
     def default_value(self):
-        return self.type_def["values"][0]["name"]
+        return self.type_def.values[0].name
 
 
-class StructType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "struct"
-        self.fields = []
-        for field in self.type_def["fields"]:
-            field_type_name = field["type"]
-            self.fields.append((field["name"], get_type(protos, curr_proto_name, field_type_name)))
+class StructConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.struct
+        self.fields = [(field.name, get_type(types, field.type))
+                       for field in self.type_def.fields]
 
     def serialize(self, data):
         out = []
@@ -109,18 +113,16 @@ class StructType(Type):
         return out, offset
 
     def default_value(self):
-        out = {}
-        for field_name, field_type in self.fields:
-            out[field_name] = field_type.default_value()
-        return out
+        return {field_name : field_type.default_value()
+                for field_name, field_type in self.fields}
 
 
-class ArrayType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "array"
-        self.element_type = get_type(protos, curr_proto_name, self.type_def["element_type"])
-        self.array_size = self.type_def["array_size"]
+class ArrayConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.array
+        self.element_type = get_type(types, self.type_def.element_type)
+        self.array_size = self.type_def.array_size
 
     def serialize(self, data):
         out = []
@@ -145,12 +147,12 @@ class ArrayType(Type):
         return out
 
 
-class VectorType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "vector"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
-        self.element_type = get_type(protos, curr_proto_name, self.type_def["element_type"])
+class VectorConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.vector
+        self.size_type = get_type(types, "uint32")
+        self.element_type = get_type(types, self.type_def.element_type)
 
     def serialize(self, data):
         out = []
@@ -175,13 +177,13 @@ class VectorType(Type):
         return []
 
 
-class MapType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "map"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
-        self.key_type = get_type(protos, curr_proto_name, self.type_def["key_type"])
-        self.value_type = get_type(protos, curr_proto_name, self.type_def["value_type"])
+class MapConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.map
+        self.size_type = get_type(types, "uint32")
+        self.key_type = get_type(types, self.type_def.key_type)
+        self.value_type = get_type(types, self.type_def.value_type)
 
     def serialize(self, data):
         out = []
@@ -208,11 +210,11 @@ class MapType(Type):
         return {}
 
 
-class StringType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "string"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
+class StringConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.string
+        self.size_type = get_type(types, "uint32")
         self.struct_fmt = "<%is"
 
     def serialize(self, data):
@@ -229,11 +231,11 @@ class StringType(Type):
         return ""
 
 
-class BytesType(Type):
-    def __init__(self, protos, curr_proto_name, type_name):
-        super().__init__(protos, curr_proto_name, type_name)
-        assert self.type_class == "bytes"
-        self.size_type = get_type(protos, curr_proto_name, "uint32")
+class BytesConverter(Converter):
+    def __init__(self, types: dict[str, MessgenType], type_name:str):
+        super().__init__(types, type_name)
+        assert self.type_class == TypeClass.bytes
+        self.size_type = get_type(types, "uint32")
         self.struct_fmt = "<%is"
 
     def serialize(self, data):
@@ -249,27 +251,27 @@ class BytesType(Type):
     def default_value(self):
         return b""
 
-def get_type(protocols, curr_proto_name, type_name):
-    type_def = protocols.get_type(curr_proto_name, type_name)
-    type_class = type_def["type_class"]
-    if type_class == "scalar":
-        t = ScalarType(protocols, curr_proto_name, type_name)
-    elif type_class == "enum":
-        t = EnumType(protocols, curr_proto_name, type_name)
-    elif type_class == "struct":
-        t = StructType(protocols, curr_proto_name, type_name)
-    elif type_class == "array":
-        t = ArrayType(protocols, curr_proto_name, type_name)
-    elif type_class == "vector":
-        t = VectorType(protocols, curr_proto_name, type_name)
-    elif type_class == "map":
-        t = MapType(protocols, curr_proto_name, type_name)
-    elif type_class == "string":
-        t = StringType(protocols, curr_proto_name, type_name)
-    elif type_class == "bytes":
-        t = BytesType(protocols, curr_proto_name, type_name)
+def get_type(types: dict[str, MessgenType], type_name:str) -> Converter:
+    type_def = types[type_name]
+    type_class = type_def.type_class
+    if type_class == TypeClass.scalar:
+        t = ScalarConverter(types, type_name)
+    elif type_class == TypeClass.enum:
+        t = EnumConverter(types, type_name)
+    elif type_class == TypeClass.struct:
+        t = StructConverter(types, type_name)
+    elif type_class == TypeClass.array:
+        t = ArrayConverter(types, type_name)
+    elif type_class == TypeClass.vector:
+        t = VectorConverter(types, type_name)
+    elif type_class == TypeClass.map:
+        t = MapConverter(types, type_name)
+    elif type_class == TypeClass.string:
+        t = StringConverter(types, type_name)
+    elif type_class == TypeClass.bytes:
+        t = BytesConverter(types, type_name)
     else:
-        raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_name))
+        raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_def.type))
     return t
 
 
@@ -278,25 +280,25 @@ class Codec:
         self.types_by_name = {}
         self.types_by_id = {}
 
-    def load(self, basedirs: list, protocols: list):
-        protos = Protocols()
-        protos.load(basedirs, protocols)
+    def load(self, type_dirs: list[str], protocol_dirs: list[str]):
+        types = parse_types(type_dirs)
+        protocols = parse_protocols(protocol_dirs)
 
-        for proto_name, proto_def in protos.proto_map.items():
-            by_name = (proto_def["proto_id"], {})
+        for proto_name, proto_def in protocols.items():
+            by_name = (proto_def.proto_id, {})
             by_id = (proto_name, {})
-            for type_name in proto_def["types"].keys():
-                t = get_type(protos, proto_name, type_name)
-                by_name[1][t.type_name] = t
-                if t.id is not None:
-                    by_id[1][t.id] = t
+            for type_id, type_name in proto_def.types.items():
+                t = get_type(types, type_name)
+                by_name[1][type_name] = t
+                if type_id is not None:
+                    by_id[1][type_id] = t
             self.types_by_name[proto_name] = by_name
-            self.types_by_id[proto_def["proto_id"]] = by_id
+            self.types_by_id[proto_def.proto_id] = by_id
 
-    def get_type_by_name(self, proto_name, type_name):
+    def get_type_by_name(self, proto_name: str, type_name: str):
         return self.types_by_name[proto_name][1][type_name]
 
-    def serialize(self, proto_name: str, msg_name: str, msg: dict) -> (int, int, bytes):
+    def serialize(self, proto_name: str, msg_name: str, msg: dict) -> tuple[int, int, bytes]:
         p = self.types_by_name.get(proto_name)
         if p is None:
             raise MessgenError("Unsupported proto_name in serialization: proto_name=%s" % proto_name)
@@ -307,7 +309,7 @@ class Codec:
         payload = t.serialize(msg)
         return p[0], t.id, payload
 
-    def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> (str, str, dict, int):
+    def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> tuple[str, str, dict, int]:
         p = self.types_by_id.get(proto_id)
         if p is None:
             raise MessgenError("Unsupported proto_id in deserialization: proto_id=%s" % proto_id)
