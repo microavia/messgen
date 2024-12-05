@@ -13,7 +13,7 @@ from messgen import (
 
 if __name__ == "__main__":
     langs = ["cpp"]
-    types_dir = Path("tests/types_invalid")
+    types_dir = Path("tests/data/types_invalid")
     output_dir = "/tmp/messgen_tests"
 
     for lang in langs:

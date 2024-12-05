@@ -282,9 +282,9 @@ class Codec:
         self.types_by_name = {}
         self.types_by_id = {}
 
-    def load(self, type_dirs: list[str | Path], protocol_dirs: list[str | Path], protocols: list[str] = None):
+    def load(self, type_dirs: list[str | Path], protocols: list[str] = None):
         parsed_types = parse_types(type_dirs)
-        parsed_protocols = parse_protocols(protocol_dirs, protocols)
+        parsed_protocols = parse_protocols(protocols)
 
         for proto_name, proto_def in parsed_protocols.items():
             by_name = (proto_def.proto_id, {})

@@ -3,8 +3,8 @@ find_package(GTest REQUIRED)
 
 enable_testing()
 
-set(MESSGEN_TYPE_DIR "${CMAKE_CURRENT_LIST_DIR}/types")
-set(MESSGEN_PROTO_DIR "${CMAKE_CURRENT_LIST_DIR}/protocols")
+set(MESSGEN_TYPE_DIR "${CMAKE_CURRENT_LIST_DIR}/data/types")
+set(MESSGEN_PROTO_DIR "${CMAKE_CURRENT_LIST_DIR}/data/protocols")
 
 add_executable(test_cpp "cpp/CppTest.cpp")
 messgen_add_types_library(msgs_test_types "${MESSGEN_TYPE_DIR}" "stl" "cpp_standard=20")
