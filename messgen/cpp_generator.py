@@ -339,7 +339,7 @@ class CppGenerator:
             is_flat_str = "true"
         code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
         code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
-        code.append(_indent(f"static constexpr const char* SCHEMA = R\"({self._generate_schema(type_def)})\";"))
+        code.append(_indent(f"static constexpr const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
         code.append("")
 
         for field in type_def.fields:
