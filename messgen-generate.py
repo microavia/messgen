@@ -21,16 +21,16 @@ def generate(args: argparse.Namespace):
             print(f"  {p[0]} = {p[1]}")
             opts[p[0]] = p[1]
 
-    types = yaml_parser.parse_types(args.types)
-    protocols = yaml_parser.parse_protocols(args.protocol)
+    parsed_protocols = yaml_parser.parse_protocols(args.protocol)
+    parsed_types = yaml_parser.parse_types(args.types)
 
     if (gen := generator.get_generator(args.lang, opts)) is not None:
-        if protocols and types:
-            gen.generate(Path(args.outdir), types, protocols)
-        elif types:
-            gen.generate_types(Path(args.outdir), types)
-        elif protocols:
-            gen.generate_protocols(Path(args.outdir), protocols)
+        if parsed_protocols and parsed_types:
+            gen.generate(Path(args.outdir), parsed_types, parsed_protocols)
+        elif parsed_types:
+            gen.generate_types(Path(args.outdir), parsed_types)
+        elif parsed_protocols:
+            gen.generate_protocols(Path(args.outdir), parsed_protocols)
 
     else:
         raise RuntimeError("Unsupported language \"%s\"" % args.lang)
@@ -41,7 +41,7 @@ def generate(args: argparse.Namespace):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--types", action='append', help="Type directory to load, may repeat")
-    parser.add_argument("--protocol", action='append', help="Protocol file to load, may repeat")
+    parser.add_argument("--protocol", action='append', help="Protocol to load in format /path/of/basedir:namespace/of/proto, may repeat")
     parser.add_argument("--lang", required=True, help="Output language")
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--options", default="", help="Generator options")

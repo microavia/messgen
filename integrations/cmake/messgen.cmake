@@ -74,7 +74,7 @@ function(messgen_generate_protocol BASE_DIR PROTOCOL OUT_DIR OUT_FILES_VAR)
         COMMAND "python3"
         ARGS
         ${MESSGEN_DIR}/messgen-generate.py
-        "--protocol" ${BASE_DIR}/${PROTOCOL}
+        "--protocol" "${BASE_DIR}:${PROTOCOL}"
         "--outdir" ${PROTO_OUT_DIR}
         "--lang" "cpp"
         DEPENDS ${GENERATOR_DEPS} "${BASE_DIR}/${PROTOCOL}.yaml"

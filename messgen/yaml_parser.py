@@ -45,17 +45,20 @@ def parse_protocols(protocols: list[str]) -> dict[str, Protocol]:
     if not protocols:
         return {}
 
-    protocol_files = set()
-    for proto_path in protocols:
-        expected_file = Path(f"{proto_path}{_CONFIG_EXT}")
+    if not all(proto.count(":") == 1 for proto in (protocols or [])):
+        raise RuntimeError("Protocol must be in format /path/of/basedir:namespace/of/proto")
+
+    protocol_files = {}
+    for proto in protocols:
+        proto_path, proto_name = proto.split(":")
+        expected_file = Path(proto_path) / f"{proto_name}{_CONFIG_EXT}"
         if not expected_file.exists():
             raise RuntimeError(f"Protocol file not found: {expected_file}")
-        protocol_files.add(expected_file)
+        protocol_files[proto_name] = expected_file
 
     protocol_descriptors: dict[str, Protocol] = {}
-    for protocol_file in protocol_files:
-        proto_name, proto_def = _parse_protocol(protocol_file)
-        protocol_descriptors[proto_name] = proto_def
+    for proto_name, protocol_file in protocol_files.items():
+        protocol_descriptors[proto_name] = _parse_protocol(protocol_file)
 
     return protocol_descriptors
 
@@ -66,7 +69,7 @@ def _parse_protocol(protocol_file: Path) -> tuple[str, Protocol]:
         item_name = protocol_file.stem
         if not is_valid_name(item_name):
             raise RuntimeError(f"Invalid message name {item_name}")
-        return item_name, _get_protocol(item_name, item)
+        return _get_protocol(item_name, item)
     raise RuntimeError(f"Failed to open file: {protocol_file}")
 
 

@@ -183,16 +183,16 @@ class CppGenerator:
                 code.append(f"static constexpr int PROTO_ID = {proto_id};")
                 code.append("")
 
-            code.extend(self._generate_proto_ids(proto_name, proto_def))
+            code.extend(self._generate_proto_ids(proto_def))
             code.append("")
-            code.extend(self._generate_reflect_type(proto_name, proto_def))
+            code.extend(self._generate_reflect_type(proto_def))
             code.append("")
-            code.extend(self._generate_dispatcher(proto_name, proto_def))
+            code.extend(self._generate_dispatcher())
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
         return code
 
-    def _generate_proto_ids(self, proto_name: str, proto: Protocol) -> list[str]:
+    def _generate_proto_ids(self, proto: Protocol) -> list[str]:
         code: list[str] = []
         code.append("template <class Msg> inline constexpr int TYPE_ID;")
         for type_id, type_name in proto.types.items():
@@ -200,7 +200,7 @@ class CppGenerator:
         code.append("")
         return code
 
-    def _generate_reflect_type(self, proto_name: str, proto: Protocol) -> list[str]:
+    def _generate_reflect_type(self, proto: Protocol) -> list[str]:
         code: list[str] = []
         code.append("template <class Fn>")
         code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
@@ -214,7 +214,7 @@ class CppGenerator:
         code.append("}")
         return code
 
-    def _generate_dispatcher(self, proto_name: str, proto: Protocol) -> list[str]:
+    def _generate_dispatcher(self) -> list[str]:
         return textwrap.dedent("""
             template <class T>
             bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {
@@ -333,11 +333,10 @@ class CppGenerator:
             is_flat_str = "true"
         code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
         code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
-        code.append(_indent(f"static constexpr const char* SCHEMA = \"{self._generate_schema(type_def)}\";"))
+        code.append(_indent(f"static constexpr const char* SCHEMA = R\"({self._generate_schema(type_def)})\";"))
         code.append("")
 
         for field in type_def.fields:
-            field_def = self._types[field.type]
             field_c_type = self._cpp_type(field.type)
             code.append(_indent(f"{field_c_type} {field.name}; {_inline_comment(field)}"))
 
@@ -462,7 +461,7 @@ class CppGenerator:
 
     @staticmethod
     def _generate_schema(type_def: MessgenType):
-        return json.dumps(asdict(type_def)).replace('"', '\\"').replace(" ", "")
+        return json.dumps(asdict(type_def)).replace(" ", "")
 
     def _add_include(self, inc, scope="global"):
         self._includes.add((inc, scope))

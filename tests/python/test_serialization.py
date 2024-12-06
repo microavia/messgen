@@ -6,7 +6,7 @@ from messgen.dynamic import Codec
 @pytest.fixture
 def codec():
     codec_ = Codec()
-    codec_.load(type_dirs=['tests/data/types'], protocols=["tests/data/protocols/test_proto"])
+    codec_.load(type_dirs=['tests/data/types'], protocols=["tests/data/protocols:test_proto"])
     yield codec_
 
 
