@@ -18,7 +18,7 @@ def generate(args: argparse.Namespace):
     for a in args.options.split(","):
         p = a.split("=")
         if len(p) == 2:
-            print("  %s = %s", p[0], p[1])
+            print(f"  {p[0]} = {p[1]}")
             opts[p[0]] = p[1]
 
     types = yaml_parser.parse_types(args.types)
