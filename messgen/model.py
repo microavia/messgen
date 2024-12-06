@@ -68,16 +68,16 @@ class EnumType:
 class FieldType:
     name: str
     type: str
-    comment: str
+    comment: str | None
 
 
 @dataclass
 class StructType:
     type: str
     type_class: TypeClass
-    comment: str
+    comment: str | None
     fields: list[FieldType]
-    size: int
+    size: int | None
 
 
 MessgenType = Union[

@@ -230,12 +230,12 @@ def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], 
                     base_type=base_type,
                     comment=type_desc.get("comment"),
                     values=values,
-                    size=dependency.size)
+                    size=dependency.size or _SCALAR_TYPES_INFO["int"]["size"])
 
 
 def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> StructType:
-    type_desc = type_descriptors.get(type_name)
-    type_class = type_desc.get("type_class", None)
+    type_desc = type_descriptors[type_name]
+    type_class = type_desc.get("type_class")
 
     struct_type = StructType(type=type_name,
                              type_class=TypeClass.struct,
@@ -243,7 +243,7 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
                              fields=[],
                              size=None)
 
-    fields = (type_desc.get("fields")
+    fields = (type_desc.get("fields", [])
               if isinstance(type_desc.get("fields"), list)
               else [])
 

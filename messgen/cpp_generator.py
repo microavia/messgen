@@ -408,7 +408,7 @@ class CppGenerator:
         fixed_size = 0
         fixed_fields = []
         for field in fields:
-            field_type_def = self._types.get(field.type)
+            field_type_def = self._types[field.type]
             field_size = field_type_def.size
 
             if field_size is None:
@@ -478,7 +478,7 @@ class CppGenerator:
             code.append("")
         return code
 
-    def _generate_members_of(self, type_name: str, type_def: MessgenType):
+    def _generate_members_of(self, type_name: str, type_def: StructType):
         self._add_include("tuple")
 
         unqual_name = _unqual_name(type_name)
@@ -498,18 +498,37 @@ class CppGenerator:
         type_def = self._types[type_name]
         mode = self._get_mode()
 
-        if type_def.type_class == TypeClass.scalar:
-            self._add_include("cstdint")
-            return self._CPP_TYPES_MAP[type_name]
+        if isinstance(type_def, BasicType):
 
-        elif type_def.type_class == TypeClass.array:
+            if type_def.type_class == TypeClass.scalar:
+                self._add_include("cstdint")
+                return self._CPP_TYPES_MAP[type_name]
+
+            elif type_def.type_class == TypeClass.string:
+                if mode == "stl":
+                    self._add_include("string")
+                    return "std::string"
+                elif mode == "nostl":
+                    self._add_include("string_view")
+                    return "std::string_view"
+                else:
+                    raise RuntimeError("Unsupported mode for string: %s" % mode)
+
+            elif type_def.type_class == TypeClass.bytes:
+                if mode == "stl":
+                    self._add_include("vector")
+                    return "std::vector<uint8_t>"
+                elif mode == "nostl":
+                    return "messgen::vector<uint8_t>"
+                else:
+                    raise RuntimeError("Unsupported mode for bytes: %s" % mode)
+
+        elif isinstance(type_def, ArrayType):
             self._add_include("array")
-            el_type_name = _qual_name(type_def.element_type)
             el_c_type = self._cpp_type(type_def.element_type)
             return "std::array<%s, %d>" % (el_c_type, type_def.array_size)
 
-        elif type_def.type_class == TypeClass.vector:
-            el_type_name = type_def.element_type
+        elif isinstance(type_def, VectorType):
             el_c_type = self._cpp_type(type_def.element_type)
             if mode == "stl":
                 self._add_include("vector")
@@ -519,7 +538,7 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for vector: %s" % mode)
 
-        elif type_def.type_class == TypeClass.map:
+        elif isinstance(type_def, MapType):
             key_c_type = self._cpp_type(type_def.key_type)
             value_c_type = self._cpp_type(type_def.value_type)
             if mode == "stl":
@@ -531,37 +550,16 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
 
-        elif type_def.type_class == TypeClass.string:
-            if mode == "stl":
-                self._add_include("string")
-                return "std::string"
-            elif mode == "nostl":
-                self._add_include("string_view")
-                return "std::string_view"
-            else:
-                raise RuntimeError("Unsupported mode for string: %s" % mode)
-
-        elif type_def.type_class == TypeClass.bytes:
-            if mode == "stl":
-                self._add_include("vector")
-                return "std::vector<uint8_t>"
-            elif mode == "nostl":
-                return "messgen::vector<uint8_t>"
-            else:
-                raise RuntimeError("Unsupported mode for bytes: %s" % mode)
-
-        elif type_def.type_class in [TypeClass.enum, TypeClass.struct]:
-            if SEPARATOR in type_name:
-                scope = "global"
-            else:
-                scope = "local"
+        elif isinstance(type_def, (EnumType, StructType)):
+            scope = ("global"
+                     if SEPARATOR in type_name
+                     else "local")
             self._add_include("%s.h" % type_name, scope)
             return _qual_name(type_name)
 
-        else:
-            raise RuntimeError("Can't get c++ type for %s" % type_name)
+        raise RuntimeError("Can't get c++ type for %s" % type_name)
 
-    def _all_fields_scalar(self, fields: list[tuple[str, str]]):
+    def _all_fields_scalar(self, fields: list[FieldType]):
         return all(self._types[field.type].type_class != TypeClass.scalar
                    for field in fields)
 
