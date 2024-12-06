@@ -66,8 +66,6 @@ function(messgen_generate_protocol BASE_DIR PROTOCOL OUT_DIR OUT_FILES_VAR)
     set(PROTO_FILE "${BASE_DIR}/${PROTOCOL}.yaml")
     set(OUT_FILE "${OUT_DIR}/${PROTOCOL}.h")
 
-    get_filename_component(PROTO_OUT_DIR "${OUT_FILE}" DIRECTORY)
-
     file(GLOB_RECURSE GENERATOR_DEPS ${MESSGEN_DIR}/*.py)
     add_custom_command(
         OUTPUT ${OUT_FILE}
@@ -75,7 +73,7 @@ function(messgen_generate_protocol BASE_DIR PROTOCOL OUT_DIR OUT_FILES_VAR)
         ARGS
         ${MESSGEN_DIR}/messgen-generate.py
         "--protocol" "${BASE_DIR}:${PROTOCOL}"
-        "--outdir" ${PROTO_OUT_DIR}
+        "--outdir" ${OUT_DIR}
         "--lang" "cpp"
         DEPENDS ${GENERATOR_DEPS} "${BASE_DIR}/${PROTOCOL}.yaml"
     )

@@ -15,13 +15,13 @@ concept serializable = requires(std::remove_cvref_t<Msg> msg, uint8_t *buf) {
 };
 
 template <class Msg>
-concept message = serializable<Msg> && requires(std::remove_cvref_t<Msg> msg) {
+concept type = serializable<Msg> && requires(std::remove_cvref_t<Msg> msg) {
     { msg.NAME } -> std::convertible_to<const char *>;
     { msg.SCHEMA } -> std::convertible_to<const char *>;
     { msg.IS_FLAT } -> std::convertible_to<bool>;
 };
 
 template <class Msg>
-concept flat_message = message<Msg> && std::remove_cvref_t<Msg>::IS_FLAT;
+concept flat_type = type<Msg> && std::remove_cvref_t<Msg>::IS_FLAT;
 
 } // namespace messgen

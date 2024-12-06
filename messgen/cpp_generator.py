@@ -137,6 +137,8 @@ class CppGenerator:
         for proto_name, proto_def in protocols.items():
             file_name = out_dir / (proto_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
+            print(file_name)
+            print(proto_name)
             write_file_if_diff(file_name, self._generate_proto_file(proto_name, proto_def))
 
     def _get_mode(self):
@@ -194,7 +196,11 @@ class CppGenerator:
 
     def _generate_proto_ids(self, proto: Protocol) -> list[str]:
         code: list[str] = []
-        code.append("template <class Msg> inline constexpr int TYPE_ID;")
+        code.append("template <messgen::type Msg> inline constexpr int TYPE_ID = []{")
+        code.append("    static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");")
+        code.append("    return 0;")
+        code.append("}();")
+
         for type_id, type_name in proto.types.items():
             code.append(f"template <> inline constexpr int TYPE_ID<{_qual_name(type_name)}> = {type_id};")
         code.append("")

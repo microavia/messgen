@@ -98,15 +98,15 @@ TEST_F(CppNostlTest, MessageConcept) {
 
     struct not_a_message {};
 
-    EXPECT_TRUE(message<test::simple_struct>);
-    EXPECT_FALSE(message<not_a_message>);
-    EXPECT_FALSE(message<int>);
+    EXPECT_TRUE(type<test::simple_struct>);
+    EXPECT_FALSE(type<not_a_message>);
+    EXPECT_FALSE(type<int>);
 }
 
 TEST_F(CppNostlTest, FlatMessageConcept) {
     using namespace messgen;
 
-    EXPECT_TRUE(flat_message<test::flat_struct>);
-    EXPECT_FALSE(flat_message<test::var_size_struct>);
-    EXPECT_FALSE(flat_message<int>);
+    EXPECT_TRUE(flat_type<test::flat_struct>);
+    EXPECT_FALSE(flat_type<test::var_size_struct>);
+    EXPECT_FALSE(flat_type<int>);
 }
