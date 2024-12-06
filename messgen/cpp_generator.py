@@ -39,8 +39,9 @@ def _qual_name(type_name: str) -> str:
     return type_name.replace(SEPARATOR, "::")
 
 
-def _strip_last_name(type_name) -> str:
-    return SEPARATOR.join(type_name.split(SEPARATOR)[:-1])
+def _split_last_name(type_name) -> str:
+    split_name = type_name.split(SEPARATOR)
+    return SEPARATOR.join(split_name[:-1]), split_name[-1]
 
 
 @contextmanager
@@ -57,6 +58,15 @@ def _namespace(name: str, code:list[str]):
         if ns_name:
             code.append("")
             code.append(f"}} // namespace {ns_name}")
+
+
+@contextmanager
+def _struct(name: str, code: list[str]):
+    try:
+        code.append(f"struct {name} {{")
+        yield
+    finally:
+        code.append("};")
 
 
 def _inline_comment(type_def: FieldType | EnumValue):
@@ -137,8 +147,6 @@ class CppGenerator:
         for proto_name, proto_def in protocols.items():
             file_name = out_dir / (proto_name + self._EXT_HEADER)
             file_name.parent.mkdir(parents=True, exist_ok=True)
-            print(file_name)
-            print(proto_name)
             write_file_if_diff(file_name, self._generate_proto_file(proto_name, proto_def))
 
     def _get_mode(self):
@@ -155,7 +163,7 @@ class CppGenerator:
         self._reset_file()
         code: list[str] = []
 
-        with _namespace(_strip_last_name(type_name), code):
+        with _namespace(_split_last_name(type_name)[0], code):
             if isinstance(type_def, EnumType):
                 code.extend(self._generate_type_enum(type_name, type_def))
 
@@ -176,68 +184,104 @@ class CppGenerator:
         self._add_include("cstdint")
         self._add_include("messgen/messgen.h")
 
-        with _namespace(proto_name, code):
-            for type_name in proto_def.types.values():
-                self._add_include(type_name + self._EXT_HEADER)
+        namespace_name, class_name = _split_last_name(proto_name)
+        print(f"Namespace: {namespace_name}, Class: {class_name}")
+        with _namespace(namespace_name, code):
+            with _struct(class_name, code):
+                for type_name in proto_def.types.values():
+                    self._add_include(type_name + self._EXT_HEADER)
 
-            proto_id = proto_def.proto_id
-            if proto_id is not None:
-                code.append(f"static constexpr int PROTO_ID = {proto_id};")
-                code.append("")
+                proto_id = proto_def.proto_id
+                if proto_id is not None:
+                    code.append(f"    constexpr static int PROTO_ID = {proto_id};")
 
-            code.extend(self._generate_proto_ids(proto_def))
+                code.extend(self._generate_type_id_decl(proto_def))
+                code.extend(self._generate_reflect_type_decl())
+                code.extend(self._generate_dispatcher_decl())
+
+            code.extend(self._generate_type_ids(class_name, proto_def))
+            code.extend(self._generate_reflect_type(class_name, proto_def))
+            code.extend(self._generate_dispatcher(class_name))
             code.append("")
-            code.extend(self._generate_reflect_type(proto_def))
-            code.append("")
-            code.extend(self._generate_dispatcher())
 
-        code = self._PREAMBLE_HEADER + self._generate_includes() + code
-        return code
+        return self._PREAMBLE_HEADER + self._generate_includes() + code
 
-    def _generate_proto_ids(self, proto: Protocol) -> list[str]:
+    @staticmethod
+    def _generate_type_id_decl(proto: Protocol) -> list[str]:
+        return textwrap.indent(textwrap.dedent("""
+            template <messgen::type Msg>
+            constexpr static inline int TYPE_ID = []{
+                static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");
+                return 0;
+            }();"""), "    ").splitlines()
+
+    @staticmethod
+    def _generate_type_ids(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
-        code.append("template <messgen::type Msg> inline constexpr int TYPE_ID = []{")
-        code.append("    static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");")
-        code.append("    return 0;")
-        code.append("}();")
-
         for type_id, type_name in proto.types.items():
-            code.append(f"template <> inline constexpr int TYPE_ID<{_qual_name(type_name)}> = {type_id};")
-        code.append("")
+            code.append(f"    template <> constexpr inline int {class_name}::TYPE_ID<{_qual_name(type_name)}> = {type_id};")
         return code
 
-    def _generate_reflect_type(self, proto: Protocol) -> list[str]:
+    @staticmethod
+    def _generate_reflect_type_decl() -> list[str]:
+        return textwrap.indent(textwrap.dedent("""
+            template <class Fn>
+            constexpr static auto reflect_message(int type_id, Fn&& fn);
+            """), "    ").splitlines()
+
+    @staticmethod
+    def _generate_reflect_type(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
-        code.append("template <class Fn>")
-        code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
-        code.append("    switch (type_id) {")
+        code.append("    template <class Fn>")
+        code.append(f"    constexpr auto {class_name}::reflect_message(int type_id, Fn&& fn) {{")
+        code.append("        switch (type_id) {")
         for type_name in proto.types.values():
             qual_name = _qual_name(type_name)
-            code.append(f"        case TYPE_ID<{qual_name}>:")
-            code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
-            code.append(f"            return;")
+            code.append(f"            case TYPE_ID<{qual_name}>:")
+            code.append(f"                std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
+            code.append(f"                return;")
+        code.append("        }")
         code.append("    }")
-        code.append("}")
         return code
 
-    def _generate_dispatcher(self) -> list[str]:
-        return textwrap.dedent("""
+    @staticmethod
+    def _generate_dispatcher_decl() -> list[str]:
+        return textwrap.indent(textwrap.dedent("""
             template <class T>
-            bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {
+            static bool dispatch_message(int msg_id, const uint8_t *payload, T handler);
+            """), "    ").splitlines()
+
+    @staticmethod
+    def _generate_dispatcher(class_name: str) -> list[str]:
+        return textwrap.dedent(f"""
+            template <class T>
+            bool {class_name}::dispatch_message(int msg_id, const uint8_t *payload, T handler) {{
                 auto result = false;
-                reflect_message(msg_id, [&]<class R>(R) {
+                reflect_message(msg_id, [&]<class R>(R) {{
                     using message_type = messgen::splice_t<R>;
-                    if constexpr (requires(message_type msg) { handler(msg); }) {
+                    if constexpr (requires(message_type msg) {{ handler(msg); }}) {{
                         message_type msg;
                         msg.deserialize(payload);
                         handler(std::move(msg));
                         result = true;
-                    }
-                });
+                    }}
+                }});
                 return result;
+            }}""").splitlines()
+
+    @staticmethod
+    def _generate_traits() -> list[str]:
+        return textwrap.dedent("""
+            namespace messgen {
+                template <class T>
+                struct reflect_t {};
+
+                template <class T>
+                struct splice_t {};
             }""").splitlines()
 
-    def _generate_comment_type(self, type_def):
+    @staticmethod
+    def _generate_comment_type(type_def):
         if not type_def.comment:
             return []
 
