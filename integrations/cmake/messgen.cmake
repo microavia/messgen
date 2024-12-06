@@ -66,7 +66,7 @@ function(messgen_generate_protocol BASE_DIR PROTOCOL OUT_DIR OUT_FILES_VAR)
     set(PROTO_FILE "${BASE_DIR}/${PROTOCOL}.yaml")
     set(OUT_FILE "${OUT_DIR}/${PROTOCOL}.h")
 
-    list(APPEND MESSGEN_ARGS "--protocol" "${BASE_DIR}/${PROTOCOL}")
+    get_filename_component(PROTO_OUT_DIR "${OUT_FILE}" DIRECTORY)
 
     file(GLOB_RECURSE GENERATOR_DEPS ${MESSGEN_DIR}/*.py)
     add_custom_command(
@@ -74,8 +74,8 @@ function(messgen_generate_protocol BASE_DIR PROTOCOL OUT_DIR OUT_FILES_VAR)
         COMMAND "python3"
         ARGS
         ${MESSGEN_DIR}/messgen-generate.py
-        ${MESSGEN_ARGS}
-        "--outdir" ${OUT_DIR}
+        "--protocol" ${BASE_DIR}/${PROTOCOL}
+        "--outdir" ${PROTO_OUT_DIR}
         "--lang" "cpp"
         DEPENDS ${GENERATOR_DEPS} "${BASE_DIR}/${PROTOCOL}.yaml"
     )
@@ -88,7 +88,7 @@ endfunction()
 #
 function(messgen_add_types_library LIBRARY_NAME BASE_DIRS MODE)
     string(JOIN "," OPTIONS "mode=${MODE}" ${ARGN})
-    set(MESSAGES_OUT_DIR "${CMAKE_BINARY_DIR}/${LIBRARY_NAME}/generated_src/types")
+    set(MESSAGES_OUT_DIR "${CMAKE_BINARY_DIR}/${LIBRARY_NAME}/generated_src")
     get_filename_component(MESSGEN_DIR ${CMAKE_CURRENT_FUNCTION_LIST_DIR} DIRECTORY)
     get_filename_component(MESSGEN_DIR ${MESSGEN_DIR} DIRECTORY)
     add_library(${LIBRARY_NAME} INTERFACE)
@@ -104,7 +104,7 @@ endfunction()
 #
 function(messgen_add_proto_library LIBRARY_NAME BASE_DIR PROTOCOL TYPES_TARGET)
     string(JOIN "," OPTIONS "mode=${MODE}" ${ARGN})
-    set(MESSAGES_OUT_DIR "${CMAKE_BINARY_DIR}/${LIBRARY_NAME}/generated_src/protocols")
+    set(MESSAGES_OUT_DIR "${CMAKE_BINARY_DIR}/${LIBRARY_NAME}/generated_src")
     add_library(${LIBRARY_NAME} INTERFACE)
     messgen_generate_protocol(${BASE_DIR} ${PROTOCOL} "${MESSAGES_OUT_DIR}" MESSGEN_OUT_FILES)
     target_sources(${LIBRARY_NAME} INTERFACE ${MESSGEN_OUT_FILES})
