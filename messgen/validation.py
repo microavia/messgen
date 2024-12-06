@@ -56,9 +56,11 @@ _CPP_KEYWORDS = {
     "friend",
     "goto",
     "if",
+    "import",
     "inline",
     "int",
     "long",
+    "module",
     "mutable",
     "namespace",
     "new",
@@ -103,7 +105,7 @@ _CPP_KEYWORDS = {
     "volatile",
     "wchar_t",
     "while",
-    "xor_eq"
+    "xor_eq",
     "xor",
 }
 
@@ -115,7 +117,7 @@ _CPP_INT_TYPES = {
     "uint8_t",
     "uint16_t",
     "uint32_t",
-    "uint64_t"
+    "uint64_t",
 }
 
 
