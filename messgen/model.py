@@ -59,7 +59,7 @@ class EnumType:
     type: str
     type_class: TypeClass
     base_type: str
-    comment: str
+    comment: str | None
     values: list[EnumValue]
     size: int
 
@@ -68,6 +68,7 @@ class EnumType:
 class FieldType:
     name: str
     type: str
+    comment: str
 
 
 @dataclass
@@ -79,7 +80,14 @@ class StructType:
     size: int
 
 
-MessgenType = Union[StructType, BasicType, ArrayType, VectorType, MapType]
+MessgenType = Union[
+    ArrayType,
+    BasicType,
+    EnumType,
+    MapType,
+    StructType,
+    VectorType,
+]
 
 
 @dataclass

@@ -17,10 +17,17 @@ from .common import (
     write_file_if_diff,
 )
 from .model import (
+    ArrayType,
+    BasicType,
+    EnumType,
+    EnumValue,
+    FieldType,
+    MapType,
     MessgenType,
     Protocol,
     StructType,
     TypeClass,
+    VectorType,
 )
 
 
@@ -52,7 +59,7 @@ def _namespace(name: str, code:list[str]):
             code.append(f"}} // namespace {ns_name}")
 
 
-def _inline_comment(type_def: MessgenType):
+def _inline_comment(type_def: FieldType | EnumValue):
     try:
         return "  ///< %s" % type_def.comment
     finally:
@@ -106,10 +113,10 @@ class CppGenerator:
         self._options: dict = options
         self._includes: set = set()
         self._ctx: dict = {}
-        self._types = None
+        self._types: dict[str, MessgenType] = {}
 
     def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
-        self.validate(protocols, types)
+        self.validate(types, protocols)
         self.generate_types(out_dir, types)
         self.generate_protocols(out_dir, protocols)
 
@@ -144,13 +151,13 @@ class CppGenerator:
     def _generate_type_file(self, type_name: str, type_def: MessgenType) -> list:
         print(f"Generate type: {type_name}")
         self._reset_file()
-        code = []
+        code: list[str] = []
 
         with _namespace(_strip_last_name(type_name), code):
-            if type_def.type_class == TypeClass.enum:
+            if isinstance(type_def, EnumType):
                 code.extend(self._generate_type_enum(type_name, type_def))
 
-            elif type_def.type_class == TypeClass.struct:
+            elif isinstance(type_def, StructType):
                 code.extend(self._generate_type_struct(type_name, type_def))
                 code.extend(self._generate_members_of(type_name, type_def))
 
@@ -162,7 +169,7 @@ class CppGenerator:
         print("Generate protocol file: %s" % proto_name)
 
         self._reset_file()
-        code = []
+        code: list[str] = []
 
         self._add_include("cstdint")
         self._add_include("messgen/messgen.h")
@@ -185,7 +192,7 @@ class CppGenerator:
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
         return code
 
-    def _generate_proto_ids(self, proto_name: str, proto: dict) -> list[str]:
+    def _generate_proto_ids(self, proto_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
         code.append("template <class Msg> inline constexpr int TYPE_ID;")
         for type_id, type_name in proto.types.items():
@@ -193,7 +200,7 @@ class CppGenerator:
         code.append("")
         return code
 
-    def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
+    def _generate_reflect_type(self, proto_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
         code.append("template <class Fn>")
         code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
@@ -207,7 +214,7 @@ class CppGenerator:
         code.append("}")
         return code
 
-    def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
+    def _generate_dispatcher(self, proto_name: str, proto: Protocol) -> list[str]:
         return textwrap.dedent("""
             template <class T>
             bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {
@@ -244,7 +251,7 @@ class CppGenerator:
         code.extend(self._generate_comment_type(type_def))
         code.append(f"enum class {unqual_name}: {self._cpp_type(type_def.base_type)} {{")
         for enum_value in type_def.values:
-            code.append("    %s = %s,%s" % (enum_value.name, enum_value.value, _inline_comment(enum_value.comment)))
+            code.append("    %s = %s,%s" % (enum_value.name, enum_value.value, _inline_comment(enum_value)))
         code.append("};")
 
         code.append("")
@@ -257,40 +264,40 @@ class CppGenerator:
     def _get_alignment(self, type_def: MessgenType):
         type_class = type_def.type_class
 
-        if type_class in [TypeClass.scalar, TypeClass.enum]:
+        if isinstance(type_def, BasicType):
+            if type_class in [TypeClass.scalar]:
+                return type_def.size
+            elif type_class in [TypeClass.string, TypeClass.bytes]:
+                return self._get_alignment(self._types[SIZE_TYPE])
+
+        if isinstance(type_def, EnumType):
             return type_def.size
 
-        elif type_class == TypeClass.struct:
+        elif isinstance(type_def, StructType):
             # Alignment of struct is equal to max of the field alignments
             a_max = 0
             for field in type_def.fields:
-                field_type_def = self._types.get(field.type)
-                a = self._get_alignment(field_type_def)
+                a = self._get_alignment(self._types[field.type])
                 if a > a_max:
                     a_max = a
             return a_max
 
-        elif type_class == TypeClass.array:
+        elif isinstance(type_def, ArrayType):
             # Alignment of array is equal to alignment of element
-            el_type_def = self._types.get(type_def.element_type)
-            return self._get_alignment(el_type_def)
+            return self._get_alignment(self._types[type_def.element_type])
 
-        elif type_class == TypeClass.vector:
+        elif isinstance(type_def, VectorType):
             # Alignment of array is equal to max of size field alignment and alignment of element
-            a_sz = self._get_alignment(self._types.get(SIZE_TYPE))
-            a_el = self._get_alignment(self._types.get(type_def.element_type))
+            a_sz = self._get_alignment(self._types[SIZE_TYPE])
+            a_el = self._get_alignment(self._types[type_def.element_type])
             return max(a_sz, a_el)
 
-        elif type_class == TypeClass.map:
+        elif isinstance(type_def, MapType):
             # Alignment of array is equal to max of size field alignment and alignment of element
-            a_sz = self._get_alignment(self._types.get(SIZE_TYPE))
-            a_key = self._get_alignment(self._types.get(type_def.key_type))
-            a_value = self._get_alignment(self._types.get(type_def.value_type))
+            a_sz = self._get_alignment(self._types[SIZE_TYPE])
+            a_key = self._get_alignment(self._types[type_def.key_type])
+            a_value = self._get_alignment(self._types[type_def.value_type])
             return max(a_sz, a_key, a_value)
-
-        elif type_class in [TypeClass.string, TypeClass.bytes]:
-            # Alignment of string is equal size field alignment
-            return self._get_alignment(self._types.get(SIZE_TYPE))
 
         else:
             raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
@@ -332,7 +339,7 @@ class CppGenerator:
         for field in type_def.fields:
             field_def = self._types[field.type]
             field_c_type = self._cpp_type(field.type)
-            code.append(_indent(f"{field_c_type} {field.name}; {_inline_comment(field_def)}"))
+            code.append(_indent(f"{field_c_type} {field.name}; {_inline_comment(field)}"))
 
         # Serialize function
         code_ser = []

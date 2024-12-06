@@ -37,6 +37,7 @@ _SCALAR_TYPES_INFO = {
     "uint64": {"size": 8},
     "float32": {"size": 4},
     "float64": {"size": 8},
+    "int": {"size": 4},
 }
 
 
@@ -208,8 +209,10 @@ def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], t
                     size=None)
 
 
-def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> MapType:
+def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> EnumType:
     type_desc = type_descriptors.get(type_name)
+    assert type_desc
+
     base_type = type_desc.get("base_type")
 
     if base_type:
@@ -262,7 +265,9 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
         dependency = None
 
         if dependency := _value_or_none(_get_type, dependency_name, type_descriptors, type_dependencies):
-            struct_type.fields.append(FieldType(name=field_name, type=dependency_name))
+            struct_type.fields.append(FieldType(name=field_name,
+                                                type=dependency_name,
+                                                comment=field.get("comment")))
             type_dependencies.add(dependency_name)
 
         if not dependency:
