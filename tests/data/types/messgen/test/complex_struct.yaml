@@ -4,7 +4,7 @@ fields:
   - { name: "f0", type: "uint64", comment: "Some integer field" }
   - { name: "f1", type: "uint32", comment: "Some integer field" }
   - { name: "f2", type: "uint64", comment: "Some integer field" }
-  - { name: "s_arr", type: "messgen/test/simple_struct[2]" }
+  - { name: "s_arr", type: "simple_struct[2]" }
   - { name: "f1_arr", type: "int64[4]", comment: "Another integer field" }
   - { name: "v_arr", type: "messgen/test/var_size_struct[2]" }
   - { name: "f2_vec", type: "float64[]" }

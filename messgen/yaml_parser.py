@@ -98,6 +98,7 @@ def parse_types(base_dirs: list[str | Path]) -> dict[str, MessgenType]:
 
     ignore_dependencies: set[str] = set()
     type_dependencies -= set(parsed_types.keys())
+
     parsed_types.update({
         type_name: _get_type(type_name, type_descriptors, ignore_dependencies)
         for type_name in type_dependencies
@@ -158,7 +159,7 @@ def _get_vector_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
     assert _get_type(type_name[:-2], type_descriptors, type_dependencies)
 
     element_type = type_name[:-2]
-    type_dependencies.add(element_type)
+    type_dependencies.add(_get_dependency_type(type_name, element_type, type_descriptors, type_dependencies)[0])
 
     return VectorType(type=type_name,
                       type_class=TypeClass.vector,
@@ -169,7 +170,7 @@ def _get_vector_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
 def _get_array_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> ArrayType:
     p = type_name[:-1].split("[")
     element_type = "[".join(p[:-1])
-    type_dependencies.add(element_type)
+    type_dependencies.add(_get_dependency_type(type_name, element_type, type_descriptors, type_dependencies)[0])
 
     array_size = int(p[-1])
     if array_size > 0x10000:
@@ -196,11 +197,8 @@ def _get_map_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], t
     value_type = "{".join(p[:-1])
     key_type = p[-1]
 
-    assert _get_type(key_type, type_descriptors, type_dependencies)
-    assert _get_type(value_type, type_descriptors, type_dependencies)
-
-    type_dependencies.add(key_type)
-    type_dependencies.add(value_type)
+    type_dependencies.add(_get_dependency_type(type_name, key_type, type_descriptors, type_dependencies)[0])
+    type_dependencies.add(_get_dependency_type(type_name, value_type, type_descriptors, type_dependencies)[0])
 
     return MapType(type=type_name,
                     type_class=TypeClass.map,
@@ -216,7 +214,7 @@ def _get_enum_type(type_name: str, type_descriptors: dict[str, dict[str, Any]], 
     base_type = type_desc.get("base_type")
 
     if base_type:
-        type_dependencies.add(base_type)
+        type_dependencies.add(_get_dependency_type(type_name, base_type, type_descriptors, type_dependencies)[0])
         dependency = _get_type(base_type, type_descriptors, type_dependencies)
         assert dependency
 
@@ -251,7 +249,7 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
     fixed_size = True
     seen_names = set()
     for field in fields:
-        field_name = field.get("name")
+        field_name, field_type = field.get("name"), field.get("type")
 
         if not is_valid_name(field_name):
             raise RuntimeError(f"Invalid field '{field_name}' in {type_class}")
@@ -261,18 +259,9 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
 
         seen_names.add(field_name)
 
-        dependency_name = field.get("type")
-        dependency = None
-
-        if dependency := _value_or_none(_get_type, dependency_name, type_descriptors, type_dependencies):
-            struct_type.fields.append(FieldType(name=field_name,
-                                                type=dependency_name,
-                                                comment=field.get("comment")))
-            type_dependencies.add(dependency_name)
-
-        if not dependency:
-            raise RuntimeError(f"Invalid field '{type_name}.{field_name}' in {type_class}. "
-                               f"Could not resolve type from {dependency_name}")
+        dependency_name, dependency = _get_dependency_type(type_name, field_type, type_descriptors, type_dependencies)
+        struct_type.fields.append(FieldType(name=field_name, type=dependency_name, comment=field.get("comment")))
+        type_dependencies.add(dependency_name)
 
         if (dsz := dependency.size) is not None:
             sz += dsz
@@ -283,6 +272,19 @@ def _get_struct_type(type_name: str, type_descriptors: dict[str, dict[str, Any]]
         struct_type.size = sz
 
     return struct_type
+
+
+def _get_dependency_type(type_name: str, dependency_name: str, type_descriptors: dict[str, dict[str, Any]], type_dependencies: set[str]) -> tuple[str, MessgenType]:
+    if dependency := _value_or_none(_get_type, dependency_name, type_descriptors, type_dependencies):
+        return dependency_name, dependency
+
+    if SEPARATOR in type_name:
+        ns_name = SEPARATOR.join(type_name.split(SEPARATOR)[:-1])
+        qual_dependency_name = f"{ns_name}{SEPARATOR}{dependency_name}"
+        if dependency := _value_or_none(_get_type, qual_dependency_name, type_descriptors, type_dependencies):
+            return qual_dependency_name, dependency
+
+    raise RuntimeError(f"Could not resolve {dependency_name} dependency of {type_name}")
 
 
 def _value_or_none(func, *args, **kwargs):
