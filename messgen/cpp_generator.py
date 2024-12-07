@@ -39,7 +39,7 @@ def _qual_name(type_name: str) -> str:
     return type_name.replace(SEPARATOR, "::")
 
 
-def _split_last_name(type_name) -> str:
+def _split_last_name(type_name) -> tuple[str, str]:
     split_name = type_name.split(SEPARATOR)
     return SEPARATOR.join(split_name[:-1]), split_name[-1]
 
