@@ -63,7 +63,7 @@ def parse_protocols(protocols: list[str]) -> dict[str, Protocol]:
     return protocol_descriptors
 
 
-def _parse_protocol(protocol_file: Path) -> tuple[str, Protocol]:
+def _parse_protocol(protocol_file: Path) -> Protocol:
     with open(protocol_file, "r") as f:
         item = yaml.safe_load(f)
         item_name = protocol_file.stem
