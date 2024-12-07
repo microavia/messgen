@@ -1,7 +1,9 @@
 import os
 from typing import Dict, Set, List, Tuple
-from .protocols import Protocols
 from .common import SEPARATOR
+
+class Protocols: # fake
+    pass
 
 class TypeScriptTypes:
     TYPE_MAP = {
@@ -17,7 +19,7 @@ class TypeScriptTypes:
         "uint64": "bigint",
         "float32": "number",
         "float64": "number",
-        "string": "string", 
+        "string": "string",
         "bytes": "Uint8Array",
     }
 
@@ -46,8 +48,8 @@ class TypeScriptGenerator:
     _protocols: Protocols
     _options: dict
 
-    def __init__(self, protos, options):
-        self._protocols = protos
+    def __init__(self, options):
+        self._protocols = None # FIXME:
         self._reset_state()
         self._options = options
 
@@ -58,19 +60,19 @@ class TypeScriptGenerator:
 
     def generate(self, out_dir, proto_name, proto) -> None:
         self._reset_state()
-        
+
         types = proto.get("types", {})
         proto_comment = proto.get("comment", "")
         proto_version = proto.get("version", "")
         proto_name = proto.get("proto_name", proto_name)
 
         output_path = self._create_output_dirs(out_dir, proto_name)
-        
+
         for type_name in types:
             self._generate_type(proto_name, type_name, types)
 
         self._generate_types_map(proto_name, types)
-        
+
         code = self._generate_file_content(
             proto_name=proto_name,
             proto_comment=proto_comment,
@@ -85,13 +87,13 @@ class TypeScriptGenerator:
         output_path = os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep))
         os.makedirs(output_path, exist_ok=True)
         return output_path
-    
+
     def _generate_file_content(self, proto_name, proto_comment, proto_version, out_dir, output_path):
         header_lines = ['// === AUTO GENERATED CODE ===']
         if proto_comment:
             header_lines.append(f'// {proto_comment}')
         header_lines.append(f'// Protocol: {proto_name}')
-        
+
         if proto_version:
             header_lines.append(f'// Version: {proto_version}')
         header_lines.append('')
@@ -145,34 +147,34 @@ class TypeScriptGenerator:
 
     def _generate_interface(self, interface_name, type_def):
         self.code_lines.append(f"export interface {interface_name} {{")
-        fields = type_def.get("fields") or [] 
+        fields = type_def.get("fields") or []
 
         for field in fields:
             if field.get("comment"):
                 self.code_lines.append(f"  /** {field['comment']} */")
-            
+
             field_name = field["name"]
             field_type = self._get_ts_type(field["type"], type_def.get("proto_name", ""))
             self.code_lines.append(f"  {field_name}: {field_type};")
-            
+
         self.code_lines.append("}")
         self.code_lines.append("")
 
     def _generate_enum(self, enum_name, type_def):
         self.code_lines.append(f"export enum {enum_name} {{")
-        
+
         for value in type_def.get("values", []):
             if value.get("comment"):
                 self.code_lines.append(f"  /** {value['comment']} */")
             value_name = self._to_camel_case(value['name'])
             self.code_lines.append(f"  {value_name} = {value['value']},")
-            
+
         self.code_lines.append("}")
         self.code_lines.append("")
 
     def _write_output_file(self, output_path, proto_name, content):
         output_file = os.path.join(
-            output_path, 
+            output_path,
             f"{proto_name.split(SEPARATOR)[-1]}.ts"
         )
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -181,7 +183,7 @@ class TypeScriptGenerator:
     def _calculate_import_path(self, out_dir, output_path, proto_name):
         output_dir = os.path.dirname(output_path)
         proto_dir = os.path.join(out_dir, proto_name.replace(SEPARATOR, os.sep))
-        proto_dir = os.path.dirname(proto_dir) 
+        proto_dir = os.path.dirname(proto_dir)
         imported_file_name = proto_name.split(SEPARATOR)[-1]
         import_path = '../'
 
@@ -197,9 +199,9 @@ class TypeScriptGenerator:
         output_dir = os.path.dirname(output_path)
 
         relative_path = proto_filename if proto_dir in output_dir else proto_name.replace(SEPARATOR, '/')
-        
+
         return os.path.join('..', relative_path, proto_filename)
-    
+
     def _generate_imports(self, out_dir, output_path):
         sorted_imports = sorted(self.imports)
         return [
@@ -241,7 +243,7 @@ class TypeScriptGenerator:
             imported_type_name = parts[-1]
             self.imports.add((proto_name, imported_type_name))
             return self._to_camel_case(imported_type_name)
-        else: 
+        else:
             return self._to_camel_case(type_name)
 
 

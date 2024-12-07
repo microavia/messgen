@@ -1,11 +1,11 @@
-#include <another_proto.h>
+#include <nested/another_proto.h>
 #include <messgen/messgen.h>
-#include <messgen/test_proto.h>
-#include <messgen/test_proto/complex_struct_with_empty.h>
-#include <messgen/test_proto/complex_struct.h>
-#include <messgen/test_proto/flat_struct.h>
-#include <messgen/test_proto/struct_with_enum.h>
-#include <messgen/test_proto/var_size_struct.h>
+#include <test_proto.h>
+#include <messgen/test/complex_struct_with_empty.h>
+#include <messgen/test/complex_struct.h>
+#include <messgen/test/flat_struct.h>
+#include <messgen/test/struct_with_enum.h>
+#include <messgen/test/var_size_struct.h>
 
 #include <gtest/gtest.h>
 
@@ -49,7 +49,7 @@ protected:
 };
 
 TEST_F(CppTest, SimpleStruct) {
-    messgen::test_proto::simple_struct msg{};
+    messgen::test::simple_struct msg{};
     msg.f0 = 1;
     msg.f1 = 2;
     msg.f2 = 3;
@@ -63,16 +63,16 @@ TEST_F(CppTest, SimpleStruct) {
 }
 
 TEST_F(CppTest, StructWithEnum) {
-    messgen::test_proto::struct_with_enum msg{};
+    messgen::test::struct_with_enum msg{};
     msg.f0 = 1;
     msg.f1 = 2;
-    msg.e0 = messgen::test_proto::simple_enum::another_value;
+    msg.e0 = messgen::test::simple_enum::another_value;
 
     test_serialization(msg);
 }
 
 TEST_F(CppTest, VarSizeStruct) {
-    messgen::test_proto::var_size_struct msg{};
+    messgen::test::var_size_struct msg{};
     std::vector<int64_t> v;
     v.resize(2);
     v[0] = 3;
@@ -85,11 +85,11 @@ TEST_F(CppTest, VarSizeStruct) {
 }
 
 TEST_F(CppTest, ComplexStruct) {
-    messgen::test_proto::complex_struct msg{};
+    messgen::test::complex_struct msg{};
 
     msg.f0 = 255;
     msg.f2_vec.push_back(45.787);
-    msg.e_vec.push_back(messgen::test_proto::simple_enum::another_value);
+    msg.e_vec.push_back(messgen::test::simple_enum::another_value);
     msg.s_arr[0].f3 = 3;
     msg.s_arr[1].f3 = 5;
     msg.v_vec0.resize(1);
@@ -116,7 +116,7 @@ TEST_F(CppTest, ComplexStruct) {
 }
 
 TEST_F(CppTest, FlatStruct) {
-    messgen::test_proto::flat_struct msg{};
+    messgen::test::flat_struct msg{};
 
     msg.f0 = 1;
     msg.f1 = 2;
@@ -132,7 +132,7 @@ TEST_F(CppTest, FlatStruct) {
 }
 
 TEST_F(CppTest, FlatStructZeroCopy) {
-    messgen::test_proto::flat_struct msg{};
+    messgen::test::flat_struct msg{};
 
     msg.f0 = 1;
     msg.f1 = 2;
@@ -148,7 +148,7 @@ TEST_F(CppTest, FlatStructZeroCopy) {
 }
 
 TEST_F(CppTest, TwoMsg) {
-    messgen::test_proto::simple_struct msg1{};
+    messgen::test::simple_struct msg1{};
     msg1.f0 = 1;
     msg1.f1 = 2;
     msg1.f2 = 3;
@@ -158,7 +158,7 @@ TEST_F(CppTest, TwoMsg) {
     msg1.f6 = 7;
     msg1.f8 = 9;
 
-    messgen::test_proto::flat_struct msg2{};
+    messgen::test::flat_struct msg2{};
     msg2.f0 = 1;
     msg2.f1 = 2;
     msg2.f2 = 3;
@@ -177,8 +177,8 @@ TEST_F(CppTest, TwoMsg) {
 
     EXPECT_EQ(ser_size, sz_check);
 
-    messgen::test_proto::simple_struct msg1c{};
-    messgen::test_proto::flat_struct msg2c{};
+    messgen::test::simple_struct msg1c{};
+    messgen::test::flat_struct msg2c{};
     size_t deser_size = msg1c.deserialize(_buf.data());
     deser_size += msg2c.deserialize(_buf.data() + deser_size);
     EXPECT_EQ(deser_size, sz_check);
@@ -188,7 +188,7 @@ TEST_F(CppTest, TwoMsg) {
 }
 
 TEST_F(CppTest, ComplexStructWithEmpty) {
-    messgen::test_proto::complex_struct_with_empty e{};
+    messgen::test::complex_struct_with_empty e{};
     test_serialization(e);
 }
 
@@ -200,7 +200,7 @@ constexpr void for_each(std::tuple<T...> &&obj, Func &&func) {
 TEST_F(CppTest, MessageReflectionFieldNames) {
     using namespace messgen;
 
-    auto message = test_proto::complex_struct{};
+    auto message = test::complex_struct{};
 
     auto names = std::vector<std::string_view>{};
     for_each(members_of(reflect_object(message)), [&](auto &&param) { names.push_back(name_of(param)); });
@@ -216,7 +216,7 @@ TEST_F(CppTest, MessageReflectionFieldNames) {
 TEST_F(CppTest, MessageReflectionFieldTypes) {
     using namespace messgen;
 
-    auto message = test_proto::complex_struct{};
+    auto message = test::complex_struct{};
 
     auto types = std::vector<std::string_view>{};
     for_each(members_of(reflect_object(message)), [&](auto &&param) { types.push_back(name_of(type_of(param))); });
@@ -226,14 +226,14 @@ TEST_F(CppTest, MessageReflectionFieldTypes) {
         "uint64_t",
         "uint32_t",
         "uint64_t",
-        "array<simple_struct, 2>",
+        "array<messgen::test::simple_struct, 2>",
         "array<int64_t, 4>",
-        "array<var_size_struct, 2>",
+        "array<messgen::test::var_size_struct, 2>",
         "vector<double>",
-        "vector<simple_enum>",
-        "vector<simple_struct>",
-        "vector<vector<var_size_struct>>",
-        "array<vector<var_size_struct>, 4>",
+        "vector<messgen::test::simple_enum>",
+        "vector<messgen::test::simple_struct>",
+        "vector<vector<messgen::test::var_size_struct>>",
+        "array<vector<messgen::test::var_size_struct>, 4>",
         "vector<array<vector<int16_t>, 4>>",
         "string",
         "vector<uint8_t>",
@@ -245,14 +245,14 @@ TEST_F(CppTest, MessageReflectionFieldTypes) {
 }
 
 TEST_F(CppTest, EnumReflection) {
-    auto enum_name = messgen::name_of(messgen::reflect_type<messgen::test_proto::simple_enum>);
-    EXPECT_STREQ(enum_name.data(), "simple_enum");
+    auto enum_name = messgen::name_of(messgen::reflect_type<messgen::test::simple_enum>);
+    EXPECT_STREQ(enum_name.data(), "messgen::test::simple_enum");
 }
 
 TEST_F(CppTest, DispatchMessage) {
     using namespace messgen;
 
-    auto expected = test_proto::simple_struct{
+    auto expected = test::simple_struct{
         .f0 = 1,
         .f1 = 2,
     };
@@ -263,7 +263,7 @@ TEST_F(CppTest, DispatchMessage) {
     auto handler = [&](auto &&actual) {
         using ActualType = std::decay_t<decltype(actual)>;
 
-        if constexpr (std::is_same_v<ActualType, test_proto::simple_struct>) {
+        if constexpr (std::is_same_v<ActualType, test::simple_struct>) {
             EXPECT_EQ(expected.f0, actual.f0);
             EXPECT_EQ(expected.f1, actual.f1);
             invoked = true;
@@ -271,7 +271,7 @@ TEST_F(CppTest, DispatchMessage) {
             FAIL() << "Unexpected message type handled.";
         }
     };
-    test_proto::dispatch_message(test_proto::simple_struct::TYPE_ID, _buf.data(), handler);
+    test_proto::dispatch_message(test_proto::TYPE_ID<test::simple_struct>, _buf.data(), handler);
 
     EXPECT_TRUE(invoked);
 }
@@ -281,15 +281,15 @@ TEST_F(CppTest, MessageConcept) {
 
     struct not_a_message {};
 
-    EXPECT_TRUE(message<test_proto::simple_struct>);
-    EXPECT_FALSE(message<not_a_message>);
-    EXPECT_FALSE(message<int>);
+    EXPECT_TRUE(type<test::simple_struct>);
+    EXPECT_FALSE(type<not_a_message>);
+    EXPECT_FALSE(type<int>);
 }
 
 TEST_F(CppTest, FlatMessageConcept) {
     using namespace messgen;
 
-    EXPECT_TRUE(flat_message<test_proto::flat_struct>);
-    EXPECT_FALSE(flat_message<test_proto::complex_struct>);
-    EXPECT_FALSE(flat_message<int>);
+    EXPECT_TRUE(flat_type<test::flat_struct>);
+    EXPECT_FALSE(flat_type<test::complex_struct>);
+    EXPECT_FALSE(flat_type<int>);
 }

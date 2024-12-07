@@ -1,0 +1,4 @@
+pytest
+pyyaml
+mypy
+types-PyYAML

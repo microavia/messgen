@@ -1,0 +1,10 @@
+type_class: struct
+comment: "Struct with empty_struct in its fields"
+fields:
+  - { name: "e", type: "messgen/test/empty_struct" }
+  - { name: "dynamic_array", type: "messgen/test/empty_struct[]" }
+  - { name: "static_array", type: "messgen/test/empty_struct[5]" }
+  - { name: "multi_array", type: "messgen/test/empty_struct[][5][]" }
+  - { name: "map_empty_by_int", type: "messgen/test/empty_struct{int32}" }
+  - { name: "map_vec_by_str", type: "messgen/test/empty_struct[]{string}" }
+  - { name: "array_of_size_zero", type: "int32[0]" }

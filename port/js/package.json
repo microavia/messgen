@@ -6,7 +6,7 @@
     "test": "vitest",
     "benchmark": "vitest bench",
     "coverage": "vitest run --coverage",
-    "gen": "python3 ../../messgen-generate.py --basedir ../../tests/messages --protocol messgen/test_proto  --protocol another_proto --outdir ./tests",
+    "gen": "python3 ../../messgen-generate.py --types ../../tests/data/types --protocol ../../tests/data/protocols/test_proto --protocol ../../tests/data/protocols/another_proto --outdir ./tests",
     "gen:json": "npm run gen -- --lang json",
     "gen:ts": "npm run gen-json && npm run gen -- --lang ts",
     "gen:cpp": "npm run gen -- --lang cpp",

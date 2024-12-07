@@ -1,13 +1,78 @@
+import json
 import os
+import textwrap
 
-from .common import SEPARATOR, SIZE_TYPE, write_file_if_diff
-from .protocols import Protocols
+from contextlib import contextmanager
+from dataclasses import asdict
+from pathlib import (
+    PosixPath,
+    Path,
+)
+
+from .validation import validate_protocol
+
+from .common import (
+    SEPARATOR,
+    SIZE_TYPE,
+    write_file_if_diff,
+)
+from .model import (
+    ArrayType,
+    BasicType,
+    EnumType,
+    EnumValue,
+    FieldType,
+    MapType,
+    MessgenType,
+    Protocol,
+    StructType,
+    TypeClass,
+    VectorType,
+)
 
 
-def _inline_comment(comment):
-    if comment:
-        return "  ///< %s" % comment
-    else:
+def _unqual_name(type_name: str) -> str:
+    return PosixPath(type_name).stem
+
+
+def _qual_name(type_name: str) -> str:
+    return type_name.replace(SEPARATOR, "::")
+
+
+def _split_last_name(type_name) -> tuple[str, str]:
+    split_name = type_name.split(SEPARATOR)
+    return SEPARATOR.join(split_name[:-1]), split_name[-1]
+
+
+@contextmanager
+def _namespace(name: str, code:list[str]):
+    ns_name = None
+    try:
+        ns_name = _qual_name(name)
+        if ns_name:
+            code.append(f"namespace {ns_name} {{")
+            code.append("")
+        yield
+
+    finally:
+        if ns_name:
+            code.append("")
+            code.append(f"}} // namespace {ns_name}")
+
+
+@contextmanager
+def _struct(name: str, code: list[str]):
+    try:
+        code.append(f"struct {name} {{")
+        yield
+    finally:
+        code.append("};")
+
+
+def _inline_comment(type_def: FieldType | EnumValue):
+    try:
+        return "  ///< %s" % type_def.comment
+    finally:
         return ""
 
 
@@ -22,10 +87,6 @@ def _indent(c):
         return r
     else:
         raise RuntimeError("Unsupported type for indent: %s" % type(c))
-
-
-def _cpp_namespace(proto_name: str) -> str:
-    return proto_name.replace(SEPARATOR, "::")
 
 
 class FieldsGroup:
@@ -58,27 +119,35 @@ class CppGenerator:
         "float64": "double",
     }
 
-    def __init__(self, protos: Protocols, options: dict):
-        self._protocols: Protocols = protos
+    def __init__(self, options: dict):
         self._options: dict = options
         self._includes: set = set()
         self._ctx: dict = {}
+        self._types: dict[str, MessgenType] = {}
 
-    def generate(self, out_dir, proto_name, proto):
-        self._ctx["proto_name"] = proto_name
-        proto_out_dir = out_dir + os.path.sep + proto_name.replace(SEPARATOR, os.path.sep)
+    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
+        self.validate(types, protocols)
+        self.generate_types(out_dir, types)
+        self.generate_protocols(out_dir, protocols)
 
-        try:
-            os.makedirs(proto_out_dir)
-        except:
-            pass
+    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
+        for proto_def in protocols.values():
+            validate_protocol(proto_def, types)
 
-        for type_name, type_def in proto["types"].items():
-            fn = os.path.join(proto_out_dir, type_name) + self._EXT_HEADER
-            write_file_if_diff(fn, self._generate_type_file(type_name, type_def))
+    def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
+        self._types = types
+        for type_name, type_def in types.items():
+            if type_def.type_class not in [TypeClass.struct, TypeClass.enum]:
+                continue
+            file_name = out_dir / (type_name + self._EXT_HEADER)
+            file_name.parent.mkdir(parents=True, exist_ok=True)
+            write_file_if_diff(file_name, self._generate_type_file(type_name, type_def))
 
-        proto_fn = proto_out_dir + self._EXT_HEADER
-        write_file_if_diff(proto_fn, self._generate_proto_file(proto_name))
+    def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
+        for proto_name, proto_def in protocols.items():
+            file_name = out_dir / (proto_name + self._EXT_HEADER)
+            file_name.parent.mkdir(parents=True, exist_ok=True)
+            write_file_if_diff(file_name, self._generate_proto_file(proto_name, proto_def))
 
     def _get_mode(self):
         return self._options.get("mode", "stl")
@@ -89,170 +158,196 @@ class CppGenerator:
     def _reset_file(self):
         self._includes.clear()
 
-    def _generate_type_file(self, type_name, type_def) -> list:
-        proto_name = self._ctx["proto_name"]
-        print("Generate type: %s/%s" % (proto_name, type_name))
-        namespace = _cpp_namespace(proto_name)
-
+    def _generate_type_file(self, type_name: str, type_def: MessgenType) -> list:
+        print(f"Generate type: {type_name}")
         self._reset_file()
-        code = []
+        code: list[str] = []
 
-        code.append("namespace %s {" % namespace)
-        code.append("")
+        with _namespace(_split_last_name(type_name)[0], code):
+            if isinstance(type_def, EnumType):
+                code.extend(self._generate_type_enum(type_name, type_def))
 
-        if type_def["type_class"] == "enum":
-            code.extend(self._generate_type_enum(type_name, type_def))
-        elif type_def["type_class"] == "struct":
-            code.extend(self._generate_type_struct(type_name))
-            code.extend(self._generate_members_of(type_name))
-
-        code.append("")
-        code.append("} // namespace %s" % namespace)
+            elif isinstance(type_def, StructType):
+                code.extend(self._generate_type_struct(type_name, type_def))
+                code.extend(self._generate_members_of(type_name, type_def))
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
 
         return code
 
-    def _generate_proto_file(self, proto_name):
+    def _generate_proto_file(self, proto_name: str, proto_def: Protocol) -> list[str]:
         print("Generate protocol file: %s" % proto_name)
 
-        namespace = _cpp_namespace(proto_name)
-
         self._reset_file()
-        code = []
+        code: list[str] = []
 
         self._add_include("cstdint")
         self._add_include("messgen/messgen.h")
 
-        code.append("namespace %s {" % namespace)
-        code.append("")
+        namespace_name, class_name = _split_last_name(proto_name)
+        print(f"Namespace: {namespace_name}, Class: {class_name}")
+        with _namespace(namespace_name, code):
+            with _struct(class_name, code):
+                for type_name in proto_def.types.values():
+                    self._add_include(type_name + self._EXT_HEADER)
 
-        proto = self._protocols.proto_map[proto_name]
+                proto_id = proto_def.proto_id
+                if proto_id is not None:
+                    code.append(f"    constexpr static int PROTO_ID = {proto_id};")
 
-        proto_id = proto["proto_id"]
-        if proto_id is not None:
-            code.append("static constexpr int PROTO_ID = %s;" % proto_id)
+                code.extend(self._generate_type_id_decl(proto_def))
+                code.extend(self._generate_reflect_type_decl())
+                code.extend(self._generate_dispatcher_decl())
+
+            code.extend(self._generate_type_ids(class_name, proto_def))
+            code.extend(self._generate_reflect_type(class_name, proto_def))
+            code.extend(self._generate_dispatcher(class_name))
             code.append("")
 
-        for type_name in proto.get("types"):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
+        return self._PREAMBLE_HEADER + self._generate_includes() + code
 
-        code.extend(self._generate_reflect_type(proto_name, proto))
-        code.append("")
-        code.extend(self._generate_dispatcher(proto_name, proto))
+    @staticmethod
+    def _generate_type_id_decl(proto: Protocol) -> list[str]:
+        return textwrap.indent(textwrap.dedent("""
+            template <messgen::type Msg>
+            constexpr static inline int TYPE_ID = []{
+                static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");
+                return 0;
+            }();"""), "    ").splitlines()
 
-        for type_name in proto.get("types"):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                self._add_include(proto_name + SEPARATOR + type_name + self._EXT_HEADER)
-
-        code.append("")
-        code.append("} // namespace %s" % namespace)
-
-        code = self._PREAMBLE_HEADER + self._generate_includes() + code
+    @staticmethod
+    def _generate_type_ids(class_name: str, proto: Protocol) -> list[str]:
+        code: list[str] = []
+        for type_id, type_name in proto.types.items():
+            code.append(f"    template <> constexpr inline int {class_name}::TYPE_ID<{_qual_name(type_name)}> = {type_id};")
         return code
 
-    def _generate_reflect_type(self, proto_name: str, proto: dict) -> list[str]:
+    @staticmethod
+    def _generate_reflect_type_decl() -> list[str]:
+        return textwrap.indent(textwrap.dedent("""
+            template <class Fn>
+            constexpr static auto reflect_message(int type_id, Fn&& fn);
+            """), "    ").splitlines()
+
+    @staticmethod
+    def _generate_reflect_type(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
-        code.append("template <typename Fn>")
-        code.append("constexpr auto reflect_message(int type_id, Fn&& fn) {")
-        code.append("    switch (type_id) {")
-        for type_name in proto.get("types", []):
-            type_def = self._protocols.get_type(proto_name, type_name)
-            type_id = type_def.get("id")
-            if type_id is not None:
-                code.append(f"        case {type_name}::TYPE_ID:")
-                code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{type_name}>);")
-                code.append(f"            return;")
+        code.append("    template <class Fn>")
+        code.append(f"    constexpr auto {class_name}::reflect_message(int type_id, Fn&& fn) {{")
+        code.append("        switch (type_id) {")
+        for type_name in proto.types.values():
+            qual_name = _qual_name(type_name)
+            code.append(f"            case TYPE_ID<{qual_name}>:")
+            code.append(f"                std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
+            code.append(f"                return;")
+        code.append("        }")
         code.append("    }")
-        code.append("}")
         return code
 
-    def _generate_dispatcher(self, proto_name: str, proto: dict) -> list[str]:
-        code: list[str] = []
-        code.append("template <class T>")
-        code.append("bool dispatch_message(int msg_id, const uint8_t *payload, T handler) {")
-        code.append("   auto result = false;")
-        code.append("   reflect_message(msg_id, [&]<class R>(R) {")
-        code.append("       using message_type = messgen::splice_t<R>;")
-        code.append("       if constexpr (requires(message_type msg) { handler(msg); }) {")
-        code.append("           message_type msg;")
-        code.append("           msg.deserialize(payload);")
-        code.append("           handler(std::move(msg));")
-        code.append("       }")
-        code.append("       result = true;")
-        code.append("   });")
-        code.append("   return result;")
-        code.append("};")
-        return code
+    @staticmethod
+    def _generate_dispatcher_decl() -> list[str]:
+        return textwrap.indent(textwrap.dedent("""
+            template <class T>
+            static bool dispatch_message(int msg_id, const uint8_t *payload, T handler);
+            """), "    ").splitlines()
 
-    def _generate_comment_type(self, type_def):
-        if "comment" not in type_def:
+    @staticmethod
+    def _generate_dispatcher(class_name: str) -> list[str]:
+        return textwrap.dedent(f"""
+            template <class T>
+            bool {class_name}::dispatch_message(int msg_id, const uint8_t *payload, T handler) {{
+                auto result = false;
+                reflect_message(msg_id, [&]<class R>(R) {{
+                    using message_type = messgen::splice_t<R>;
+                    if constexpr (requires(message_type msg) {{ handler(msg); }}) {{
+                        message_type msg;
+                        msg.deserialize(payload);
+                        handler(std::move(msg));
+                        result = true;
+                    }}
+                }});
+                return result;
+            }}""").splitlines()
+
+    @staticmethod
+    def _generate_traits() -> list[str]:
+        return textwrap.dedent("""
+            namespace messgen {
+                template <class T>
+                struct reflect_t {};
+
+                template <class T>
+                struct splice_t {};
+            }""").splitlines()
+
+    @staticmethod
+    def _generate_comment_type(type_def):
+        if not type_def.comment:
             return []
+
         code = []
         code.append("/**")
-        code.append(" * %s" % type_def["comment"])
+        code.append(" * %s" % type_def.comment)
         code.append(" */")
         return code
 
     def _generate_type_enum(self, type_name, type_def):
         self._add_include("messgen/messgen.h")
 
+        unqual_name = _unqual_name(type_name)
+        qual_name = _qual_name(type_name)
+
         code = []
         code.extend(self._generate_comment_type(type_def))
-        code.append("enum class %s : %s {" % (type_name, self._cpp_type(type_def["base_type"])))
-        for item in type_def["values"]:
-            code.append("    %s = %s,%s" % (item["name"], item["value"], _inline_comment(item.get("comment"))))
+        code.append(f"enum class {unqual_name}: {self._cpp_type(type_def.base_type)} {{")
+        for enum_value in type_def.values:
+            code.append("    %s = %s,%s" % (enum_value.name, enum_value.value, _inline_comment(enum_value)))
         code.append("};")
 
         code.append("")
-        code.append(f"[[nodiscard]] inline constexpr std::string_view name_of(::messgen::reflect_t<{type_name}>) noexcept {{")
-        code.append("    return \"%s\";" % type_name)
+        code.append(f"[[nodiscard]] inline constexpr std::string_view name_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
+        code.append(f"    return \"{qual_name}\";")
         code.append("}")
 
         return code
 
-    def _get_alignment(self, type_def):
-        type_class = type_def["type_class"]
+    def _get_alignment(self, type_def: MessgenType):
+        type_class = type_def.type_class
 
-        if type_class in ["scalar", "enum"]:
-            return type_def["size"]
+        if isinstance(type_def, BasicType):
+            if type_class in [TypeClass.scalar]:
+                return type_def.size
+            elif type_class in [TypeClass.string, TypeClass.bytes]:
+                return self._get_alignment(self._types[SIZE_TYPE])
 
-        elif type_class == "struct":
+        if isinstance(type_def, EnumType):
+            return type_def.size
+
+        elif isinstance(type_def, StructType):
             # Alignment of struct is equal to max of the field alignments
             a_max = 0
-            for field in type_def["fields"]:
-                field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
-                a = self._get_alignment(field_type_def)
+            for field in type_def.fields:
+                a = self._get_alignment(self._types[field.type])
                 if a > a_max:
                     a_max = a
             return a_max
 
-        elif type_class == "array":
+        elif isinstance(type_def, ArrayType):
             # Alignment of array is equal to alignment of element
-            el_type_def = self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"])
-            return self._get_alignment(el_type_def)
+            return self._get_alignment(self._types[type_def.element_type])
 
-        elif type_class == "vector":
+        elif isinstance(type_def, VectorType):
             # Alignment of array is equal to max of size field alignment and alignment of element
-            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
-            a_el = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["element_type"]))
+            a_sz = self._get_alignment(self._types[SIZE_TYPE])
+            a_el = self._get_alignment(self._types[type_def.element_type])
             return max(a_sz, a_el)
 
-        elif type_class == "map":
+        elif isinstance(type_def, MapType):
             # Alignment of array is equal to max of size field alignment and alignment of element
-            a_sz = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
-            a_key = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["key_type"]))
-            a_value = self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], type_def["value_type"]))
+            a_sz = self._get_alignment(self._types[SIZE_TYPE])
+            a_key = self._get_alignment(self._types[type_def.key_type])
+            a_value = self._get_alignment(self._types[type_def.value_type])
             return max(a_sz, a_key, a_value)
-
-        elif type_class in ["string", "bytes"]:
-            # Alignment of string is equal size field alignment
-            return self._get_alignment(self._protocols.get_type(self._ctx["proto_name"], SIZE_TYPE))
 
         else:
             raise RuntimeError("Unsupported type_class in _get_alignment: %s" % type_class)
@@ -261,48 +356,39 @@ class CppGenerator:
         align = self._get_alignment(type_def)
         return offs % align == 0
 
-    def _generate_type_struct(self, type_name: str):
-        curr_proto_name = self._ctx["proto_name"]
-        type_def = self._protocols.get_type(curr_proto_name, type_name)
-
-        fields = type_def["fields"]
+    def _generate_type_struct(self, type_name: str, type_def: StructType):
+        fields = type_def.fields
 
         self._add_include("cstddef")
         self._add_include("cstring")
         self._add_include("messgen/messgen.h")
 
+        unqual_name = _unqual_name(type_name)
+
         code = []
         code.extend(self._generate_comment_type(type_def))
-        code.append("struct %s {" % type_name)
-
-        # Type ID, Proto ID
-        type_id = type_def.get("id")
-        if type_id is not None:
-            proto_id = self._protocols.proto_map[curr_proto_name]["proto_id"]
-            code.append("    static constexpr int TYPE_ID = %s;" % type_id)
-            code.append("    static constexpr int PROTO_ID = %s;" % proto_id)
+        code.append(f"struct {unqual_name} {{")
 
         groups = self._field_groups(fields)
         if len(groups) > 1 and self._all_fields_scalar(fields):
             print("Warn: padding in '%s' after '%s' causes extra memcpy call during serialization." % (
-                type_name, groups[0].fields[0]["name"]))
+                type_name, groups[0].fields[0].name))
 
         # IS_FLAT flag
         is_flat_str = "false"
         is_empty = len(groups) == 0
         is_flat = is_empty or (len(groups) == 1 and groups[0].size is not None)
-        type_def["is_flat"] = is_flat
         if is_flat:
             code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
-        code.append(_indent("static constexpr bool IS_FLAT = %s;" % is_flat_str))
-        code.append(_indent("static constexpr const char* NAME = \"%s\";" % type_name))
+        code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
+        code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
+        code.append(_indent(f"static constexpr const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
         code.append("")
 
-        for field in type_def["fields"]:
-            field_c_type = self._cpp_type(field["type"])
-            code.append("    %s %s;%s" % (
-                field_c_type, field["name"], _inline_comment(field.get("comment", ""))))
+        for field in type_def.fields:
+            field_c_type = self._cpp_type(field.type)
+            code.append(_indent(f"{field_c_type} {field.name}; {_inline_comment(field)}"))
 
         # Serialize function
         code_ser = []
@@ -318,11 +404,11 @@ class CppGenerator:
                 # There is padding before current field
                 # Write together previous aligned fields, if any
                 code_ser.append("// %s" % ", ".join(group.field_names))
-                code_ser.extend(self._memcpy_to_buf("&" + group.fields[0]["name"], group.size))
+                code_ser.extend(self._memcpy_to_buf("&" + group.fields[0].name, group.size))
             elif len(group.fields) == 1:
                 field = group.fields[0]
-                field_name = field["name"]
-                field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
+                field_name = field.name
+                field_type_def = self._types.get(field.type)
                 code_ser.extend(self._serialize_field(field_name, field_type_def))
             code_ser.append("")
         code_ser.append("return _size;")
@@ -348,12 +434,11 @@ class CppGenerator:
                 # There is padding before current field
                 # Write together previous aligned fields, if any
                 code_deser.append("// %s" % ", ".join(group.field_names))
-                code_deser.extend(self._memcpy_from_buf("&" + group.fields[0]["name"], group.size))
+                code_deser.extend(self._memcpy_from_buf("&" + group.fields[0].name, group.size))
             elif len(group.fields) == 1:
                 field = group.fields[0]
-                field_name = field["name"]
-                field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
-                code_deser.extend(self._deserialize_field(field_name, field_type_def))
+                field_type_def = self._types.get(field.type)
+                code_deser.extend(self._deserialize_field(field.name, field_type_def))
             code_deser.append("")
         code_deser.append("return _size;")
 
@@ -372,15 +457,14 @@ class CppGenerator:
         fixed_size = 0
         fixed_fields = []
         for field in fields:
-            field_name = field["name"]
-            field_type_def = self._protocols.get_type(curr_proto_name, field["type"])
-            field_size = field_type_def.get("size")
+            field_type_def = self._types[field.type]
+            field_size = field_type_def.size
 
             if field_size is None:
-                code_ss.extend(self._serialized_size_field(field_name, field_type_def))
+                code_ss.extend(self._serialized_size_field(field.name, field_type_def))
                 code_ss.append("")
             else:
-                fixed_fields.append(field_name)
+                fixed_fields.append(field.name)
                 fixed_size += field_size
 
         code_ss.append("return _size;")
@@ -394,10 +478,12 @@ class CppGenerator:
                       "}"]
         code.extend(_indent(code_ss))
 
+
+
         if self._get_cpp_standard() >= 20:
             # Operator <=>
             code.append("")
-            code.append(_indent("auto operator<=>(const %s&) const = default;" % type_name))
+            code.append(_indent("auto operator<=>(const %s&) const = default;" % unqual_name))
 
         code.append("};")
 
@@ -405,10 +491,10 @@ class CppGenerator:
             # Operator ==
             code_eq = []
             if len(fields) > 0:
-                field_name = fields[0]["name"]
+                field_name = fields[0].name
                 code_eq.append("return l.%s == r.%s" % (field_name, field_name))
                 for field in fields[1:]:
-                    field_name = field["name"]
+                    field_name = field.name
                     code_eq.append("   and l.%s == r.%s" % (field_name, field_name))
             else:
                 code_eq.append("return true")
@@ -416,12 +502,16 @@ class CppGenerator:
 
             code.extend([
                             "",
-                            "bool operator==(const %s& l, const %s& r) {" % (type_name, type_name),
+                            f"bool operator==(const {unqual_name}& l, const {unqual_name}& r) {{",
                         ] + _indent(code_eq) + [
                             "}"
                         ])
 
         return code
+
+    @staticmethod
+    def _generate_schema(type_def: MessgenType):
+        return json.dumps(asdict(type_def)).replace(" ", "")
 
     def _add_include(self, inc, scope="global"):
         self._includes.add((inc, scope))
@@ -437,41 +527,58 @@ class CppGenerator:
             code.append("")
         return code
 
-    def _generate_members_of(self, type_name: str):
-        curr_proto_name = self._ctx["proto_name"]
-        type_def = self._protocols.get_type(curr_proto_name, type_name)
-        fields = type_def["fields"]
-
+    def _generate_members_of(self, type_name: str, type_def: StructType):
         self._add_include("tuple")
+
+        unqual_name = _unqual_name(type_name)
 
         code: list[str] = []
         code.append("")
-        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{type_name}>) noexcept {{")
+        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
         code.append("    return std::tuple{")
-        for field in fields:
-            field_name = field["name"]
-            code.append(f"        ::messgen::member{{\"{field_name}\", &{type_name}::{field_name}}},")
+        for field in type_def.fields:
+            code.append(f"        ::messgen::member{{\"{field.name}\", &{unqual_name}::{field.name}}},")
         code.append("    };")
         code.append("}")
+
         return code
 
     def _cpp_type(self, type_name: str) -> str:
-        t = self._protocols.get_type(self._ctx["proto_name"], type_name)
+        type_def = self._types[type_name]
         mode = self._get_mode()
 
-        if t["type_class"] == "scalar":
-            self._add_include("cstdint")
-            return self._CPP_TYPES_MAP[type_name]
+        if isinstance(type_def, BasicType):
 
-        elif t["type_class"] == "array":
+            if type_def.type_class == TypeClass.scalar:
+                self._add_include("cstdint")
+                return self._CPP_TYPES_MAP[type_name]
+
+            elif type_def.type_class == TypeClass.string:
+                if mode == "stl":
+                    self._add_include("string")
+                    return "std::string"
+                elif mode == "nostl":
+                    self._add_include("string_view")
+                    return "std::string_view"
+                else:
+                    raise RuntimeError("Unsupported mode for string: %s" % mode)
+
+            elif type_def.type_class == TypeClass.bytes:
+                if mode == "stl":
+                    self._add_include("vector")
+                    return "std::vector<uint8_t>"
+                elif mode == "nostl":
+                    return "messgen::vector<uint8_t>"
+                else:
+                    raise RuntimeError("Unsupported mode for bytes: %s" % mode)
+
+        elif isinstance(type_def, ArrayType):
             self._add_include("array")
-            el_type_name = _cpp_namespace(t["element_type"])
-            el_c_type = self._cpp_type(el_type_name)
-            return "std::array<%s, %d>" % (el_c_type, t["array_size"])
+            el_c_type = self._cpp_type(type_def.element_type)
+            return "std::array<%s, %d>" % (el_c_type, type_def.array_size)
 
-        elif t["type_class"] == "vector":
-            el_type_name = t["element_type"]
-            el_c_type = self._cpp_type(el_type_name)
+        elif isinstance(type_def, VectorType):
+            el_c_type = self._cpp_type(type_def.element_type)
             if mode == "stl":
                 self._add_include("vector")
                 return "std::vector<%s>" % el_c_type
@@ -480,9 +587,9 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for vector: %s" % mode)
 
-        elif t["type_class"] == "map":
-            key_c_type = self._cpp_type(t["key_type"])
-            value_c_type = self._cpp_type(t["value_type"])
+        elif isinstance(type_def, MapType):
+            key_c_type = self._cpp_type(type_def.key_type)
+            value_c_type = self._cpp_type(type_def.value_type)
             if mode == "stl":
                 self._add_include("map")
                 return "std::map<%s, %s>" % (key_c_type, value_c_type)
@@ -492,49 +599,26 @@ class CppGenerator:
             else:
                 raise RuntimeError("Unsupported mode for map: %s" % mode)
 
-        elif t["type_class"] == "string":
-            if mode == "stl":
-                self._add_include("string")
-                return "std::string"
-            elif mode == "nostl":
-                self._add_include("string_view")
-                return "std::string_view"
-            else:
-                raise RuntimeError("Unsupported mode for string: %s" % mode)
-
-        elif t["type_class"] == "bytes":
-            if mode == "stl":
-                self._add_include("vector")
-                return "std::vector<uint8_t>"
-            elif mode == "nostl":
-                return "messgen::vector<uint8_t>"
-            else:
-                raise RuntimeError("Unsupported mode for bytes: %s" % mode)
-
-        elif t["type_class"] in ["enum", "struct"]:
-            if SEPARATOR in type_name:
-                scope = "global"
-            else:
-                scope = "local"
+        elif isinstance(type_def, (EnumType, StructType)):
+            scope = ("global"
+                     if SEPARATOR in type_name
+                     else "local")
             self._add_include("%s.h" % type_name, scope)
-            return _cpp_namespace(type_name)
+            return _qual_name(type_name)
 
-        else:
-            raise RuntimeError("Can't get c++ type for %s" % type_name)
+        raise RuntimeError("Can't get c++ type for %s" % type_name)
 
-    def _all_fields_scalar(self, fields):
-        for field in fields:
-            field_type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
-            if field_type_def["type_class"] != "scalar":
-                return False
-        return True
+    def _all_fields_scalar(self, fields: list[FieldType]):
+        return all(self._types[field.type].type_class != TypeClass.scalar
+                   for field in fields)
 
     def _field_groups(self, fields):
         groups = [FieldsGroup()] if len(fields) > 0 else []
         for field in fields:
-            type_def = self._protocols.get_type(self._ctx["proto_name"], field["type"])
-            align = self._get_alignment(type_def)
-            size = type_def.get("size")
+            field_def = self._types.get(field.type)
+            align = self._get_alignment(field_def)
+            size = field_def.size
+
             # Check if there is padding before this field
             if len(groups[-1].fields) > 0 and (
                     (size is None) or
@@ -545,35 +629,36 @@ class CppGenerator:
                 groups.append(FieldsGroup())
 
             groups[-1].fields.append(field)
-            groups[-1].field_names.append(field["name"])
+            groups[-1].field_names.append(field.name)
             if groups[-1].size is not None:
                 if size is not None:
                     groups[-1].size += size
                 else:
                     groups[-1].size = None
+
         return groups
 
     def _serialize_field(self, field_name, field_type_def, level_n=0):
         c = []
 
-        type_class = field_type_def["type_class"]
+        type_class = field_type_def.type_class
 
         c.append("// %s" % field_name)
-        if type_class in ["scalar", "enum"]:
-            c_type = self._cpp_type(field_type_def["type"])
-            size = field_type_def.get("size")
+        if type_class in [TypeClass.scalar, TypeClass.enum]:
+            c_type = self._cpp_type(field_type_def.type)
+            size = field_type_def.size
             c.append("*reinterpret_cast<%s *>(&_buf[_size]) = %s;" % (c_type, field_name))
             c.append("_size += %s;" % size)
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             c.append("_size += %s.serialize(&_buf[_size]);" % field_name)
 
-        elif type_class in ["array", "vector"]:
-            if type_class == "vector":
+        elif type_class in [TypeClass.array, TypeClass.vector]:
+            if type_class == TypeClass.vector:
                 c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
                 c.append("_size += sizeof(messgen::size_type);")
-            el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
-            el_size = el_type_def.get("size")
+            el_type_def = self._types.get(field_type_def.element_type)
+            el_size = el_type_def.size
             el_align = self._get_alignment(el_type_def)
 
             if el_size == 0:
@@ -588,11 +673,11 @@ class CppGenerator:
                 c.extend(_indent(self._serialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
-            key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
-            value_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
+            key_type_def = self._types.get(field_type_def.key_type)
+            value_type_def = self._types.get(field_type_def.value_type)
             c.append("for (auto &_i%d: %s) {" % (level_n, field_name))
             c.extend(
                 _indent(self._serialize_field("_i%d.first" % level_n, key_type_def, level_n + 1)))
@@ -600,13 +685,13 @@ class CppGenerator:
                 self._serialize_field("_i%d.second" % level_n, value_type_def, level_n + 1)))
             c.append("}")
 
-        elif type_class == "string":
+        elif type_class == TypeClass.string:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.copy(reinterpret_cast<char *>(&_buf[_size]), %s.size());" % (field_name, field_name))
             c.append("_size += %s.size();" % field_name)
 
-        elif type_class == "bytes":
+        elif type_class == TypeClass.bytes:
             c.append("*reinterpret_cast<messgen::size_type *>(&_buf[_size]) = %s.size();" % field_name)
             c.append("_size += sizeof(messgen::size_type);")
             c.append("std::copy(%s.begin(), %s.end(), &_buf[_size]);" % (field_name, field_name))
@@ -620,25 +705,25 @@ class CppGenerator:
     def _deserialize_field(self, field_name, field_type_def, level_n=0):
         c = []
 
-        type_class = field_type_def["type_class"]
+        type_class = field_type_def.type_class
         mode = self._get_mode()
 
         c.append("// %s" % field_name)
-        if type_class in ["scalar", "enum"]:
-            c_type = self._cpp_type(field_type_def["type"])
-            size = field_type_def.get("size")
+        if type_class in [TypeClass.scalar, TypeClass.enum]:
+            c_type = self._cpp_type(field_type_def.type)
+            size = field_type_def.size
             c.append("%s = *reinterpret_cast<const %s *>(&_buf[_size]);" % (field_name, c_type))
             c.append("_size += %s;" % size)
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             alloc = ""
             if mode == "nostl":
                 alloc = ", _alloc"
             c.append("_size += %s.deserialize(&_buf[_size]%s);" % (field_name, alloc))
 
-        elif type_class == "array":
-            el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
-            el_size = el_type_def.get("size")
+        elif type_class == TypeClass.array:
+            el_type_def = self._types.get(field_type_def.element_type)
+            el_size = el_type_def.size
             el_align = self._get_alignment(el_type_def)
             if el_size == 0:
                 pass
@@ -652,10 +737,10 @@ class CppGenerator:
                 c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "vector":
+        elif type_class == TypeClass.vector:
             if mode == "stl":
-                el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
-                el_size = el_type_def.get("size")
+                el_type_def = self._types.get(field_type_def.element_type)
+                el_size = el_type_def.size
                 el_align = self._get_alignment(el_type_def)
                 c.append("%s.resize(*reinterpret_cast<const messgen::size_type *>(&_buf[_size]));" % field_name)
                 c.append("_size += sizeof(messgen::size_type);")
@@ -671,12 +756,12 @@ class CppGenerator:
                     c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                     c.append("}")
             elif mode == "nostl":
-                el_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
-                el_c_type = self._cpp_type(field_type_def["element_type"])
-                el_size = el_type_def.get("size")
+                el_type_def = self._types.get(field_type_def.element_type)
+                el_c_type = self._cpp_type(field_type_def.element_type)
+                el_size = el_type_def.size
                 el_align = self._get_alignment(el_type_def)
                 c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
-                c.append("%s = {_alloc.alloc<%s>(_field_size), _field_size};" % (field_name, el_c_type))
+                c.append(f"{field_name} = {{_alloc.alloc<{el_c_type}>(_field_size), _field_size}};")
                 c.append("_size += sizeof(messgen::size_type);")
                 if el_size == 0:
                     pass
@@ -691,14 +776,14 @@ class CppGenerator:
                     c.extend(_indent(self._deserialize_field("_i%d" % level_n, el_type_def, level_n + 1)))
                     c.append("}")
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             c.append("{")
             c.append(_indent("size_t _map_size%d = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);" % level_n))
             c.append(_indent("_size += sizeof(messgen::size_type);"))
-            key_c_type = self._cpp_type(field_type_def["key_type"])
-            key_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
-            value_c_type = self._cpp_type(field_type_def["value_type"])
-            value_type_def = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
+            key_c_type = self._cpp_type(field_type_def.key_type)
+            key_type_def = self._types.get(field_type_def.key_type)
+            value_c_type = self._cpp_type(field_type_def.value_type)
+            value_type_def = self._types.get(field_type_def.value_type)
             c.append(
                 _indent(
                     "for (size_t _i%d = 0; _i%d < _map_size%d; ++_i%d) {" % (level_n, level_n, level_n, level_n)))
@@ -714,13 +799,13 @@ class CppGenerator:
             c.append(_indent("}"))
             c.append("}")
 
-        elif type_class == "string":
+        elif type_class == TypeClass.string:
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s = {reinterpret_cast<const char *>(&_buf[_size]), _field_size};" % field_name)
             c.append("_size += _field_size;")
 
-        elif type_class == "bytes":
+        elif type_class == TypeClass.bytes:
             c.append("_field_size = *reinterpret_cast<const messgen::size_type *>(&_buf[_size]);")
             c.append("_size += sizeof(messgen::size_type);")
             c.append("%s.assign(&_buf[_size], &_buf[_size + _field_size]);" % field_name)
@@ -736,21 +821,21 @@ class CppGenerator:
     def _serialized_size_field(self, field_name, field_type_def, level_n=0):
         c = []
 
-        type_class = field_type_def["type_class"]
+        type_class = field_type_def.type_class
 
         c.append("// %s" % field_name)
-        if type_class == "scalar":
-            size = field_type_def.get("size")
+        if type_class == TypeClass.scalar:
+            size = field_type_def.size
             c.append("_size += %d;" % size)
 
-        elif type_class == "struct":
+        elif type_class == TypeClass.struct:
             c.append("_size += %s.serialized_size();" % field_name)
 
-        elif type_class in ["array", "vector"]:
-            if field_type_def["type_class"] == "vector":
+        elif type_class in [TypeClass.array, TypeClass.vector]:
+            if field_type_def.type_class == TypeClass.vector:
                 c.append("_size += sizeof(messgen::size_type);")
-            el_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["element_type"])
-            el_size = el_type.get("size")
+            el_type = self._types.get(field_type_def.element_type)
+            el_size = el_type.size
             if el_size is not None:
                 # Vector or array of fixed size elements
                 c.append("_size += %d * %s.size();" % (el_size, field_name))
@@ -760,12 +845,12 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d" % level_n, el_type, level_n + 1)))
                 c.append("}")
 
-        elif type_class == "map":
+        elif type_class == TypeClass.map:
             c.append("_size += sizeof(messgen::size_type);")
-            key_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["key_type"])
-            value_type = self._protocols.get_type(self._ctx["proto_name"], field_type_def["value_type"])
-            key_size = key_type.get("size")
-            value_size = value_type.get("size")
+            key_type = self._types.get(field_type_def.key_type)
+            value_type = self._types.get(field_type_def.value_type)
+            key_size = key_type.size
+            value_size = value_type.size
             if key_size is not None and value_size is not None:
                 # Vector or array of fixed size elements
                 c.append("_size += %d * %s.size();" % (key_size + value_size, field_name))
@@ -776,12 +861,12 @@ class CppGenerator:
                 c.extend(_indent(self._serialized_size_field("_i%d.second" % level_n, value_type, level_n + 1)))
                 c.append("}")
 
-        elif type_class in ["string", "bytes"]:
+        elif type_class in [TypeClass.string, TypeClass.bytes]:
             c.append("_size += sizeof(messgen::size_type);")
             c.append("_size += %s.size();" % field_name)
 
         else:
-            raise RuntimeError("Unsupported type_class in _serialized_size_field: %s" % field_type_def["type_class"])
+            raise RuntimeError("Unsupported type_class in _serialized_size_field: %s" % field_type_def.type_class)
 
         return c
 
