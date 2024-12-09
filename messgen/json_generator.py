@@ -5,8 +5,6 @@ from pathlib import Path
 
 from .protocol_version import version_hash
 
-from .validation import validate_protocol
-
 from .model import (
     MessgenType,
     Protocol,
@@ -18,15 +16,6 @@ class JsonGenerator:
 
     def __init__(self, options):
         self._options = options
-
-    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
-        self.validate(types, protocols)
-        self.generate_types(out_dir, types)
-        self.generate_protocols(out_dir, protocols)
-
-    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
-        for proto_def in protocols.values():
-            validate_protocol(proto_def, types)
 
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         combined: list = []

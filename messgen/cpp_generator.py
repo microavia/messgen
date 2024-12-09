@@ -9,8 +9,6 @@ from pathlib import (
     Path,
 )
 
-from .validation import validate_protocol
-
 from .common import (
     SEPARATOR,
     SIZE_TYPE,
@@ -124,15 +122,6 @@ class CppGenerator:
         self._includes: set = set()
         self._ctx: dict = {}
         self._types: dict[str, MessgenType] = {}
-
-    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
-        self.validate(types, protocols)
-        self.generate_types(out_dir, types)
-        self.generate_protocols(out_dir, protocols)
-
-    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
-        for proto_def in protocols.values():
-            validate_protocol(proto_def, types)
 
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         self._types = types
