@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from messgen.validation import validate_protocol
 from messgen import generator, yaml_parser
 from pathlib import Path
 
@@ -26,10 +27,13 @@ def generate(args: argparse.Namespace):
 
     if (gen := generator.get_generator(args.lang, opts)) is not None:
         if parsed_protocols and parsed_types:
-            gen.generate(Path(args.outdir), parsed_types, parsed_protocols)
-        elif parsed_types:
+            for proto_def in parsed_protocols.values():
+                validate_protocol(proto_def, parsed_types)
+
+        if parsed_types:
             gen.generate_types(Path(args.outdir), parsed_types)
-        elif parsed_protocols:
+
+        if parsed_protocols:
             gen.generate_protocols(Path(args.outdir), parsed_protocols)
 
     else:
