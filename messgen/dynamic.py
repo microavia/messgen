@@ -319,7 +319,7 @@ class Codec:
         proto_id, proto = self.types_by_name[proto_name]
         if not type_name in proto:
             raise MessgenError(
-                "Unsupported msg_name in serialization: proto_name=%s msg_name=%s" % (proto_name, type_name))
+                "Unsupported type_name in serialization: proto_name=%s type_name=%s" % (proto_name, type_name))
 
         type_id, type_ = proto[type_name]
         payload = type_.serialize(msg)
@@ -327,17 +327,19 @@ class Codec:
 
     def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
         if not proto_id in self.types_by_id:
-            raise MessgenError("Unsupported proto_id in deserialization: proto_id=%s" % proto_id)
+            raise MessgenError(f"Unsupported proto_id in deserialization: proto_id={proto_id}")
 
         proto_name, proto = self.types_by_id[proto_id]
         if not type_id in proto:
-            raise MessgenError("Unsupported msg_id in deserialization: proto_id=%s msg_id=%s" % (proto_id, type_id))
+            raise MessgenError(f"Unsupported msg_id in deserialization: proto_id={proto_id} type_id={type_id}")
 
         type_name, type_ = proto[type_id]
 
         msg, sz = type_.deserialize(data)
         if sz != len(data):
             raise MessgenError(
-                "Invalid message size: expected=%s actual=%s proto_id=%s msg_id=%s" % (sz, len(data), proto_id, type_id))
+                f"Invalid message size: expected={sz} actual={len(data)} "
+                f"proto_id={proto_id} proto_name={proto_name} "
+                f"type_id={type_id} type_name={type_name}")
 
         return proto_name, type_name, msg
