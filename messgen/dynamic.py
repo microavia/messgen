@@ -290,12 +290,16 @@ class Codec:
 
     def __init__(self):
         self.types_by_name = {}
-        self.types_by_id = {}
+        self.proto_types_by_name = {}
+        self.proto_types_by_id = {}
 
     def load(self, type_dirs: list[str | Path], protocols: list[str] | None = None):
         parsed_types = parse_types(type_dirs)
         if not protocols:
             return
+
+        for type_name, type_def in parsed_types.items():
+            self.types_by_name[type_name] = get_type(parsed_types, type_name)
 
         parsed_protocols = parse_protocols(protocols)
         for proto_name, proto_def in parsed_protocols.items():
@@ -306,17 +310,20 @@ class Codec:
                 by_name[1][type_name] = (type_id, t)
                 if type_id is not None:
                     by_id[1][type_id] = (type_name, t)
-            self.types_by_name[proto_name] = by_name
-            self.types_by_id[proto_def.proto_id] = by_id
+            self.proto_types_by_name[proto_name] = by_name
+            self.proto_types_by_id[proto_def.proto_id] = by_id
 
-    def get_type_by_name(self, proto_name: str, type_name: str) -> MessgenType:
-        return self.types_by_name[proto_name][1][type_name]
+    def get_type_converter(self, type_name: str) -> Converter:
+        return self.types_by_name[type_name]
+
+    def get_type_hash(self, type_name) -> int:
+        return hash(self.types_by_name[type_name].type_def)
 
     def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
-        if not proto_name in self.types_by_name:
+        if not proto_name in self.proto_types_by_name:
             raise MessgenError("Unsupported proto_name in serialization: proto_name=%s" % proto_name)
 
-        proto_id, proto = self.types_by_name[proto_name]
+        proto_id, proto = self.proto_types_by_name[proto_name]
         if not type_name in proto:
             raise MessgenError(
                 "Unsupported type_name in serialization: proto_name=%s type_name=%s" % (proto_name, type_name))
@@ -326,10 +333,10 @@ class Codec:
         return proto_id, type_id, payload
 
     def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
-        if not proto_id in self.types_by_id:
+        if not proto_id in self.proto_types_by_id:
             raise MessgenError(f"Unsupported proto_id in deserialization: proto_id={proto_id}")
 
-        proto_name, proto = self.types_by_id[proto_id]
+        proto_name, proto = self.proto_types_by_id[proto_id]
         if not type_id in proto:
             raise MessgenError(f"Unsupported msg_id in deserialization: proto_id={proto_id} type_id={type_id}")
 
@@ -339,7 +346,7 @@ class Codec:
         if sz != len(data):
             raise MessgenError(
                 f"Invalid message size: expected={sz} actual={len(data)} "
-                f"proto_id={proto_id} proto_name={proto_name} "
-                f"type_id={type_id} type_name={type_name}")
+                f"proto_id={proto_id} type_id={type_id} "
+                f"proto_name={proto_name} type_name={type_name}")
 
         return proto_name, type_name, msg
