@@ -1,5 +1,6 @@
 import struct
 
+from functools import singledispatchmethod
 from pathlib import Path
 
 from .model import (
@@ -43,7 +44,7 @@ class Converter:
 
 
 class ScalarConverter(Converter):
-    def __init__(self, types: dict[str, MessgenType], type_name:str):
+    def __init__(self, types: dict[str, MessgenType], type_name: str):
         super().__init__(types, type_name)
         assert self.type_class == TypeClass.scalar
         self.struct_fmt = STRUCT_TYPES_MAP.get(type_name)
@@ -314,31 +315,49 @@ class Codec:
             self.proto_types_by_id[proto_def.proto_id] = by_id
 
     def get_type_converter(self, type_name: str) -> Converter:
-        return self.types_by_name[type_name]
+        if converter := self.types_by_name.get(type_name):
+            return converter
+        raise MessgenError(f"Unsupported type_name={type_name}")
 
     def get_type_hash(self, type_name) -> int:
-        return hash(self.types_by_name[type_name].type_def)
+        if converter := self.types_by_name.get(type_name):
+            return hash(converter.type_def)
+        raise MessgenError(f"Unsupported type_name={type_name}")
 
-    def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
+    @singledispatchmethod
+    def serialize(self, type_name: str, data: bytes) -> dict:
+        return self.get_type_converter(type_name).serialize(data)
+
+    @serialize.register
+    def serialize_(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
         if not proto_name in self.proto_types_by_name:
-            raise MessgenError("Unsupported proto_name in serialization: proto_name=%s" % proto_name)
+            raise MessgenError(f"Unsupported proto_name={proto_name} in serialization")
 
         proto_id, proto = self.proto_types_by_name[proto_name]
         if not type_name in proto:
-            raise MessgenError(
-                "Unsupported type_name in serialization: proto_name=%s type_name=%s" % (proto_name, type_name))
+            raise MessgenError(f"Unsupported type_name={type_name} in serialization")
 
-        type_id, type_ = proto[type_name]
-        payload = type_.serialize(msg)
+        type_id, converter = proto[type_name]
+        payload = converter.serialize(msg)
         return proto_id, type_id, payload
 
-    def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
+    @singledispatchmethod
+    def deserialize(self, type_name: str, data: bytes) -> dict:
+        converter = self.get_type_converter(type_name)
+        msg, sz = converter.deserialize(data)
+        if sz != len(data):
+            raise MessgenError(
+                f"Invalid message size: expected={sz} actual={len(data)} type_name={type_name}")
+        return msg
+
+    @deserialize.register
+    def deserialize_(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
         if not proto_id in self.proto_types_by_id:
-            raise MessgenError(f"Unsupported proto_id in deserialization: proto_id={proto_id}")
+            raise MessgenError(f"Unsupported proto_id={proto_id} in deserialization")
 
         proto_name, proto = self.proto_types_by_id[proto_id]
         if not type_id in proto:
-            raise MessgenError(f"Unsupported msg_id in deserialization: proto_id={proto_id} type_id={type_id}")
+            raise MessgenError(f"Unsupported type_id={type_id} in deserialization")
 
         type_name, type_ = proto[type_id]
 
