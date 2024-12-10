@@ -287,49 +287,57 @@ def get_type(types: dict[str, MessgenType], type_name:str) -> Converter:
 
 
 class Codec:
+
     def __init__(self):
         self.types_by_name = {}
         self.types_by_id = {}
 
     def load(self, type_dirs: list[str | Path], protocols: list[str] | None = None):
         parsed_types = parse_types(type_dirs)
-        if protocols:
-            parsed_protocols = parse_protocols(protocols)
+        if not protocols:
+            return
 
+        parsed_protocols = parse_protocols(protocols)
         for proto_name, proto_def in parsed_protocols.items():
             by_name: tuple[int, dict] = (proto_def.proto_id, {})
             by_id: tuple[str, dict] = (proto_name, {})
             for type_id, type_name in proto_def.types.items():
                 t = get_type(parsed_types, type_name)
-                by_name[1][type_name] = t
+                by_name[1][type_name] = (type_id, t)
                 if type_id is not None:
-                    by_id[1][type_id] = t
+                    by_id[1][type_id] = (type_name, t)
             self.types_by_name[proto_name] = by_name
             self.types_by_id[proto_def.proto_id] = by_id
 
-    def get_type_by_name(self, proto_name: str, type_name: str):
+    def get_type_by_name(self, proto_name: str, type_name: str) -> MessgenType:
         return self.types_by_name[proto_name][1][type_name]
 
-    def serialize(self, proto_name: str, msg_name: str, msg: dict) -> tuple[int, int, bytes]:
-        p = self.types_by_name.get(proto_name)
-        if p is None:
+    def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
+        if not proto_name in self.types_by_name:
             raise MessgenError("Unsupported proto_name in serialization: proto_name=%s" % proto_name)
-        t = p[1].get(msg_name)
-        if t is None:
-            raise MessgenError(
-                "Unsupported msg_name in serialization: proto_name=%s msg_name=%s" % (proto_name, msg_name))
-        payload = t.serialize(msg)
-        return p[0], t.id, payload
 
-    def deserialize(self, proto_id: int, msg_id: int, data: bytes) -> tuple[int, str, dict]:
-        p = self.types_by_id.get(proto_id)
-        if p is None:
+        proto_id, proto = self.types_by_name[proto_name]
+        if not type_name in proto:
+            raise MessgenError(
+                "Unsupported msg_name in serialization: proto_name=%s msg_name=%s" % (proto_name, type_name))
+
+        type_id, type_ = proto[type_name]
+        payload = type_.serialize(msg)
+        return proto_id, type_id, payload
+
+    def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
+        if not proto_id in self.types_by_id:
             raise MessgenError("Unsupported proto_id in deserialization: proto_id=%s" % proto_id)
-        t = p[1].get(msg_id)
-        if t is None:
-            raise MessgenError("Unsupported msg_id in deserialization: proto_id=%s msg_id=%s" % (proto_id, msg_id))
-        msg, sz = t.deserialize(data)
+
+        proto_name, proto = self.types_by_id[proto_id]
+        if not type_id in proto:
+            raise MessgenError("Unsupported msg_id in deserialization: proto_id=%s msg_id=%s" % (proto_id, type_id))
+
+        type_name, type_ = proto[type_id]
+
+        msg, sz = type_.deserialize(data)
         if sz != len(data):
             raise MessgenError(
-                "Invalid message size: expected=%s actual=%s proto_id=%s msg_id=%s" % (sz, len(data), proto_id, msg_id))
-        return p[0], t.type_name, msg
+                "Invalid message size: expected=%s actual=%s proto_id=%s msg_id=%s" % (sz, len(data), proto_id, type_id))
+
+        return proto_name, type_name, msg
