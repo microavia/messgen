@@ -56,6 +56,7 @@ def _namespace(name: str, code:list[str]):
         if ns_name:
             code.append("")
             code.append(f"}} // namespace {ns_name}")
+            code.append("")
 
 
 @contextmanager
@@ -65,6 +66,7 @@ def _struct(name: str, code: list[str]):
         yield
     finally:
         code.append("};")
+        code.append("")
 
 
 def _inline_comment(type_def: FieldType | EnumValue):
@@ -182,7 +184,8 @@ class CppGenerator:
 
                 proto_id = proto_def.proto_id
                 if proto_id is not None:
-                    code.append(f"    constexpr static int PROTO_ID = {proto_id};")
+                    code.append(f"    constexpr static inline int HASH = 0x{hash(proto_def):x};")
+                    code.append(f"    constexpr static inline int PROTO_ID = {proto_id};")
 
                 code.extend(self._generate_type_id_decl(proto_def))
                 code.extend(self._generate_reflect_type_decl())
@@ -199,7 +202,7 @@ class CppGenerator:
     def _generate_type_id_decl(proto: Protocol) -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <messgen::type Msg>
-            constexpr static inline int TYPE_ID = []{
+            constexpr static inline int TYPE_ID = [] {
                 static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");
                 return 0;
             }();"""), "    ").splitlines()
@@ -208,29 +211,31 @@ class CppGenerator:
     def _generate_type_ids(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
         for type_id, type_name in proto.types.items():
-            code.append(f"    template <> constexpr inline int {class_name}::TYPE_ID<{_qual_name(type_name)}> = {type_id};")
+            code.append("template <>")
+            code.append(f"constexpr inline int {class_name}::TYPE_ID<{_qual_name(type_name)}> = {type_id};")
+        code.append("")
         return code
 
     @staticmethod
     def _generate_reflect_type_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class Fn>
-            constexpr static auto reflect_message(int type_id, Fn&& fn);
+            constexpr static auto reflect_message(int type_id, Fn &&fn);
             """), "    ").splitlines()
 
     @staticmethod
     def _generate_reflect_type(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
-        code.append("    template <class Fn>")
-        code.append(f"    constexpr auto {class_name}::reflect_message(int type_id, Fn&& fn) {{")
-        code.append("        switch (type_id) {")
+        code.append("template <class Fn>")
+        code.append(f"constexpr auto {class_name}::reflect_message(int type_id, Fn &&fn) {{")
+        code.append("    switch (type_id) {")
         for type_name in proto.types.values():
             qual_name = _qual_name(type_name)
-            code.append(f"            case TYPE_ID<{qual_name}>:")
-            code.append(f"                std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
-            code.append(f"                return;")
-        code.append("        }")
+            code.append(f"        case TYPE_ID<{qual_name}>:")
+            code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
+            code.append(f"            return;")
         code.append("    }")
+        code.append("}")
         return code
 
     @staticmethod
@@ -368,11 +373,12 @@ class CppGenerator:
         is_empty = len(groups) == 0
         is_flat = is_empty or (len(groups) == 1 and groups[0].size is not None)
         if is_flat:
-            code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
+            code.append(_indent("constexpr static inline size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
-        code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
-        code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
-        code.append(_indent(f"static constexpr const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
+        code.append(_indent(f"constexpr static inline bool IS_FLAT = {is_flat_str};"))
+        code.append(_indent(f"constexpr static inline uint32_t HASH = 0x{hash(type_def):x};"))
+        code.append(_indent(f"constexpr static inline const char* NAME = \"{_qual_name(type_name)}\";"))
+        code.append(_indent(f"constexpr static inline const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
         code.append("")
 
         for field in type_def.fields:
