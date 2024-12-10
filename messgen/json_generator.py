@@ -25,12 +25,14 @@ class JsonGenerator:
                 continue
             file_name = out_dir / (type_name + self._FILE_EXT)
             file_name.parent.mkdir(parents=True, exist_ok=True)
-            write_file_if_diff(file_name, json.dumps(asdict(type_def), indent=2).splitlines())
+            type_dict = asdict(type_def)
+            type_dict["hash"] = hash(type_def)
+            write_file_if_diff(file_name, json.dumps(type_dict, indent=2).splitlines())
 
     def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
         for proto_name, proto_def in protocols.items():
             file_name = out_dir / (proto_name + self._FILE_EXT)
             file_name.parent.mkdir(parents=True, exist_ok=True)
             proto_dict = asdict(proto_def)
-            proto_dict["version"] = version_hash(proto_dict)
-            write_file_if_diff(file_name, json.dumps(asdict(proto_def), indent=2).splitlines())
+            proto_dict["hash"] = hash(proto_def)
+            write_file_if_diff(file_name, json.dumps(proto_dict, indent=2).splitlines())
