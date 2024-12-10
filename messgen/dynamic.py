@@ -37,6 +37,7 @@ class MessgenError(Exception):
 
 
 class Converter:
+
     def __init__(self, types: dict[str, MessgenType], type_name: str):
         self.type_name = type_name
         self.type_def = types[type_name]
@@ -319,14 +320,10 @@ class Codec:
             return converter
         raise MessgenError(f"Unsupported type_name={type_name}")
 
-    def get_type_hash(self, type_name) -> int:
-        if converter := self.types_by_name.get(type_name):
-            return hash(converter.type_def)
-        raise MessgenError(f"Unsupported type_name={type_name}")
-
     @singledispatchmethod
     def serialize(self, type_name: str, data: bytes) -> dict:
-        return self.get_type_converter(type_name).serialize(data)
+        converter = self.get_type_converter(type_name)
+        return hash(converter.type_def), converter.serialize(data)
 
     @serialize.register
     def serialize_(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
@@ -339,7 +336,7 @@ class Codec:
 
         type_id, converter = proto[type_name]
         payload = converter.serialize(msg)
-        return proto_id, type_id, payload
+        return proto_id, type_id, hash(converter.type_def), payload
 
     @singledispatchmethod
     def deserialize(self, type_name: str, data: bytes) -> dict:
@@ -348,7 +345,7 @@ class Codec:
         if sz != len(data):
             raise MessgenError(
                 f"Invalid message size: expected={sz} actual={len(data)} type_name={type_name}")
-        return msg
+        return hash(converter.type_def), msg
 
     @deserialize.register
     def deserialize_(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
@@ -359,13 +356,13 @@ class Codec:
         if not type_id in proto:
             raise MessgenError(f"Unsupported type_id={type_id} in deserialization")
 
-        type_name, type_ = proto[type_id]
+        type_name, converter = proto[type_id]
 
-        msg, sz = type_.deserialize(data)
+        msg, sz = converter.deserialize(data)
         if sz != len(data):
             raise MessgenError(
                 f"Invalid message size: expected={sz} actual={len(data)} "
                 f"proto_id={proto_id} type_id={type_id} "
                 f"proto_name={proto_name} type_name={type_name}")
 
-        return proto_name, type_name, msg
+        return proto_name, type_name, hash(converter.type_def), msg
