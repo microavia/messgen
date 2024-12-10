@@ -127,6 +127,15 @@ def validate_protocol(protocol: Protocol, types: dict[str, MessgenType]):
             raise RuntimeError(f"Type {type_name} required by {protocol.name} protocol not found")
 
 
+def validate_types(types: dict[str, MessgenType]):
+    seen_hashes = {}
+    for type_name, type_def in types.items():
+        type_hash = hash(type_def)
+        if hash_conflict := seen_hashes.get(type_hash):
+            raise RuntimeError(f"Type {type_name} has the same hash as {hash_conflict.type}")
+        seen_hashes[type_hash] = hash(type_def)
+
+
 # Checks if `s` is a valid name for a field or a message type
 def is_valid_name(name: str):
     if not isinstance(name, str) or not name:
