@@ -92,7 +92,6 @@ Before selecting messgen keep in mind:
 - No optional fields in structs and messages
 - No messages versioning
 
-
 Type and protocol descriptions are stored as `.yaml` files following the structure demonstrated below.
 
 ```
@@ -129,7 +128,6 @@ The lowest level of hierarchy is **type**. It can be:
 - Bytes: vector of `uint8`, representing bytes buffer, `bytes`
 - Struct: list of fields, described in yaml file
 - External: user-defined types, user must provide serialization/deserialization methods for each port that is used (TODO)
-- Alias: reference to another existing type (e.g. from another protocol) (TODO)
 
 #### Enum
 
