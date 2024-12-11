@@ -11,7 +11,7 @@ def codec():
 
 
 def test_serialization1(codec):
-    type_def = codec.get_type_converter("messgen/test/simple_struct")
+    type_def = codec.get_type_serializer("messgen/test/simple_struct")
     expected_msg = {
         "f0": 0x1234567890abcdef,
         "f2": 1.2345678901234567890,
@@ -31,7 +31,7 @@ def test_serialization1(codec):
 
 
 def test_serialization2(codec):
-    type_def = codec.get_type_converter("messgen/test/var_size_struct")
+    type_def = codec.get_type_serializer("messgen/test/var_size_struct")
     expected_msg = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],
