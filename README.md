@@ -4,7 +4,7 @@
 # Messgen
 
 Lightweight and fast message serialization library.
-Generates message classes/structs from yaml descripiton.
+Generates message classes/structs from YAML descriptions.
 
 Features:
 
@@ -14,12 +14,12 @@ Features:
 - Maps
 - Nested messages
 - Messages metadata
-- Supported output formats: C++, JSON, Typescript
+- Supported output formats: C++, JSON, TypeScript
 - Supported output formats TODO: Go, Markdown (documentation)
 
 ## Dependencies
 
-- python 3.X
+- Python 3.X
 
 On Linux:
 
@@ -39,11 +39,11 @@ On Windows 10:
 
 ## Generate messages
 
-All data types should be placed in one directory. Each protocol should can be placed in any arbitrary directory.
+All data types should be placed in one directory. Each protocol can be placed in any arbitrary directory.
 
-`types` is base directory for type definitions (specifying multiple type directories is allowed). The subdirectories are treated as namespaces "my_company/core" or "my_company/the_product/some_items".
+`types` is the base directory for type definitions (specifying multiple type directories is allowed). The subdirectories are treated as namespaces "my_company/core" or "my_company/the_product/some_items".
 
-`protocol` is a single protocol definition file (specifying multiple protocols is allowed). The protocol consists of base directory and protocol name separated by a colon e.g. "protocols_dir:my_namespace/protocol".
+`protocol` is a single protocol definition file (specifying multiple protocols is allowed). The protocol consists of a base directory and protocol name separated by a colon e.g. "protocols_dir:my_namespace/protocol".
 
 Message generator usage:
 
@@ -51,7 +51,7 @@ Message generator usage:
 python3 messgen-generate.py --types <types_dir> --protocol <protocol> --lang <lang> --outdir <out_dir> [--options key1=value1,key2=value2,...]
 ```
 
-Generated messages placed in `out_dir` directory.
+Generated messages are placed in the `out_dir` directory.
 
 #### C++
 
