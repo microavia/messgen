@@ -25,8 +25,7 @@ def test_serialization1(codec):
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
 
-    actual_msg, actual_size = type_def.deserialize(expected_bytes)
-    assert actual_size == len(expected_bytes)
+    actual_msg = type_def.deserialize(expected_bytes)
     for key in expected_msg:
         assert actual_msg[key] == pytest.approx(expected_msg[key])
 
@@ -42,6 +41,5 @@ def test_serialization2(codec):
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
 
-    actual_msg, actual_size = type_def.deserialize(expected_bytes)
-    assert actual_size == len(expected_bytes)
+    actual_msg = type_def.deserialize(expected_bytes)
     assert actual_msg == expected_msg
