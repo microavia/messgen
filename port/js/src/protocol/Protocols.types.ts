@@ -1,10 +1,4 @@
-import type { IName, INumberType, IType, MessageId, ProtocolId, ProtocolName, TypeDefinition } from '../types';
-
-export interface Field {
-  name: IName
-  type: IType
-  comment?: string;
-}
+import type { IName, INumberType, MessageId, ProtocolId, ProtocolName, TypeDefinition, Field } from '../types';
 
 interface EnumValue {
   name: IName;
