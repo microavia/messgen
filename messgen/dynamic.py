@@ -1,6 +1,6 @@
 import struct
 
-from functools import singledispatchmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from .model import (
@@ -36,12 +36,33 @@ class MessgenError(Exception):
     pass
 
 
-class Converter:
+class Converter(ABC):
 
     def __init__(self, types: dict[str, MessgenType], type_name: str):
         self.type_name = type_name
         self.type_def = types[type_name]
         self.type_class = self.type_def.type_class
+
+    def type_hash(self):
+        return hash(self.type_def)
+
+    def serialize(self, data):
+        return self._serialize(data)
+
+    def deserialize(self, data):
+        msg, sz = self._deserialize(data)
+        if sz != len(data):
+            raise MessgenError(
+                f"Invalid message size: expected={sz} actual={len(data)} type_name={self.type_name}")
+        return msg
+
+    @abstractmethod
+    def _serialize(self, data):
+        pass
+
+    @abstractmethod
+    def _deserialize(self, data):
+        pass
 
 
 class ScalarConverter(Converter):
@@ -59,10 +80,10 @@ class ScalarConverter(Converter):
         elif self.type_name == "float32" or self.type_name == "float64":
             self.def_value = 0.0
 
-    def serialize(self, data):
+    def _serialize(self, data):
         return struct.pack(self.struct_fmt, data)
 
-    def deserialize(self, data):
+    def _deserialize(self, data):
         return struct.unpack(self.struct_fmt, data[:self.size])[0], self.size
 
     def default_value(self):
@@ -85,11 +106,11 @@ class EnumConverter(Converter):
             self.mapping[item.value] = item.name
         self.rev_mapping = {v: k for k, v in self.mapping.items()}
 
-    def serialize(self, data):
+    def _serialize(self, data):
         v = self.rev_mapping[data]
         return struct.pack(self.struct_fmt, v)
 
-    def deserialize(self, data):
+    def _deserialize(self, data):
         v, = struct.unpack(self.struct_fmt, data[:self.size])
         return self.mapping[v], self.size
 
@@ -105,20 +126,20 @@ class StructConverter(Converter):
         self.fields = [(field.name, get_type(types, field.type))
                        for field in self.type_def.fields]
 
-    def serialize(self, data):
+    def _serialize(self, data):
         out = []
         for field_name, field_type in self.fields:
             v = data.get(field_name, None)
             if v is None:
                 v = field_type.default_value()
-            out.append(field_type.serialize(v))
+            out.append(field_type._serialize(v))
         return b"".join(out)
 
-    def deserialize(self, data):
+    def _deserialize(self, data):
         out = {}
         offset = 0
         for field_name, field_type in self.fields:
-            value, size = field_type.deserialize(data[offset:])
+            value, size = field_type._deserialize(data[offset:])
             out[field_name] = value
             offset += size
         return out, offset
@@ -136,18 +157,18 @@ class ArrayConverter(Converter):
         self.element_type = get_type(types, self.type_def.element_type)
         self.array_size = self.type_def.array_size
 
-    def serialize(self, data):
+    def _serialize(self, data):
         out = []
         assert len(data) == self.array_size
         for item in data:
-            out.append(self.element_type.serialize(item))
+            out.append(self.element_type._serialize(item))
         return b"".join(out)
 
-    def deserialize(self, data):
+    def _deserialize(self, data):
         out = []
         offset = 0
         for i in range(self.array_size):
-            value, size = self.element_type.deserialize(data[offset:])
+            value, size = self.element_type._deserialize(data[offset:])
             out.append(value)
             offset += size
         return out, offset
@@ -167,21 +188,21 @@ class VectorConverter(Converter):
         self.size_type = get_type(types, "uint32")
         self.element_type = get_type(types, self.type_def.element_type)
 
-    def serialize(self, data):
+    def _serialize(self, data):
         out = []
-        out.append(self.size_type.serialize(len(data)))
+        out.append(self.size_type._serialize(len(data)))
 
         for item in data:
-            out.append(self.element_type.serialize(item))
+            out.append(self.element_type._serialize(item))
         return b"".join(out)
 
-    def deserialize(self, data):
+    def _deserialize(self, data):
         out = []
         offset = 0
-        n, n_size = self.size_type.deserialize(data[offset:])
+        n, n_size = self.size_type._deserialize(data[offset:])
         offset += n_size
         for i in range(n):
-            value, n = self.element_type.deserialize(data[offset:])
+            value, n = self.element_type._deserialize(data[offset:])
             out.append(value)
             offset += n
         return out, offset
@@ -199,23 +220,23 @@ class MapConverter(Converter):
         self.key_type = get_type(types, self.type_def.key_type)
         self.value_type = get_type(types, self.type_def.value_type)
 
-    def serialize(self, data):
+    def _serialize(self, data):
         out = []
-        out.append(self.size_type.serialize(len(data)))
+        out.append(self.size_type._serialize(len(data)))
         for k, v in data.items():
-            out.append(self.key_type.serialize(k))
-            out.append(self.value_type.serialize(v))
+            out.append(self.key_type._serialize(k))
+            out.append(self.value_type._serialize(v))
         return b"".join(out)
 
-    def deserialize(self, data):
+    def _deserialize(self, data):
         out = {}
         offset = 0
-        n, n_size = self.size_type.deserialize(data[offset:])
+        n, n_size = self.size_type._deserialize(data[offset:])
         offset += n_size
         for i in range(n):
-            key, n = self.key_type.deserialize(data[offset:])
+            key, n = self.key_type._deserialize(data[offset:])
             offset += n
-            value, n = self.value_type.deserialize(data[offset:])
+            value, n = self.value_type._deserialize(data[offset:])
             offset += n
             out[key] = value
         return out, offset
@@ -231,11 +252,11 @@ class StringConverter(Converter):
         self.size_type = get_type(types, "uint32")
         self.struct_fmt = "<%is"
 
-    def serialize(self, data):
-        return self.size_type.serialize(len(data)) + struct.pack(self.struct_fmt % len(data), data.encode("utf-8"))
+    def _serialize(self, data):
+        return self.size_type._serialize(len(data)) + struct.pack(self.struct_fmt % len(data), data.encode("utf-8"))
 
-    def deserialize(self, data):
-        n, n_size = self.size_type.deserialize(data)
+    def _deserialize(self, data):
+        n, n_size = self.size_type._deserialize(data)
         offset = n_size
         value = struct.unpack(self.struct_fmt % n, data[offset:offset + n])[0]
         offset += n
@@ -252,11 +273,11 @@ class BytesConverter(Converter):
         self.size_type = get_type(types, "uint32")
         self.struct_fmt = "<%is"
 
-    def serialize(self, data):
-        return self.size_type.serialize(len(data)) + struct.pack(self.struct_fmt % len(data), data)
+    def _serialize(self, data):
+        return self.size_type._serialize(len(data)) + struct.pack(self.struct_fmt % len(data), data)
 
-    def deserialize(self, data):
-        n, n_size = self.size_type.deserialize(data)
+    def _deserialize(self, data):
+        n, n_size = self.size_type._deserialize(data)
         offset = n_size
         value = struct.unpack(self.struct_fmt % n, data[offset:offset + n])[0]
         offset += n
@@ -295,12 +316,17 @@ class Codec:
         self.proto_types_by_name = {}
         self.proto_types_by_id = {}
 
+    def get_type_converter(self, type_name: str) -> Converter:
+        if converter := self.types_by_name.get(type_name):
+            return converter
+        raise MessgenError(f"Unsupported type_name={type_name}")
+
     def load(self, type_dirs: list[str | Path], protocols: list[str] | None = None):
         parsed_types = parse_types(type_dirs)
         if not protocols:
             return
 
-        for type_name, type_def in parsed_types.items():
+        for type_name in parsed_types:
             self.types_by_name[type_name] = get_type(parsed_types, type_name)
 
         parsed_protocols = parse_protocols(protocols)
@@ -315,18 +341,7 @@ class Codec:
             self.proto_types_by_name[proto_name] = by_name
             self.proto_types_by_id[proto_def.proto_id] = by_id
 
-    def get_type_converter(self, type_name: str) -> Converter:
-        if converter := self.types_by_name.get(type_name):
-            return converter
-        raise MessgenError(f"Unsupported type_name={type_name}")
-
-    @singledispatchmethod
-    def serialize(self, type_name: str, data: bytes) -> dict:
-        converter = self.get_type_converter(type_name)
-        return hash(converter.type_def), converter.serialize(data)
-
-    @serialize.register
-    def serialize_(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
+    def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, int, bytes]:
         if not proto_name in self.proto_types_by_name:
             raise MessgenError(f"Unsupported proto_name={proto_name} in serialization")
 
@@ -338,17 +353,7 @@ class Codec:
         payload = converter.serialize(msg)
         return proto_id, type_id, hash(converter.type_def), payload
 
-    @singledispatchmethod
-    def deserialize(self, type_name: str, data: bytes) -> dict:
-        converter = self.get_type_converter(type_name)
-        msg, sz = converter.deserialize(data)
-        if sz != len(data):
-            raise MessgenError(
-                f"Invalid message size: expected={sz} actual={len(data)} type_name={type_name}")
-        return hash(converter.type_def), msg
-
-    @deserialize.register
-    def deserialize_(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
+    def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, int, dict]:
         if not proto_id in self.proto_types_by_id:
             raise MessgenError(f"Unsupported proto_id={proto_id} in deserialization")
 
@@ -357,12 +362,4 @@ class Codec:
             raise MessgenError(f"Unsupported type_id={type_id} in deserialization")
 
         type_name, converter = proto[type_id]
-
-        msg, sz = converter.deserialize(data)
-        if sz != len(data):
-            raise MessgenError(
-                f"Invalid message size: expected={sz} actual={len(data)} "
-                f"proto_id={proto_id} type_id={type_id} "
-                f"proto_name={proto_name} type_name={type_name}")
-
-        return proto_name, type_name, hash(converter.type_def), msg
+        return proto_name, type_name, converter.type_hash(), converter.deserialize(data)

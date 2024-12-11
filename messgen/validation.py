@@ -128,12 +128,12 @@ def validate_protocol(protocol: Protocol, types: dict[str, MessgenType]):
 
 
 def validate_types(types: dict[str, MessgenType]):
-    seen_hashes = {}
+    seen_hashes: dict[int, Any] = {}
     for type_name, type_def in types.items():
         type_hash = hash(type_def)
         if hash_conflict := seen_hashes.get(type_hash):
             raise RuntimeError(f"Type {type_name} has the same hash as {hash_conflict.type}")
-        seen_hashes[type_hash] = hash(type_def)
+        seen_hashes[type_hash] = type_def
 
 
 # Checks if `s` is a valid name for a field or a message type

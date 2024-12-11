@@ -6,7 +6,7 @@ from enum import Enum, auto
 from typing import Union
 
 
-def _hash_model_type(dt: dataclass) -> int:
+def _hash_model_type(dt) -> int:
     input_string = json.dumps(asdict(dt)).replace(" ", "")
     hash_object = hashlib.md5(input_string.encode())
     hex_digest = hash_object.hexdigest()
