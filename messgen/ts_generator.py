@@ -50,6 +50,9 @@ class TypeScriptTypes:
         return cls.TYPED_ARRAY_MAP.get(type_name, None)
 
 class TypeScriptGenerator:
+    _TYPES_FILE = "types.ts"
+    _PROTOCOLS_FILE = "protocols.ts"
+
     def __init__(self, options):
         self._options = options
         self._types = []
@@ -64,6 +67,37 @@ class TypeScriptGenerator:
         for proto_def in protocols.values():
             validate_protocol(proto_def, types)
 
+    def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
+        types = set()
+        code = []
+    
+        for proto_name, proto_def in protocols.items():
+            code.append(f"export interface {self._to_camel_case(proto_name)} {{")
+            code.append(f"  '{proto_name}': {{")
+            for struct_name in proto_def.types.values():
+                ts_struct_name = self._to_camel_case(struct_name)
+                code.append(f"    '{struct_name}': {ts_struct_name};")
+                types.add(ts_struct_name)
+            code.append('  }')
+            code.append('}')
+            code.append('')
+    
+        import_statements = self._generate_protocol_imports(types)
+        final_code = '\n'.join(import_statements + code) + self.generate_union_protocol(protocols)
+    
+        self._write_output_file(out_dir, self._PROTOCOLS_FILE, final_code)
+
+    def _generate_protocol_imports(self, types: set[str]) -> list[str]:
+        import_statements = ["import type {"]
+        for struct_name in types:
+            import_statements.append(f"    {struct_name},")
+        import_statements.append("} from './types';")
+        import_statements.append('')
+        return import_statements
+
+    def generate_union_protocol(self, protocols: dict[str, Protocol]) -> str:
+        return f'export type Protocol = ' + ' | '.join([f'{self._to_camel_case(proto_name)}' for proto_name in protocols.keys()]) + ';'
+
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         self._types.clear()
 
@@ -75,7 +109,7 @@ class TypeScriptGenerator:
         
         code = '\n'.join(self._types)
         
-        self._write_output_file(out_dir, 'types', code)
+        self._write_output_file(out_dir, self._TYPES_FILE, code)
 
     def _generate_enum(self, enum_name, type_def):
         self._types.append(f"export enum {self._to_camel_case(enum_name)} {{")
@@ -89,8 +123,8 @@ class TypeScriptGenerator:
         self._types.append("}")
         self._types.append("")
     
-    def _generate_struct(self, interface_name, type_def):
-        self._types.append(f"export interface {self._to_camel_case(interface_name)} {{")
+    def _generate_struct(self, name: str, type_def: MessgenType):
+        self._types.append(f"export interface {self._to_camel_case(name)} {{")
         fields = type_def.fields or []
 
         for field in fields:
@@ -104,7 +138,7 @@ class TypeScriptGenerator:
         self._types.append("}")
         self._types.append("")
 
-    def _get_ts_type(self, field_type):
+    def _get_ts_type(self, field_type: str):
         typed_array_type = self._is_typed_array(field_type)
         if typed_array_type:
             return typed_array_type
@@ -142,20 +176,16 @@ class TypeScriptGenerator:
             if typed_array:
                 return typed_array
         return None
-
-
-    def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
-        for proto_name, proto_def in protocols.items():
-            print(f"Generating {proto_name}")
     
-    @staticmethod
-    def _to_camel_case(s):
-        name = '_'.join(s.split(SEPARATOR))
-        return ''.join(word.capitalize() for word in name.split('_'))
-    
-    def _write_output_file(self, output_path, file_name, content):
-        output_file = os.path.join(output_path, f"{file_name}.ts")
+    def _write_output_file(self, output_path, file, content):
+        output_file = os.path.join(output_path, f"{file}")
 
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(content)
+
+    @staticmethod
+    def _to_camel_case(s: str):
+        name = '_'.join(s.split(SEPARATOR))
+        return ''.join(word.capitalize() for word in name.split('_'))
+    
 
