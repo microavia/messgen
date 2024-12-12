@@ -20,7 +20,12 @@ interface EnumValue {
   value: number;
 }
 
-export interface TypeClass {
+export enum TypeClass {
+  STRUCT = '8',
+  ENUM = '7',
+}
+
+export interface StructTypeClass {
   type_class: 'struct';
   comment?: string;
   fields: Field[] | null;
@@ -33,7 +38,7 @@ export interface EnumTypeClass {
   values: EnumValue[];
 }
 
-export type StructureType = TypeClass | EnumTypeClass;
+export type StructureType = StructTypeClass | EnumTypeClass;
 
 export interface Protocol {
   name: string;

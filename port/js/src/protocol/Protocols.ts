@@ -1,5 +1,5 @@
 import type { IBasicType, IName, IType, TypeDefinition } from '../types';
-import type { RawType } from './Protocols.types';
+import { type RawType, TypeClass } from './Protocols.types';
 
 const SCALAR_TYPES_INFO = new Map<string, boolean>([
   ['int8', true],
@@ -23,13 +23,13 @@ export class Protocols {
 
   load(types: RawType[]): void {
     types.forEach((type) => {
-      if (type.type_class === '8') {
+      if (type.type_class === TypeClass.STRUCT) {
         this.types.set(type.type, {
           typeClass: 'struct',
           fields: type.fields,
           typeName: type.type,
         });
-      } else if (type.type_class === '7') {
+      } else if (type.type_class === TypeClass.ENUM) {
         this.types.set(type.type, {
           typeClass: 'enum',
           type: type.base_type,
@@ -42,43 +42,37 @@ export class Protocols {
 
   getType(typeName: IType): TypeDefinition {
     if (SCALAR_TYPES_INFO.has(typeName)) {
-      return {
-        type: typeName as IBasicType,
-        typeClass: 'scalar',
-      };
+      return { type: typeName as IBasicType, typeClass: 'scalar' };
     }
-
     if (typeName.endsWith(']')) {
-      const [elementType, size] = this.parseArray(typeName);
-
-      if (SCALAR_TYPES_INFO.get(elementType)) {
-        return {
-          type: typeName,
-          typeClass: 'typed-array',
-          elementType,
-          arraySize: size,
-        };
-      }
-
-      return {
-        type: typeName,
-        typeClass: 'array',
-        elementType,
-        arraySize: size,
-      };
+      return this.parseArrayType(typeName);
     }
-
     if (typeName.endsWith('}')) {
-      const [valueType, keyType] = this.parseMap(typeName);
-      return {
-        type: typeName,
-        typeClass: 'map',
-        keyType,
-        valueType,
-      };
+      return this.parseMapType(typeName);
     }
-
     return this.resolveType(typeName);
+  }
+
+  private parseArrayType(typeName: string): TypeDefinition {
+    const [elementType, size] = this.parseArray(typeName);
+
+    const isTyped = SCALAR_TYPES_INFO.get(elementType);
+    return {
+      type: typeName,
+      typeClass: isTyped ? 'typed-array' : 'array',
+      elementType,
+      arraySize: size,
+    };
+  }
+
+  private parseMapType(typeName: string): TypeDefinition {
+    const [keyType, valueType] = this.parseMap(typeName);
+    return {
+      type: typeName,
+      typeClass: 'map',
+      keyType,
+      valueType,
+    };
   }
 
   private parseArray(typeName: string): [string, number | undefined] {
@@ -91,16 +85,14 @@ export class Protocols {
 
   private parseMap(typeName: string): [string, string] {
     const parts = typeName.slice(0, -1).split('{');
-    return [parts.slice(0, -1).join('{'), parts[parts.length - 1]];
+    return [parts[parts.length - 1], parts.slice(0, -1).join('{')];
   }
 
   private resolveType(typeName: string): TypeDefinition {
     const typeDefinition = this.types.get(typeName);
-
     if (!typeDefinition) {
       throw new Error(`Unknown type: ${typeName} not found`);
     }
-
     return typeDefinition;
   }
 }

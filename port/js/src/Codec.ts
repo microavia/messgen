@@ -13,13 +13,13 @@ export class Codec<Config extends GenericConfig = GenericConfig> {
     this.protocols.load(rawTypes);
     const converterFactory = new ConverterFactory(this.protocols);
 
-    for (const protocol of protocols) {
-      const { name, proto_id: protoId, types } = protocol;
+    for (const { name, proto_id: protoId, types } of protocols) {
       const typeMap = new Map<string, Converter>();
       const idMap = new Map<MessageId, Converter>();
 
       for (const [messageId, typeName] of Object.entries(types)) {
         const converter = converterFactory.toConverter(typeName);
+
         typeMap.set(typeName, converter);
         idMap.set(parseInt(messageId, 10), converter);
       }
