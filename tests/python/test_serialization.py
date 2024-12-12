@@ -11,7 +11,7 @@ def codec():
 
 
 def test_serialization1(codec):
-    type_def = codec.get_type_by_name("test_proto", "messgen/test/simple_struct")
+    type_def = codec.get_type_serializer("messgen/test/simple_struct")
     expected_msg = {
         "f0": 0x1234567890abcdef,
         "f2": 1.2345678901234567890,
@@ -25,14 +25,13 @@ def test_serialization1(codec):
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
 
-    actual_msg, actual_size = type_def.deserialize(expected_bytes)
-    assert actual_size == len(expected_bytes)
+    actual_msg = type_def.deserialize(expected_bytes)
     for key in expected_msg:
         assert actual_msg[key] == pytest.approx(expected_msg[key])
 
 
 def test_serialization2(codec):
-    type_def = codec.get_type_by_name("test_proto", "messgen/test/var_size_struct")
+    type_def = codec.get_type_serializer("messgen/test/var_size_struct")
     expected_msg = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],
@@ -42,6 +41,5 @@ def test_serialization2(codec):
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
 
-    actual_msg, actual_size = type_def.deserialize(expected_bytes)
-    assert actual_size == len(expected_bytes)
+    actual_msg = type_def.deserialize(expected_bytes)
     assert actual_msg == expected_msg
