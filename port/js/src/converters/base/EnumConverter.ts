@@ -8,10 +8,10 @@ export class EnumConverter extends Converter {
   private enumsByName: Record<string, number>;
   private enumsByValue: string[];
 
-  constructor(protocolName: string, typeDef: EnumTypeDefinition, getType: GetType) {
+  constructor(typeDef: EnumTypeDefinition, getType: GetType) {
     super(typeDef.typeName);
 
-    this.converter = getType(protocolName, typeDef.type);
+    this.converter = getType(typeDef.type);
 
     this.enumsByName = typeDef.values.reduce((acc, value) => {
       acc[value.name] = value.value;

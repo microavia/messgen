@@ -3,23 +3,23 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { execSync } from 'child_process';
 import { Codec } from '../src/Codec';
-import { uploadShema } from './utils';
-import type { ProtocolJSON } from '../src/protocol/Protocols.types';
+import { uploadTypes, uploadProtocols } from './utils';
+import type { Protocol, RawType } from '../src/protocol';
 
 describe('Codec', () => {
-  let testProtoData: ProtocolJSON;
-  let anotherProtoData: ProtocolJSON;
+  let types: RawType[];
+  let protocols: Protocol[];
   let codec: Codec;
 
   beforeAll(() => {
     execSync('npm run gen:json');
-    testProtoData = uploadShema('./messgen/test_proto/protocol.json');
-    anotherProtoData = uploadShema('./another_proto/protocol.json');
-    codec = new Codec([testProtoData, anotherProtoData]);
+    types = uploadTypes('./types.json');
+    protocols = uploadProtocols('./protocols.json');
+    codec = new Codec(types, protocols);
   });
   describe('init example', () => {
     it('should initialize the messages', () => {
-      expect(new Codec([testProtoData, anotherProtoData])).toBeDefined();
+      expect(new Codec(types, protocols)).toBeDefined();
     });
 
     it('should serialize and deserialize a message', () => {
@@ -38,7 +38,7 @@ describe('Codec', () => {
         f9: true,
       };
 
-      const message = codec.serialize('messgen/test_proto', 'simple_struct', rawData);
+      const message = codec.serialize('test_proto', 'messgen/test/simple_struct', rawData);
 
       expect(codec.deserialize(1, 0, message.buffer)).toEqual({
         ...rawData,
