@@ -83,7 +83,9 @@ class TypeScriptGenerator:
             code.append('')
     
         import_statements = self._generate_protocol_imports(types)
-        final_code = '\n'.join(import_statements + code) + self.generate_union_protocol(protocols)
+        protocol_types = ' | '.join(self._to_camel_case(proto_name) for proto_name in protocols.keys())
+        final_code = '\n'.join(import_statements + code) + f'export type Protocol = {protocol_types};'
+      
     
         self._write_output_file(out_dir, self._PROTOCOLS_FILE, final_code)
 
@@ -94,9 +96,6 @@ class TypeScriptGenerator:
         import_statements.append("} from './types';")
         import_statements.append('')
         return import_statements
-
-    def generate_union_protocol(self, protocols: dict[str, Protocol]) -> str:
-        return f'export type Protocol = ' + ' | '.join([f'{self._to_camel_case(proto_name)}' for proto_name in protocols.keys()]) + ';'
 
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         self._types.clear()
@@ -125,7 +124,7 @@ class TypeScriptGenerator:
     
     def _generate_struct(self, name: str, type_def: MessgenType):
         self._types.append(f"export interface {self._to_camel_case(name)} {{")
-        fields = type_def.fields or []
+        fields = getattr(type_def, 'fields', []) or []
 
         for field in fields:
             if field.comment != None:
