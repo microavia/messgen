@@ -344,7 +344,7 @@ class Codec:
             self.proto_types_by_name[proto_name] = by_name
             self.proto_types_by_id[proto_def.proto_id] = by_id
 
-    def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, int, bytes]:
+    def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
         if not proto_name in self.proto_types_by_name:
             raise MessgenError(f"Unsupported proto_name={proto_name} in serialization")
 
@@ -354,9 +354,9 @@ class Codec:
 
         type_id, converter = proto[type_name]
         payload = converter.serialize(msg)
-        return proto_id, type_id, converter.type_hash(), payload
+        return proto_id, type_id, payload
 
-    def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, int, dict]:
+    def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
         if not proto_id in self.proto_types_by_id:
             raise MessgenError(f"Unsupported proto_id={proto_id} in deserialization")
 
@@ -365,4 +365,4 @@ class Codec:
             raise MessgenError(f"Unsupported type_id={type_id} in deserialization")
 
         type_name, converter = proto[type_id]
-        return proto_name, type_name, converter.type_hash(), converter.deserialize(data)
+        return proto_name, type_name, converter.deserialize(data)
