@@ -143,7 +143,7 @@ describe('StructConverter', () => {
   ): StructConverter {
     const schema = createSchema(fields);
     const getType = initGetType();
-    return new StructConverter('testStruct', schema, getType);
+    return new StructConverter(schema, getType);
   }
 
   function createSchema(fields: Field[] = []): StructTypeDefinition {

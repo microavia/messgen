@@ -23,10 +23,10 @@ export class TypedArrayConverter extends Converter {
   private arraySize?: number;
   private TypedArrayConstructor: TypedArrayConstructor;
 
-  constructor(protocolName: string, typeDef: TypedArrayTypeDefinition, getType: GetType) {
+  constructor(typeDef: TypedArrayTypeDefinition, getType: GetType) {
     super(typeDef.type);
-    this.converter = getType(protocolName, typeDef.elementType);
-    this.sizeConverter = getType(protocolName, SIZE_TYPE);
+    this.converter = getType(typeDef.elementType);
+    this.sizeConverter = getType(SIZE_TYPE);
     this.arraySize = typeDef.arraySize;
 
     const arrayConstructor = TYPED_ARRAY_MAP.get(typeDef.elementType);

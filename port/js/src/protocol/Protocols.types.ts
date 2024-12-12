@@ -1,11 +1,31 @@
-import type { IName, INumberType, MessageId, ProtocolId, ProtocolName, TypeDefinition, Field } from '../types';
+import type { IName, INumberType, Field } from '../types';
+
+export interface RawStructType {
+  type: string;
+  type_class: '8'
+  fields: Field[];
+}
+
+export interface RawEnumType {
+  type: string;
+  type_class: '7';
+  base_type: INumberType;
+  values: EnumValue[];
+}
+
+export type RawType = RawStructType | RawEnumType;
 
 interface EnumValue {
   name: IName;
   value: number;
 }
 
-export interface TypeClass {
+export enum TypeClass {
+  STRUCT = '8',
+  ENUM = '7',
+}
+
+export interface StructTypeClass {
   type_class: 'struct';
   comment?: string;
   fields: Field[] | null;
@@ -18,23 +38,10 @@ export interface EnumTypeClass {
   values: EnumValue[];
 }
 
-export interface Types {
-  [key: string]: TypeClass | EnumTypeClass;
-}
+export type StructureType = StructTypeClass | EnumTypeClass;
 
-export interface ProtocolJSON {
-  proto_id: ProtocolId;
-  proto_name: ProtocolName;
-  types: Types;
-  types_map?: Record<MessageId, IName>;
-  version: string;
+export interface Protocol {
+  name: string;
+  proto_id: number;
+  types: Record<string, IName>;
 }
-
-export interface ProtocolConfig {
-  id: ProtocolId;
-  name: ProtocolName;
-  types: Map<string, TypeDefinition>;
-  messageIds: Map<string, MessageId>;
-}
-
-export type StructureType = TypeClass | EnumTypeClass;

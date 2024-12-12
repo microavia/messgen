@@ -52,7 +52,7 @@ describe('EnumConverter', () => {
   function intiEnumConverter(values: EnumValue[], type?: IBasicType): EnumConverter {
     const schema = createSchema(values, type);
     const getType = initGetType();
-    return new EnumConverter('testStruct', schema, getType);
+    return new EnumConverter(schema, getType);
   }
 
   function createSchema(values: EnumValue[] = [], type: IBasicType = 'int8'): EnumTypeDefinition {

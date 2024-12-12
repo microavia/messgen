@@ -9,11 +9,11 @@ export class MapConverter extends Converter {
   protected valueConverter: Converter;
   protected dynamicSizeConverter: Converter;
 
-  constructor(protocolName: string, typeDef: MapTypeDefinition, getType: GetType) {
+  constructor(typeDef: MapTypeDefinition, getType: GetType) {
     super(typeDef.typeClass);
-    this.keyConverter = getType(protocolName, typeDef.keyType);
-    this.valueConverter = getType(protocolName, typeDef.valueType);
-    this.dynamicSizeConverter = getType(protocolName, SIZE_TYPE);
+    this.keyConverter = getType(typeDef.keyType);
+    this.valueConverter = getType(typeDef.valueType);
+    this.dynamicSizeConverter = getType(SIZE_TYPE);
   }
 
   serialize(value: Map<IValue, IValue> | Record<string, IValue>, buffer: Buffer): void {

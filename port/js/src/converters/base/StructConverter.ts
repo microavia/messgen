@@ -8,7 +8,7 @@ export class StructConverter extends Converter {
   private static RESERVED_WORDS: Set<string> = new Set(Object.getOwnPropertyNames(Object.prototype));
   parentObject: Record<IName, IValue>;
 
-  constructor(protocolName: string, typeDef: StructTypeDefinition, getType: GetType) {
+  constructor(typeDef: StructTypeDefinition, getType: GetType) {
     super(typeDef.typeName);
     const fieldsSet = new Set<string>();
 
@@ -22,7 +22,7 @@ export class StructConverter extends Converter {
         throw new Error(`Field ${field.name} is a reserved word in JavaScript`);
       }
 
-      const converter = getType(protocolName, field.type);
+      const converter = getType(field.type);
       if (!converter) {
         throw new Error(`Converter for type ${field.type} is not found in ${this.name}`);
       }

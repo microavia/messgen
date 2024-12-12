@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { ConverterFactory } from "../src/converters/ConverterFactory";
-import { IType } from "../src/types";
-import { Converter } from "../src/converters/Converter";
-import { Buffer } from "../src/Buffer";
-import { Protocols } from '../src/protocol/Protocols';
+import { ConverterFactory } from '../src/converters/ConverterFactory';
+import type { IType } from '../src/types';
+import type { Converter } from '../src/converters/Converter';
+import { Buffer } from '../src/Buffer';
 
 describe('ConverterFactory', () => {
   it('should serialize scalar correctly', () => {
@@ -53,11 +52,11 @@ describe('ConverterFactory', () => {
   });
 
   it('should throw an error when the basis type is not found in the converters map', () => {
-    expect(() => getConverter('customType')).toThrowError('Unknown type: customType not found at protocol test');
+    expect(() => getConverter('customType')).toThrowError('Unknown type: customType not found');
   });
 
   it('should throw an error when the map key type is not found in the converters map', () => {
-    expect(() => { getConverter('int32{customType}') }).toThrowError(`Unknown type: customType not found at protocol test`);
+    expect(() => { getConverter('int32{customType}'); }).toThrowError('Unknown type: customType not found');
   });
 
   it('should serialize multidimensional array', () => {
@@ -89,13 +88,12 @@ describe('ConverterFactory', () => {
     expect(converter.deserialize(buffer)).toEqual(value);
   });
 
-
   it('should serialize map of scalar typess', () => {
     const converter = getConverter('string{int32}');
     const value = new Map<number, string>([
-      [1, "one"],
-      [2, "two"],
-      [3, "three"]
+      [1, 'one'],
+      [2, 'two'],
+      [3, 'three'],
     ]);
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
 
@@ -104,13 +102,12 @@ describe('ConverterFactory', () => {
     expect(buffer.offset).toEqual(39);
   });
 
-
   it('should serialize and deserialize a map of basic types correctly', () => {
     const converter = getConverter('string{int32}');
     const value = new Map<number, string>([
-      [1, "one"],
-      [2, "two"],
-      [3, "three"]
+      [1, 'one'],
+      [2, 'two'],
+      [3, 'three'],
     ]);
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
 
@@ -119,8 +116,6 @@ describe('ConverterFactory', () => {
 
     expect(converter.deserialize(buffer)).is.deep.eq(value);
   });
-
-
 
   it('should calculate the correct size for flat array', () => {
     const converter = getConverter('int32[5]');
@@ -139,9 +134,8 @@ describe('ConverterFactory', () => {
   it('should throw an error for unknown map key type', () => {
     const serializeFn = () => getConverter('int32{undefined}');
 
-    expect(serializeFn).toThrowError('Unknown type: undefined not found at protocol test');
+    expect(serializeFn).toThrowError('Unknown type: undefined not found');
   });
-
 
   it('should throw an error when the array length is out of bounds', () => {
     const converter = getConverter('int32[3]');
@@ -151,13 +145,12 @@ describe('ConverterFactory', () => {
     expect(serialize).toThrowError('Array length mismatch: 4 !== 3');
   });
 
-
   it('it should serialize nested maps with nested structs', () => {
     const converter = getConverter('int32[3][]{string}{string}');
     const value = new Map<string, Map<string, Int32Array[]>>([
-      ["key1", new Map<string, Int32Array[]>([
-        ["key2", [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6])]]
-      ])]
+      ['key1', new Map<string, Int32Array[]>([
+        ['key2', [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6])]],
+      ])],
     ]);
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
 
@@ -168,9 +161,9 @@ describe('ConverterFactory', () => {
   it('it should deserialize nested maps with nested structs', () => {
     const converter = getConverter('int32[3][]{string}{string}');
     const value = new Map<string, Map<string, Int32Array[]>>([
-      ["key1", new Map<string, Int32Array[]>([
-        ["key2", [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6])]]
-      ])]
+      ['key1', new Map<string, Int32Array[]>([
+        ['key2', [new Int32Array([1, 2, 3]), new Int32Array([4, 5, 6])]],
+      ])],
     ]);
 
     const buffer = new Buffer(new ArrayBuffer(converter.size(value)));
@@ -181,7 +174,7 @@ describe('ConverterFactory', () => {
   });
 
   function getConverter(type: IType): Converter {
-    const factory = new ConverterFactory(new Protocols([]));
-    return factory.toConverter('test', type);
+    const factory = new ConverterFactory();
+    return factory.toConverter(type);
   }
 });

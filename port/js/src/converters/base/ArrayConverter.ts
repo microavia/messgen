@@ -9,10 +9,10 @@ export class ArrayConverter extends Converter {
   private sizeConverter: Converter;
   private arraySize?: number;
 
-  constructor(protocolName: string, typeDef: ArrayTypeDefinition, getType: GetType) {
+  constructor(typeDef: ArrayTypeDefinition, getType: GetType) {
     super(typeDef.type + typeDef.elementType);
-    this.converter = getType(protocolName, typeDef.elementType);
-    this.sizeConverter = getType(protocolName, SIZE_TYPE);
+    this.converter = getType(typeDef.elementType);
+    this.sizeConverter = getType(SIZE_TYPE);
     this.arraySize = typeDef.arraySize;
   }
 
