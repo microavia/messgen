@@ -79,7 +79,7 @@ const srcDataFn = () => ({
 });
 const srcData = srcDataFn();
 
-const structConverter = new StructConverter('testStruct', schema, initGetType());
+const structConverter = new StructConverter(schema, initGetType());
 const size = structConverter.size(srcData);
 const buffer = new Buffer(new ArrayBuffer(size));
 

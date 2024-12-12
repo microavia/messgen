@@ -1,4 +1,4 @@
-import { type ProtocolJSON, Protocols } from './protocol';
+import { type RawType, type Protocol, Protocols } from './protocol';
 import { type Converter, ConverterFactory } from './converters';
 import type { ExtractPayload, GenericConfig, TypeToIdMap, TypeToNameMap } from './Codec.types';
 import { Buffer } from './Buffer';
@@ -7,31 +7,24 @@ import type { ProtocolId, MessageId } from './types';
 export class Codec<Config extends GenericConfig = GenericConfig> {
   private typesByName: TypeToNameMap = new Map();
   private typesById: TypeToIdMap = new Map();
-  private protocols: Protocols;
+  private protocols = new Protocols();
 
-  constructor(schema: ProtocolJSON[]) {
-    this.protocols = new Protocols(schema);
+  constructor(rawTypes: RawType[] = [], protocols: Protocol[] = []) {
+    this.protocols.load(rawTypes);
     const converterFactory = new ConverterFactory(this.protocols);
 
-    const items = this.protocols.getProtocols();
-    for (const [protoName, proto] of items) {
+    for (const { name, proto_id: protoId, types } of protocols) {
       const typeMap = new Map<string, Converter>();
       const idMap = new Map<MessageId, Converter>();
 
-      const types = Array.from(proto.types.entries());
-      for (const [typeName] of types) {
-        const converter = converterFactory.toConverter(protoName, typeName);
+      for (const [messageId, typeName] of Object.entries(types)) {
+        const converter = converterFactory.toConverter(typeName);
+
         typeMap.set(typeName, converter);
-
-        const messageId = proto.messageIds.get(typeName);
-
-        if (messageId !== undefined) {
-          idMap.set(messageId, converter);
-        }
+        idMap.set(parseInt(messageId, 10), converter);
       }
-
-      this.typesByName.set(proto.name, typeMap);
-      this.typesById.set(proto.id, idMap);
+      this.typesByName.set(name, typeMap);
+      this.typesById.set(protoId, idMap);
     }
   }
 
