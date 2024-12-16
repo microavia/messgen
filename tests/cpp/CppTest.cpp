@@ -49,15 +49,16 @@ protected:
 };
 
 TEST_F(CppTest, SimpleStruct) {
-    messgen::test::simple_struct msg{};
-    msg.f0 = 1;
-    msg.f1 = 2;
-    msg.f2 = 3;
-    msg.f3 = 4;
-    msg.f4 = 5;
-    msg.f5 = 6;
-    msg.f6 = 7;
-    msg.f8 = 9;
+    test_proto::simple_struct_msg msg{{
+        .f0 = 1,
+        .f1 = 2,
+        .f2 = 3,
+        .f3 = 4,
+        .f4 = 5,
+        .f5 = 6,
+        .f6 = 7,
+        .f8 = 9,
+    }};
 
     test_serialization(msg);
 }
