@@ -260,8 +260,8 @@ class CppGenerator:
                 auto result = false;
                 reflect_message(msg_id, [&]<class R>(R) {{
                     using message_type = messgen::splice_t<R>;
-                    if constexpr (requires(typename message_type::data_type msg) {{ handler(msg); }}) {{
-                        auto msg = typename message_type::data_type{{}};
+                    if constexpr (requires(message_type msg) {{ handler(msg); }}) {{
+                        auto msg = message_type{{}};
                         msg.deserialize(payload);
                         handler(std::move(msg));
                         result = true;

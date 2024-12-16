@@ -264,7 +264,7 @@ TEST_F(CppTest, DispatchMessage) {
     auto handler = [&](auto &&actual) {
         using ActualType = std::decay_t<decltype(actual)>;
 
-        if constexpr (std::is_same_v<ActualType, test::simple_struct>) {
+        if constexpr (std::is_same_v<ActualType, test_proto::simple_struct_msg>) {
             EXPECT_EQ(expected.f0, actual.f0);
             EXPECT_EQ(expected.f1, actual.f1);
             invoked = true;
