@@ -264,17 +264,6 @@ class CppGenerator:
             }}""").splitlines()
 
     @staticmethod
-    def _generate_traits() -> list[str]:
-        return textwrap.dedent("""
-            namespace messgen {
-                template <class T>
-                struct reflect_t {};
-
-                template <class T>
-                struct splice_t {};
-            }""").splitlines()
-
-    @staticmethod
     def _generate_comment_type(type_def):
         if not type_def.comment:
             return []
@@ -478,7 +467,7 @@ class CppGenerator:
         if self._get_cpp_standard() >= 20:
             # Operator <=>
             code.append("")
-            code.append(_indent("auto operator<=>(const %s&) const = default;" % unqual_name))
+            code.append(_indent("auto operator<=>(const %s &) const = default;" % unqual_name))
 
         code.append("};")
 
