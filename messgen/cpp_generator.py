@@ -529,7 +529,7 @@ class CppGenerator:
 
         code: list[str] = []
         code.append("")
-        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
+        code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
         code.append("    return std::tuple{")
         for field in type_def.fields:
             code.append(f"        ::messgen::member{{\"{field.name}\", &{unqual_name}::{field.name}}},")

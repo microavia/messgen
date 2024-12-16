@@ -135,6 +135,7 @@ class Message:
     def __hash__(self):
         return _hash_model_type(self)
 
+
 @dataclass
 class Protocol:
     name: str
