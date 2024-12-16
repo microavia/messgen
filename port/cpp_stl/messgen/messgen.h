@@ -28,13 +28,21 @@ constexpr reflect_t<std::remove_cvref_t<T>> reflect_object(T &&t) {
 }
 
 template <class C, class M>
-struct member_variable {
+struct member {
     using class_type = C;
     using member_type = std::remove_cvref_t<M>;
 
-    std::string_view name;
+    const char *name;
+};
+
+template <class C, class M>
+struct member_variable : member<C, M> {
+    using member<C, M>::name;
     M C::*ptr;
 };
+
+template <class C, class M>
+member_variable(const char *, M C::*) -> member_variable<C, M>;
 
 template <class S, class C, class M>
     requires std::same_as<std::remove_cvref_t<S>, std::remove_cvref_t<C>>
@@ -43,17 +51,17 @@ template <class S, class C, class M>
 }
 
 template <class C, class M>
-[[nodiscard]] constexpr auto parent_of(const member_variable<C, M> &) noexcept {
-    return reflect_type<typename member_variable<C, M>::class_type>;
+[[nodiscard]] constexpr auto parent_of(const member<C, M> &) noexcept {
+    return reflect_type<typename member<C, M>::class_type>;
 }
 
 template <class C, class M>
-[[nodiscard]] constexpr auto type_of(const member_variable<C, M> &) noexcept {
-    return reflect_type<typename member_variable<C, M>::member_type>;
+[[nodiscard]] constexpr auto type_of(const member<C, M> &) noexcept {
+    return reflect_type<typename member<C, M>::member_type>;
 }
 
 template <class C, class M>
-[[nodiscard]] constexpr std::string_view name_of(const member_variable<C, M> &m) noexcept {
+[[nodiscard]] constexpr std::string_view name_of(const member<C, M> &m) noexcept {
     return m.name;
 }
 

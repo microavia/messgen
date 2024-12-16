@@ -271,7 +271,8 @@ TEST_F(CppTest, DispatchMessage) {
             FAIL() << "Unexpected message type handled.";
         }
     };
-    test_proto::dispatch_message(test_proto::TYPE_ID<test::simple_struct>, _buf.data(), handler);
+
+    test_proto::dispatch_type(5, _buf.data(), handler);
 
     EXPECT_TRUE(invoked);
 }

@@ -160,7 +160,7 @@ class CppGenerator:
 
             elif isinstance(type_def, StructType):
                 code.extend(self._generate_type_struct(type_name, type_def))
-                code.extend(self._generate_members_of(type_name, type_def))
+                code.extend(self._generate_type_members_of(type_name, type_def))
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
 
@@ -187,52 +187,59 @@ class CppGenerator:
                     code.append(f"    constexpr static inline int HASH = 0x{hash(proto_def):x};")
                     code.append(f"    constexpr static inline int PROTO_ID = {proto_id};")
 
-                code.extend(self._generate_type_id_decl(proto_def))
-                code.extend(self._generate_reflect_type_decl())
+                code.extend(self._generate_messages(class_name, proto_def))
+                code.extend(self._generate_reflect_message_decl())
                 code.extend(self._generate_dispatcher_decl())
 
-            code.extend(self._generate_type_ids(class_name, proto_def))
-            code.extend(self._generate_reflect_type(class_name, proto_def))
+            code.extend(self._generate_protocol_members_of(class_name, proto_def))
+            code.extend(self._generate_reflect_message(class_name, proto_def))
             code.extend(self._generate_dispatcher(class_name))
             code.append("")
 
         return self._PREAMBLE_HEADER + self._generate_includes() + code
 
-    @staticmethod
-    def _generate_type_id_decl(proto: Protocol) -> list[str]:
-        return textwrap.indent(textwrap.dedent("""
-            template <messgen::type Msg>
-            constexpr static inline int TYPE_ID = [] {
-                static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");
-                return 0;
-            }();"""), "    ").splitlines()
 
-    @staticmethod
-    def _generate_type_ids(class_name: str, proto: Protocol) -> list[str]:
+    def _generate_messages(self, class_name: str, proto_def: Protocol):
+        self._add_include("tuple")
         code: list[str] = []
-        for type_id, message in proto.messages.items():
-            code.append("template <>")
-            code.append(f"constexpr inline int {class_name}::TYPE_ID<{_qual_name(message.type)}> = {type_id};")
+        for message in proto_def.messages.values():
+            code.extend(textwrap.indent(textwrap.dedent(f"""
+            struct {message.name} {{
+                using type = {_qual_name(message.type)};
+                using protocol = {class_name};
+                constexpr inline static int TYPE_ID = {message.message_id};
+            }};"""), "    ").splitlines())
+        return code
+
+    def _generate_protocol_members_of(self, class_name: str, proto_def: Protocol):
+        self._add_include("tuple")
+        code: list[str] = []
+        code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{class_name}>) noexcept {{")
+        code.append("    return std::tuple{")
+        for message in proto_def.messages.values():
+            code.append(f"        ::messgen::member<{class_name}, {class_name}::{message.name}>{{\"{message.name}\"}},")
+        code.append("    };")
+        code.append("}")
         code.append("")
         return code
 
     @staticmethod
-    def _generate_reflect_type_decl() -> list[str]:
+    def _generate_reflect_message_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class Fn>
             constexpr static auto reflect_message(int msg_id, Fn &&fn);
             """), "    ").splitlines()
 
     @staticmethod
-    def _generate_reflect_type(class_name: str, proto: Protocol) -> list[str]:
+    def _generate_reflect_message(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
         code.append("template <class Fn>")
         code.append(f"constexpr auto {class_name}::reflect_message(int msg_id, Fn &&fn) {{")
         code.append("    switch (msg_id) {")
         for message in proto.messages.values():
-            qual_name = _qual_name(message.type)
-            code.append(f"        case TYPE_ID<{qual_name}>:")
-            code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
+            msg_type = f"{class_name}::{_unqual_name(message.name)}"
+            code.append(f"        case {msg_type}::TYPE_ID:")
+            code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{msg_type}>);")
             code.append(f"            return;")
         code.append("    }")
         code.append("}")
@@ -242,19 +249,19 @@ class CppGenerator:
     def _generate_dispatcher_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class T>
-            static bool dispatch_message(int msg_id, const uint8_t *payload, T handler);
+            constexpr static bool dispatch_type(int msg_id, const uint8_t *payload, T handler);
             """), "    ").splitlines()
 
     @staticmethod
     def _generate_dispatcher(class_name: str) -> list[str]:
         return textwrap.dedent(f"""
             template <class T>
-            bool {class_name}::dispatch_message(int msg_id, const uint8_t *payload, T handler) {{
+            constexpr bool {class_name}::dispatch_type(int msg_id, const uint8_t *payload, T handler) {{
                 auto result = false;
                 reflect_message(msg_id, [&]<class R>(R) {{
                     using message_type = messgen::splice_t<R>;
-                    if constexpr (requires(message_type msg) {{ handler(msg); }}) {{
-                        message_type msg;
+                    if constexpr (requires(typename message_type::type msg) {{ handler(msg); }}) {{
+                        auto msg = typename message_type::type{{}};
                         msg.deserialize(payload);
                         handler(std::move(msg));
                         result = true;
@@ -511,7 +518,7 @@ class CppGenerator:
             code.append("")
         return code
 
-    def _generate_members_of(self, type_name: str, type_def: StructType):
+    def _generate_type_members_of(self, type_name: str, type_def: StructType):
         self._add_include("tuple")
 
         unqual_name = _unqual_name(type_name)
