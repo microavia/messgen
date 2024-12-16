@@ -183,7 +183,7 @@ class CppGenerator:
 
                 proto_id = proto_def.proto_id
                 if proto_id is not None:
-                    code.append(f"    constexpr static inline int HASH = 0x{hash(proto_def):x};")
+                    code.append(f"    constexpr static inline int HASH = {hash(proto_def)};")
                     code.append(f"    constexpr static inline int PROTO_ID = {proto_id};")
 
                 code.extend(self._generate_messages(class_name, proto_def))
