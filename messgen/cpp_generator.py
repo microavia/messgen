@@ -203,9 +203,10 @@ class CppGenerator:
         code: list[str] = []
         for message in proto_def.messages.values():
             code.extend(textwrap.indent(textwrap.dedent(f"""
-            struct {message.name} {{
+            struct {message.name} : {_qual_name(message.type)} {{
                 using type = {_qual_name(message.type)};
                 using protocol = {class_name};
+                constexpr inline static int PROTO_ID = protocol::PROTO_ID;
                 constexpr inline static int TYPE_ID = {message.message_id};
             }};"""), "    ").splitlines())
         return code
@@ -248,14 +249,14 @@ class CppGenerator:
     def _generate_dispatcher_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class T>
-            constexpr static bool dispatch_type(int msg_id, const uint8_t *payload, T handler);
+            constexpr static bool dispatch_message(int msg_id, const uint8_t *payload, T handler);
             """), "    ").splitlines()
 
     @staticmethod
     def _generate_dispatcher(class_name: str) -> list[str]:
         return textwrap.dedent(f"""
             template <class T>
-            constexpr bool {class_name}::dispatch_type(int msg_id, const uint8_t *payload, T handler) {{
+            constexpr bool {class_name}::dispatch_message(int msg_id, const uint8_t *payload, T handler) {{
                 auto result = false;
                 reflect_message(msg_id, [&]<class R>(R) {{
                     using message_type = messgen::splice_t<R>;
