@@ -126,10 +126,20 @@ MessgenType = Union[
 
 
 @dataclass
+class Message:
+    message_id: int
+    name: str
+    type: str
+    comment: str | None
+
+    def __hash__(self):
+        return _hash_model_type(self)
+
+@dataclass
 class Protocol:
     name: str
     proto_id: int
-    types: dict[int, str]
+    messages: dict[int, Message]
 
     def __hash__(self):
         return _hash_model_type(self)

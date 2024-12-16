@@ -179,8 +179,8 @@ class CppGenerator:
         print(f"Namespace: {namespace_name}, Class: {class_name}")
         with _namespace(namespace_name, code):
             with _struct(class_name, code):
-                for type_name in proto_def.types.values():
-                    self._add_include(type_name + self._EXT_HEADER)
+                for message in proto_def.messages.values():
+                    self._add_include(message.type + self._EXT_HEADER)
 
                 proto_id = proto_def.proto_id
                 if proto_id is not None:
@@ -210,9 +210,9 @@ class CppGenerator:
     @staticmethod
     def _generate_type_ids(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
-        for type_id, type_name in proto.types.items():
+        for type_id, message in proto.messages.items():
             code.append("template <>")
-            code.append(f"constexpr inline int {class_name}::TYPE_ID<{_qual_name(type_name)}> = {type_id};")
+            code.append(f"constexpr inline int {class_name}::TYPE_ID<{_qual_name(message.type)}> = {type_id};")
         code.append("")
         return code
 
@@ -220,17 +220,17 @@ class CppGenerator:
     def _generate_reflect_type_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class Fn>
-            constexpr static auto reflect_message(int type_id, Fn &&fn);
+            constexpr static auto reflect_message(int msg_id, Fn &&fn);
             """), "    ").splitlines()
 
     @staticmethod
     def _generate_reflect_type(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
         code.append("template <class Fn>")
-        code.append(f"constexpr auto {class_name}::reflect_message(int type_id, Fn &&fn) {{")
-        code.append("    switch (type_id) {")
-        for type_name in proto.types.values():
-            qual_name = _qual_name(type_name)
+        code.append(f"constexpr auto {class_name}::reflect_message(int msg_id, Fn &&fn) {{")
+        code.append("    switch (msg_id) {")
+        for message in proto.messages.values():
+            qual_name = _qual_name(message.type)
             code.append(f"        case TYPE_ID<{qual_name}>:")
             code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
             code.append(f"            return;")

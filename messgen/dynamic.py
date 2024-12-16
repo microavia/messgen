@@ -336,11 +336,11 @@ class Codec:
         for proto_name, proto_def in parsed_protocols.items():
             by_name: tuple[int, dict] = (proto_def.proto_id, {})
             by_id: tuple[str, dict] = (proto_name, {})
-            for type_id, type_name in proto_def.types.items():
-                t = create_type_serializer(parsed_types, type_name)
-                by_name[1][type_name] = (type_id, t)
-                if type_id is not None:
-                    by_id[1][type_id] = (type_name, t)
+            for msg_id, message in proto_def.messages.items():
+                t = create_type_serializer(parsed_types, message.type)
+                by_name[1][type_name] = (msg_id, t)
+                if msg_id is not None:
+                    by_id[1][msg_id] = (type_name, t)
             self.proto_types_by_name[proto_name] = by_name
             self.proto_types_by_id[proto_def.proto_id] = by_id
 

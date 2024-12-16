@@ -12,6 +12,7 @@ from .model import (
     EnumValue,
     FieldType,
     MapType,
+    Message,
     MessgenType,
     Protocol,
     StructType,
@@ -76,7 +77,14 @@ def _parse_protocol(protocol_file: Path) -> Protocol:
 def _get_protocol(proto_name, protocol_desc: dict[str, Any]) -> Protocol:
     return Protocol(name=proto_name,
                     proto_id=int(protocol_desc["proto_id"]),
-                    types={id_: msg["type"] for id_, msg in protocol_desc.get("messages", {}).items()})
+                    messages={msg_id: _get_message_type(msg_id, msg) for msg_id, msg in protocol_desc.get("messages", {}).items()})
+
+
+def _get_message_type(msg_id: int, message_desc: dict[str, Any]) -> Message:
+    return Message(message_id=msg_id,
+                   name=message_desc["name"],
+                   type=message_desc["type"],
+                   comment=message_desc.get("comment"))
 
 
 def parse_types(base_dirs: list[str | Path]) -> dict[str, MessgenType]:
