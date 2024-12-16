@@ -76,7 +76,7 @@ def _parse_protocol(protocol_file: Path) -> Protocol:
 def _get_protocol(proto_name, protocol_desc: dict[str, Any]) -> Protocol:
     return Protocol(name=proto_name,
                     proto_id=int(protocol_desc["proto_id"]),
-                    types=protocol_desc.get("types_map", {}))
+                    types={id_: msg["type"] for id_, msg in protocol_desc.get("messages", {}).items()})
 
 
 def parse_types(base_dirs: list[str | Path]) -> dict[str, MessgenType]:

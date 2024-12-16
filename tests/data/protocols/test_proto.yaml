@@ -1,10 +1,10 @@
 proto_id: 1
-types_map:
-  0: "messgen/test/simple_struct"
-  1: "messgen/test/complex_struct"
-  2: "messgen/test/var_size_struct"
-  3: "messgen/test/struct_with_enum"
-  4: "messgen/test/empty_struct"
-  5: "messgen/test/complex_struct_with_empty"
-  6: "messgen/test/complex_struct_nostl"
-  7: "messgen/test/flat_struct"
+messages:
+  0: {name: "simple_struct_msg", type: "messgen/test/simple_struct", comment: "Simple struct message"}
+  1: {name: "complex_struct_msg", type: "messgen/test/complex_struct", comment: "Complex struct message"}
+  2: {name: "var_size_struct_msg", type: "messgen/test/var_size_struct", comment: "Variable size struct message"}
+  3: {name: "struct_with_enum_msg", type: "messgen/test/struct_with_enum", comment: "Struct with enum message"}
+  4: {name: "empty_struct_msg", type: "messgen/test/empty_struct", comment: "Empty struct message"}
+  5: {name: "complex_struct_with_empty_msg", type: "messgen/test/complex_struct_with_empty", comment: "Complex struct with empty message"}
+  6: {name: "complex_struct_nostl_msg", type: "messgen/test/complex_struct_nostl", comment: "Complex struct without STL message"}
+  7: {name: "flat_struct_msg", type: "messgen/test/flat_struct", comment: "Flat struct message"}

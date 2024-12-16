@@ -1,3 +1,4 @@
 proto_id: 2
-types_map:
-  0: "cross_proto"
+messages:
+  0: {name: "cross_proto_msg", type: "cross_proto", comment: "Cross proto message"}
+
