@@ -204,9 +204,9 @@ class CppGenerator:
         for message in proto_def.messages.values():
             code.extend(textwrap.indent(textwrap.dedent(f"""
             struct {message.name} : {_qual_name(message.type)} {{
-                using type = {_qual_name(message.type)};
-                using protocol = {class_name};
-                constexpr inline static int PROTO_ID = protocol::PROTO_ID;
+                using data_type = {_qual_name(message.type)};
+                using protocol_type = {class_name};
+                constexpr inline static int PROTO_ID = protocol_type::PROTO_ID;
                 constexpr inline static int TYPE_ID = {message.message_id};
             }};"""), "    ").splitlines())
         return code
@@ -260,8 +260,8 @@ class CppGenerator:
                 auto result = false;
                 reflect_message(msg_id, [&]<class R>(R) {{
                     using message_type = messgen::splice_t<R>;
-                    if constexpr (requires(typename message_type::type msg) {{ handler(msg); }}) {{
-                        auto msg = typename message_type::type{{}};
+                    if constexpr (requires(typename message_type::data_type msg) {{ handler(msg); }}) {{
+                        auto msg = typename message_type::data_type{{}};
                         msg.deserialize(payload);
                         handler(std::move(msg));
                         result = true;
