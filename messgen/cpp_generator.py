@@ -176,7 +176,6 @@ class CppGenerator:
         self._add_include("messgen/messgen.h")
 
         namespace_name, class_name = _split_last_name(proto_name)
-        print(f"Namespace: {namespace_name}, Class: {class_name}")
         with _namespace(namespace_name, code):
             with _struct(class_name, code):
                 for message in proto_def.messages.values():
