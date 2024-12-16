@@ -24,8 +24,8 @@ concept type = serializable<Type> && requires(std::remove_cvref_t<Type> msg) {
 template <class Type>
 concept flat_type = type<Type> && std::remove_cvref_t<Type>::IS_FLAT;
 
-template <class Type>
-concept message = type<Type> && requires(std::remove_cvref_t<Type> msg) {
+template <class Message>
+concept message = type<Message> && requires(std::remove_cvref_t<Message> msg) {
     { msg.PROTO_ID } -> std::convertible_to<int>;
     { msg.TYPE_ID } -> std::convertible_to<int>;
 };
