@@ -372,7 +372,7 @@ class CppGenerator:
             code.append(_indent("constexpr static inline size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
         code.append(_indent(f"constexpr static inline bool IS_FLAT = {is_flat_str};"))
-        code.append(_indent(f"constexpr static inline uint32_t HASH = 0x{hash(type_def):x};"))
+        code.append(_indent(f"constexpr static inline uint32_t HASH = {hash(type_def)};"))
         code.append(_indent(f"constexpr static inline const char* NAME = \"{_qual_name(type_name)}\";"))
         code.append(_indent(f"constexpr static inline const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
         code.append("")
