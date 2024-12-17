@@ -10,9 +10,9 @@ def codec():
     yield codec_
 
 
-def test_serialization1(codec):
-    type_def = codec.get_type_serializer("messgen/test/simple_struct")
-    expected_msg = {
+@pytest.fixture
+def simple_struct():
+    return {
         "f0": 0x1234567890abcdef,
         "f2": 1.2345678901234567890,
         "f3": 0x12345678,
@@ -22,6 +22,11 @@ def test_serialization1(codec):
         "f8": -0x12,
         "f9": True,
     }
+
+
+def test_serialization1(codec, simple_struct):
+    type_def = codec.get_type_serializer("messgen/test/simple_struct")
+    expected_msg = simple_struct
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
 
@@ -43,3 +48,14 @@ def test_serialization2(codec):
 
     actual_msg = type_def.deserialize(expected_bytes)
     assert actual_msg == expected_msg
+
+
+def test_protocol_deserialization(codec, simple_struct):
+    proto_id, type_id, expected_bytes = codec.serialize("test_proto", "messgen/test/simple_struct", simple_struct)
+    assert expected_bytes
+
+    print(proto_id, type_id)
+
+    proto_name, type_name, actual_msg = codec.deserialize(proto_id=proto_id, type_id=type_id, data=expected_bytes)
+    for key in simple_struct:
+        assert actual_msg[key] == pytest.approx(simple_struct[key])

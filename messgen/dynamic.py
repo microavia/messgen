@@ -338,9 +338,9 @@ class Codec:
             by_id: tuple[str, dict] = (proto_name, {})
             for msg_id, message in proto_def.messages.items():
                 t = create_type_serializer(parsed_types, message.type)
-                by_name[1][type_name] = (msg_id, t)
+                by_name[1][message.type] = (msg_id, t)
                 if msg_id is not None:
-                    by_id[1][msg_id] = (type_name, t)
+                    by_id[1][msg_id] = (message.type, t)
             self.proto_types_by_name[proto_name] = by_name
             self.proto_types_by_id[proto_def.proto_id] = by_id
 
