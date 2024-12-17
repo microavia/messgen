@@ -207,7 +207,7 @@ class CppGenerator:
                 using data_type = {_qual_name(message.type)};
                 using protocol_type = {class_name};
                 constexpr inline static int PROTO_ID = protocol_type::PROTO_ID;
-                constexpr inline static int TYPE_ID = {message.message_id};
+                constexpr inline static int MESSAGE_ID = {message.message_id};
             }};"""), "    ").splitlines())
         return code
 
@@ -238,7 +238,7 @@ class CppGenerator:
         code.append("    switch (msg_id) {")
         for message in proto.messages.values():
             msg_type = f"{class_name}::{_unqual_name(message.name)}"
-            code.append(f"        case {msg_type}::TYPE_ID:")
+            code.append(f"        case {msg_type}::MESSAGE_ID:")
             code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{msg_type}>);")
             code.append(f"            return;")
         code.append("    }")

@@ -273,7 +273,7 @@ TEST_F(CppTest, DispatchMessage) {
         }
     };
 
-    test_proto::dispatch_message(test_proto::simple_struct_msg::TYPE_ID, _buf.data(), handler);
+    test_proto::dispatch_message(test_proto::simple_struct_msg::MESSAGE_ID, _buf.data(), handler);
 
     EXPECT_TRUE(invoked);
 }
