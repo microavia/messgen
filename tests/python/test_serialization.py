@@ -57,5 +57,9 @@ def test_protocol_deserialization(codec, simple_struct):
     print(proto_id, type_id)
 
     proto_name, type_name, actual_msg = codec.deserialize(proto_id=proto_id, type_id=type_id, data=expected_bytes)
+
+    assert type_name == "messgen/test/simple_struct"
+    assert proto_name == "test_proto"
+
     for key in simple_struct:
         assert actual_msg[key] == pytest.approx(simple_struct[key])

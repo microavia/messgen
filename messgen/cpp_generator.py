@@ -217,7 +217,7 @@ class CppGenerator:
         code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{class_name}>) noexcept {{")
         code.append("    return std::tuple{")
         for message in proto_def.messages.values():
-            code.append(f"        ::messgen::member<{class_name}, {class_name}::{message.name}>{{\"{message.name}\"}},")
+            code.append(f"        ::messgen::member<{class_name}, {class_name}::{message.name}>{{{{\"{message.name}\"}}}},")
         code.append("    };")
         code.append("}")
         code.append("")
@@ -528,7 +528,7 @@ class CppGenerator:
         code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
         code.append("    return std::tuple{")
         for field in type_def.fields:
-            code.append(f"        ::messgen::member_variable{{\"{field.name}\", &{unqual_name}::{field.name}}},")
+            code.append(f"        ::messgen::member_variable{{{{\"{field.name}\"}}, &{unqual_name}::{field.name}}},")
         code.append("    };")
         code.append("}")
 

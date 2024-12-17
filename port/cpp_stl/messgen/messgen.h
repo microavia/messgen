@@ -37,7 +37,6 @@ struct member {
 
 template <class C, class M>
 struct member_variable : member<C, M> {
-    using member<C, M>::name;
     M C::*ptr;
 };
 
