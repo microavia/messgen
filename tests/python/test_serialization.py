@@ -51,24 +51,24 @@ def test_serialization2(codec):
 
 
 def test_protocol_deserialization(codec, simple_struct):
-    serializer = codec.message_serializer(proto_name="test_proto", message_name="simple_struct_msg")
-    expected_bytes = serializer.serialize(simple_struct)
+    message_info_by_name = codec.message_info_by_name(proto_name="test_proto", message_name="simple_struct_msg")
+    expected_bytes = message_info_by_name.type_serializer().serialize(simple_struct)
     assert expected_bytes
 
-    deserializer = codec.message_serializer(proto_id=serializer.proto_id(), message_id=serializer.message_id())
-    actual_msg = deserializer.deserialize(expected_bytes)
+    message_info_by_id = codec.message_info_by_id(proto_id=message_info_by_name.proto_id(), message_id=message_info_by_name.message_id())
+    actual_msg = message_info_by_id.type_serializer().deserialize(expected_bytes)
 
-    assert deserializer.proto_id() == 1
-    assert deserializer.message_id() == 0
-    assert deserializer.proto_name() == "test_proto"
-    assert deserializer.message_name() == "simple_struct_msg"
-    assert deserializer.type_name() == "messgen/test/simple_struct"
+    assert message_info_by_name.proto_id() == 1
+    assert message_info_by_name.message_id() == 0
+    assert message_info_by_name.proto_name() == "test_proto"
+    assert message_info_by_name.message_name() == "simple_struct_msg"
+    assert message_info_by_name.type_name() == "messgen/test/simple_struct"
 
-    assert serializer.proto_id() == deserializer.proto_id()
-    assert serializer.message_id() == deserializer.message_id()
-    assert serializer.proto_name() == deserializer.proto_name()
-    assert serializer.message_name() == deserializer.message_name()
-    assert serializer.type_name() == deserializer.type_name()
+    assert message_info_by_name.proto_id() == message_info_by_id.proto_id()
+    assert message_info_by_name.message_id() == message_info_by_id.message_id()
+    assert message_info_by_name.proto_name() == message_info_by_id.proto_name()
+    assert message_info_by_name.message_name() == message_info_by_id.message_name()
+    assert message_info_by_name.type_name() == message_info_by_id.type_name()
 
     for key in simple_struct:
         assert actual_msg[key] == pytest.approx(simple_struct[key])

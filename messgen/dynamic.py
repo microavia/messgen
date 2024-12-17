@@ -313,7 +313,7 @@ def create_type_serializer(types: dict[str, MessgenType], type_name: str) -> Typ
     raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_def.type))
 
 
-class MessageSerializer:
+class MessageInfo:
 
     def __init__(self, proto_id: int, message_id: int, proto_name: str, message_name: str, type_serializer: TypeSerializer):
         self._proto_id = proto_id
@@ -322,11 +322,11 @@ class MessageSerializer:
         self._message_name = message_name
         self._type_serializer = type_serializer
 
-    def message_name(self) -> str:
-        return self._message_name
-
     def proto_name(self) -> str:
         return self._proto_name
+
+    def message_name(self) -> str:
+        return self._message_name
 
     def proto_id(self) -> int:
         return self._proto_id
@@ -340,11 +340,8 @@ class MessageSerializer:
     def type_hash(self) -> int:
         return self._type_serializer.type_hash()
 
-    def serialize(self, data) -> bytes:
-        return self._type_serializer.serialize(data)
-
-    def deserialize(self, data) -> dict:
-        return self._type_serializer.deserialize(data)
+    def type_serializer(self) -> TypeSerializer:
+        return self._type_serializer
 
 
 class Codec:
@@ -373,32 +370,18 @@ class Codec:
             return converter
         raise MessgenError(f"Unsupported type_name={type_name}")
 
-    def message_serializer(self, *args, **kwargs) -> MessageSerializer:
-        if len(kwargs) == 0 and len(args) == 2:
-            return self._message_serializer(*args)
-
-        if len(args) == 0 and len(kwargs) == 2:
-            if 'proto_id' in kwargs and 'message_id' in kwargs:
-                return self._message_serializer(kwargs['proto_id'], kwargs['message_id'])
-            elif 'proto_name' in kwargs and 'message_name' in kwargs:
-                return self._message_serializer(kwargs['proto_name'], kwargs['message_name'])
-
-        raise TypeError(f"Invalid arguments for message_serializer: args={args} kwargs={kwargs}")
-
-    @singledispatchmethod
-    def _message_serializer(self, proto_id: int, message_id: int) -> MessageSerializer:
+    def message_info_by_id(self, proto_id: int, message_id: int) -> MessageInfo:
         key = (proto_id, message_id)
         if not key in self._name_by_id:
             raise MessgenError(f"Unsupported proto_id={proto_id} message_id={message_id}")
 
         proto_name, message_name, type_name = self._name_by_id[key]
-        return MessageSerializer(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
+        return MessageInfo(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
 
-    @_message_serializer.register
-    def _(self, proto_name: str, message_name: str) -> MessageSerializer:
+    def message_info_by_name(self, proto_name: str, message_name: str) -> MessageInfo:
         key = (proto_name, message_name)
         if not key in self._id_by_name:
             raise MessgenError(f"Unsupported proto_name={proto_name} message_name={message_name}")
 
         proto_id, message_id, type_name = self._id_by_name[key]
-        return MessageSerializer(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
+        return MessageInfo(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
