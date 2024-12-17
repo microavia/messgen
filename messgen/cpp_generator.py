@@ -217,7 +217,7 @@ class CppGenerator:
         code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{class_name}>) noexcept {{")
         code.append("    return std::tuple{")
         for message in proto_def.messages.values():
-            code.append(f"        ::messgen::member<{class_name}, {class_name}::{message.name}>{{{{\"{message.name}\"}}}},")
+            code.append(f"        ::messgen::member<{class_name}, {class_name}::{message.name}>{{\"{message.name}\"}},")
         code.append("    };")
         code.append("}")
         code.append("")
