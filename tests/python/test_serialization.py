@@ -25,7 +25,7 @@ def simple_struct():
 
 
 def test_serialization1(codec, simple_struct):
-    type_def = codec.get_type_serializer("messgen/test/simple_struct")
+    type_def = codec.type_serializer("messgen/test/simple_struct")
     expected_msg = simple_struct
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
@@ -36,7 +36,7 @@ def test_serialization1(codec, simple_struct):
 
 
 def test_serialization2(codec):
-    type_def = codec.get_type_serializer("messgen/test/var_size_struct")
+    type_def = codec.type_serializer("messgen/test/var_size_struct")
     expected_msg = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],
@@ -51,15 +51,24 @@ def test_serialization2(codec):
 
 
 def test_protocol_deserialization(codec, simple_struct):
-    proto_id, type_id, expected_bytes = codec.serialize("test_proto", "messgen/test/simple_struct", simple_struct)
+    serializer = codec.message_serializer(proto_name="test_proto", message_name="simple_struct_msg")
+    expected_bytes = serializer.serialize(simple_struct)
     assert expected_bytes
 
-    print(proto_id, type_id)
+    deserializer = codec.message_serializer(proto_id=serializer.proto_id(), message_id=serializer.message_id())
+    actual_msg = deserializer.deserialize(expected_bytes)
 
-    proto_name, type_name, actual_msg = codec.deserialize(proto_id=proto_id, type_id=type_id, data=expected_bytes)
+    assert deserializer.proto_id() == 1
+    assert deserializer.message_id() == 0
+    assert deserializer.proto_name() == "test_proto"
+    assert deserializer.message_name() == "simple_struct_msg"
+    assert deserializer.type_name() == "messgen/test/simple_struct"
 
-    assert type_name == "messgen/test/simple_struct"
-    assert proto_name == "test_proto"
+    assert serializer.proto_id() == deserializer.proto_id()
+    assert serializer.message_id() == deserializer.message_id()
+    assert serializer.proto_name() == deserializer.proto_name()
+    assert serializer.message_name() == deserializer.message_name()
+    assert serializer.type_name() == deserializer.type_name()
 
     for key in simple_struct:
         assert actual_msg[key] == pytest.approx(simple_struct[key])

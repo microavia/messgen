@@ -13,7 +13,7 @@ if __name__ == "__main__":
     codec.load(type_dirs=['tests/data/types'], protocols=["tests/data/protocols:test_proto", "tests/data/protocols:nested/another_proto"])
 
     # simple_struct
-    t = codec.get_type_serializer("messgen/test/simple_struct")
+    t = codec.type_serializer("messgen/test/simple_struct")
     msg1: dict[str, Any] = {
         "f0": 0x1234567890abcdef,
         "f1": 0x1234567890abcdef,
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     print("Successfully generated serialized data to tests/data/serialized/bin/simple_struct.bin")
 
     # var_size_struct
-    t = codec.get_type_serializer("messgen/test/var_size_struct")
+    t = codec.type_serializer("messgen/test/var_size_struct")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     print("Successfully generated serialized data to tests/data/serialized/bin/var_size_struct.bin")
 
     # struct_with_enum
-    t = codec.get_type_serializer("messgen/test/struct_with_enum")
+    t = codec.type_serializer("messgen/test/struct_with_enum")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f1": 0x1234567890abcdef,
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print("Successfully generated serialized data to tests/data/serialized/bin/struct_with_enum.bin")
 
     # empty_struct
-    t = codec.get_type_serializer("messgen/test/empty_struct")
+    t = codec.type_serializer("messgen/test/empty_struct")
     msg1 = {}
     b = t.serialize(msg1)
     with open('tests/data/serialized/bin/empty_struct.bin', 'wb') as f:
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     print("Successfully generated serialized data to tests/data/serialized/bin/empty_struct.bin")
 
     # complex_struct_with_empty
-    t = codec.get_type_serializer("messgen/test/complex_struct_with_empty")
+    t = codec.type_serializer("messgen/test/complex_struct_with_empty")
     msg1 = {
         "e": {},  # empty_struct
         "dynamic_array": [{} for _ in range(3)],  # list of empty_struct, replace 3 with desired length
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     # complex_struct_nostl
 
-    t = codec.get_type_serializer("messgen/test/complex_struct_nostl")
+    t = codec.type_serializer("messgen/test/complex_struct_nostl")
     simple_struct = {
         "f0": 0x1234567890abcdef,
         "f1": 0x1234567890abcdef,
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
 
     # complex_struct
-    t = codec.get_type_serializer("messgen/test/complex_struct")
+    t = codec.type_serializer("messgen/test/complex_struct")
 
     simple_struct = {
         "f0": 0x1234567890abcdef,
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     # flat_struct
 
-    t = codec.get_type_serializer("messgen/test/flat_struct")
+    t = codec.type_serializer("messgen/test/flat_struct")
     msg1 = {
         "f0": 0x1234567890abcdef,
         "f1": 0x1234567890abcdef,

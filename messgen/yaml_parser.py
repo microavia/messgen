@@ -93,7 +93,7 @@ def parse_types(base_dirs: list[str | Path]) -> dict[str, MessgenType]:
 
     type_descriptors = {}
     for directory in base_dirs:
-        base_dir = Path.cwd() / directory
+        base_dir = Path.cwd() / directory if not isinstance(directory, Path) else directory
         type_files = base_dir.rglob(f"*{_CONFIG_EXT}")
         for type_file in type_files:
             with open(type_file, "r") as f:

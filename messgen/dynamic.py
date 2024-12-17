@@ -1,5 +1,6 @@
 import struct
 
+from functools import singledispatchmethod
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -312,17 +313,46 @@ def create_type_serializer(types: dict[str, MessgenType], type_name: str) -> Typ
     raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_def.type))
 
 
+class MessageSerializer:
+
+    def __init__(self, proto_id: int, message_id: int, proto_name: str, message_name: str, type_serializer: TypeSerializer):
+        self._proto_id = proto_id
+        self._message_id = message_id
+        self._proto_name = proto_name
+        self._message_name = message_name
+        self._type_serializer = type_serializer
+
+    def message_name(self) -> str:
+        return self._message_name
+
+    def proto_name(self) -> str:
+        return self._proto_name
+
+    def proto_id(self) -> int:
+        return self._proto_id
+
+    def message_id(self) -> int:
+        return self._message_id
+
+    def type_name(self) -> str:
+        return self._type_serializer.type_name()
+
+    def type_hash(self) -> int:
+        return self._type_serializer.type_hash()
+
+    def serialize(self, data) -> bytes:
+        return self._type_serializer.serialize(data)
+
+    def deserialize(self, data) -> dict:
+        return self._type_serializer.deserialize(data)
+
+
 class Codec:
 
-    def __init__(self):
-        self.types_by_name = {}
-        self.proto_types_by_name = {}
-        self.proto_types_by_id = {}
-
-    def get_type_serializer(self, type_name: str) -> TypeSerializer:
-        if converter := self.types_by_name.get(type_name):
-            return converter
-        raise MessgenError(f"Unsupported type_name={type_name}")
+    def __init__(self) -> None:
+        self._serializers_by_name: dict[str, TypeSerializer] = {}
+        self._id_by_name: dict[tuple[str, str], tuple[int, int, str]] = {}
+        self._name_by_id: dict[tuple[int, int], tuple[str, str, str]] = {}
 
     def load(self, type_dirs: list[str | Path], protocols: list[str] | None = None):
         parsed_types = parse_types(type_dirs)
@@ -330,39 +360,45 @@ class Codec:
             return
 
         for type_name in parsed_types:
-            self.types_by_name[type_name] = create_type_serializer(parsed_types, type_name)
+            self._serializers_by_name[type_name] = create_type_serializer(parsed_types, type_name)
 
         parsed_protocols = parse_protocols(protocols)
         for proto_name, proto_def in parsed_protocols.items():
-            by_name: tuple[int, dict] = (proto_def.proto_id, {})
-            by_id: tuple[str, dict] = (proto_name, {})
             for msg_id, message in proto_def.messages.items():
-                t = create_type_serializer(parsed_types, message.type)
-                by_name[1][message.type] = (msg_id, t)
-                if msg_id is not None:
-                    by_id[1][msg_id] = (message.type, t)
-            self.proto_types_by_name[proto_name] = by_name
-            self.proto_types_by_id[proto_def.proto_id] = by_id
+                self._id_by_name[(proto_name, message.name)] = (proto_def.proto_id, msg_id, message.type)
+                self._name_by_id[(proto_def.proto_id, msg_id)] = (proto_name, message.name, message.type)
 
-    def serialize(self, proto_name: str, type_name: str, msg: dict) -> tuple[int, int, bytes]:
-        if not proto_name in self.proto_types_by_name:
-            raise MessgenError(f"Unsupported proto_name={proto_name} in serialization")
+    def type_serializer(self, type_name: str) -> TypeSerializer:
+        if converter := self._serializers_by_name.get(type_name):
+            return converter
+        raise MessgenError(f"Unsupported type_name={type_name}")
 
-        proto_id, proto = self.proto_types_by_name[proto_name]
-        if not type_name in proto:
-            raise MessgenError(f"Unsupported type_name={type_name} in serialization")
+    def message_serializer(self, *args, **kwargs) -> MessageSerializer:
+        if len(kwargs) == 0 and len(args) == 2:
+            return self._message_serializer(*args)
 
-        type_id, converter = proto[type_name]
-        payload = converter.serialize(msg)
-        return proto_id, type_id, payload
+        if len(args) == 0 and len(kwargs) == 2:
+            if 'proto_id' in kwargs and 'message_id' in kwargs:
+                return self._message_serializer(kwargs['proto_id'], kwargs['message_id'])
+            elif 'proto_name' in kwargs and 'message_name' in kwargs:
+                return self._message_serializer(kwargs['proto_name'], kwargs['message_name'])
 
-    def deserialize(self, proto_id: int, type_id: int, data: bytes) -> tuple[int, str, dict]:
-        if not proto_id in self.proto_types_by_id:
-            raise MessgenError(f"Unsupported proto_id={proto_id} in deserialization")
+        raise TypeError(f"Invalid arguments for message_serializer: args={args} kwargs={kwargs}")
 
-        proto_name, proto = self.proto_types_by_id[proto_id]
-        if not type_id in proto:
-            raise MessgenError(f"Unsupported type_id={type_id} in deserialization")
+    @singledispatchmethod
+    def _message_serializer(self, proto_id: int, message_id: int) -> MessageSerializer:
+        key = (proto_id, message_id)
+        if not key in self._name_by_id:
+            raise MessgenError(f"Unsupported proto_id={proto_id} message_id={message_id}")
 
-        type_name, converter = proto[type_id]
-        return proto_name, type_name, converter.deserialize(data)
+        proto_name, message_name, type_name = self._name_by_id[key]
+        return MessageSerializer(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
+
+    @_message_serializer.register
+    def _(self, proto_name: str, message_name: str) -> MessageSerializer:
+        key = (proto_name, message_name)
+        if not key in self._id_by_name:
+            raise MessgenError(f"Unsupported proto_name={proto_name} message_name={message_name}")
+
+        proto_id, message_id, type_name = self._id_by_name[key]
+        return MessageSerializer(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
