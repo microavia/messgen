@@ -3,8 +3,9 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from .common import write_file_if_diff
 from .protocol_version import version_hash
+
+from .validation import validate_protocol
 
 from .model import (
     MessgenType,
@@ -18,20 +19,37 @@ class JsonGenerator:
     def __init__(self, options):
         self._options = options
 
+    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
+        self.validate(types, protocols)
+        self.generate_types(out_dir, types)
+        self.generate_protocols(out_dir, protocols)
+
+    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
+        for proto_def in protocols.values():
+            validate_protocol(proto_def, types)
+
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
-        for type_name, type_def in types.items():
-            if type_def.type_class not in [TypeClass.struct, TypeClass.enum]:
-                continue
-            file_name = out_dir / (type_name + self._FILE_EXT)
-            file_name.parent.mkdir(parents=True, exist_ok=True)
-            type_dict = asdict(type_def)
-            type_dict["hash"] = hash(type_def)
-            write_file_if_diff(file_name, json.dumps(type_dict, indent=2).splitlines())
+        combined: list = []
+
+        for type_def in types.values():
+            if type_def.type_class in [TypeClass.struct, TypeClass.enum]:
+                combined.append(asdict(type_def))
+
+        self._write_file(out_dir, "types", combined)
 
     def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
-        for proto_name, proto_def in protocols.items():
-            file_name = out_dir / (proto_name + self._FILE_EXT)
-            file_name.parent.mkdir(parents=True, exist_ok=True)
+        combined: list = []
+
+        for proto_def in protocols.values():
             proto_dict = asdict(proto_def)
-            proto_dict["hash"] = hash(proto_def)
-            write_file_if_diff(file_name, json.dumps(proto_dict, indent=2).splitlines())
+            proto_dict["version"] = version_hash(proto_dict)
+            combined.append(proto_dict)
+
+        self._write_file(out_dir, "protocols", combined)
+
+    def _write_file(self, out_dir: Path, name: str, data: list) -> None:
+        file_name = out_dir / (name + self._FILE_EXT)
+        file_name.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(file_name, "w", encoding="utf-8") as f: json.dump(data, f, indent=2)
+
