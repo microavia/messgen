@@ -187,7 +187,7 @@ Type ids can be assigned to structs in `weather_station.yaml` file (see below).
 
 #### Protocol
 
-**Protocol** defines the protocol ID and type IDs for structs that will be used
+**Protocol** defines the protocol ID and message IDs for structs that will be used
 as messages. Message ID used during serialization/deserialization to identify the
 message type. Multiple protocols may be used in one system, e.g.
 `my_namespace/bootloader` and `my_namespace/application`. Parser can check the
