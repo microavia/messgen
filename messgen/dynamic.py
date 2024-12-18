@@ -37,7 +37,7 @@ class MessgenError(Exception):
     pass
 
 
-class TypeSerializer(ABC):
+class TypeConverter(ABC):
 
     def __init__(self, types: dict[str, MessgenType], type_name: str):
         self._type_name = type_name
@@ -69,7 +69,7 @@ class TypeSerializer(ABC):
         pass
 
 
-class ScalarSerializer(TypeSerializer):
+class ScalarConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name: str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.scalar
@@ -94,7 +94,7 @@ class ScalarSerializer(TypeSerializer):
         return self.def_value
 
 
-class EnumSerializer(TypeSerializer):
+class EnumConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.enum
@@ -122,12 +122,12 @@ class EnumSerializer(TypeSerializer):
         return self._type_def.values[0].name
 
 
-class StructSerializer(TypeSerializer):
+class StructConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.struct
         assert isinstance(self._type_def, StructType)
-        self.fields = [(field.name, create_type_serializer(types, field.type))
+        self.fields = [(field.name, create_type_converter(types, field.type))
                        for field in self._type_def.fields]
 
     def _serialize(self, data):
@@ -153,12 +153,12 @@ class StructSerializer(TypeSerializer):
                 for field_name, field_type in self.fields}
 
 
-class ArraySerializer(TypeSerializer):
+class ArrayConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.array
         assert isinstance(self._type_def, ArrayType)
-        self.element_type = create_type_serializer(types, self._type_def.element_type)
+        self.element_type = create_type_converter(types, self._type_def.element_type)
         self.array_size = self._type_def.array_size
 
     def _serialize(self, data):
@@ -184,13 +184,13 @@ class ArraySerializer(TypeSerializer):
         return out
 
 
-class VectorSerializer(TypeSerializer):
+class VectorConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name: str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.vector
         assert isinstance(self._type_def, VectorType)
-        self.size_type = create_type_serializer(types, "uint32")
-        self.element_type = create_type_serializer(types, self._type_def.element_type)
+        self.size_type = create_type_converter(types, "uint32")
+        self.element_type = create_type_converter(types, self._type_def.element_type)
 
     def _serialize(self, data):
         out = []
@@ -215,14 +215,14 @@ class VectorSerializer(TypeSerializer):
         return []
 
 
-class MapSerializer(TypeSerializer):
+class MapConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.map
         assert isinstance(self._type_def, MapType)
-        self.size_type = create_type_serializer(types, "uint32")
-        self.key_type = create_type_serializer(types, self._type_def.key_type)
-        self.value_type = create_type_serializer(types, self._type_def.value_type)
+        self.size_type = create_type_converter(types, "uint32")
+        self.key_type = create_type_converter(types, self._type_def.key_type)
+        self.value_type = create_type_converter(types, self._type_def.value_type)
 
     def _serialize(self, data):
         out = []
@@ -249,11 +249,11 @@ class MapSerializer(TypeSerializer):
         return {}
 
 
-class StringSerializer(TypeSerializer):
+class StringConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.string
-        self.size_type = create_type_serializer(types, "uint32")
+        self.size_type = create_type_converter(types, "uint32")
         self.struct_fmt = "<%is"
 
     def _serialize(self, data):
@@ -270,11 +270,11 @@ class StringSerializer(TypeSerializer):
         return ""
 
 
-class BytesSerializer(TypeSerializer):
+class BytesConverter(TypeConverter):
     def __init__(self, types: dict[str, MessgenType], type_name:str):
         super().__init__(types, type_name)
         assert self._type_class == TypeClass.bytes
-        self.size_type = create_type_serializer(types, "uint32")
+        self.size_type = create_type_converter(types, "uint32")
         self.struct_fmt = "<%is"
 
     def _serialize(self, data):
@@ -291,36 +291,36 @@ class BytesSerializer(TypeSerializer):
         return b""
 
 
-def create_type_serializer(types: dict[str, MessgenType], type_name: str) -> TypeSerializer:
+def create_type_converter(types: dict[str, MessgenType], type_name: str) -> TypeConverter:
     type_def = types[type_name]
     type_class = type_def.type_class
     if type_class == TypeClass.scalar:
-        return ScalarSerializer(types, type_name)
+        return ScalarConverter(types, type_name)
     elif type_class == TypeClass.enum:
-        return EnumSerializer(types, type_name)
+        return EnumConverter(types, type_name)
     elif type_class == TypeClass.struct:
-        return StructSerializer(types, type_name)
+        return StructConverter(types, type_name)
     elif type_class == TypeClass.array:
-        return ArraySerializer(types, type_name)
+        return ArrayConverter(types, type_name)
     elif type_class == TypeClass.vector:
-        return VectorSerializer(types, type_name)
+        return VectorConverter(types, type_name)
     elif type_class == TypeClass.map:
-        return MapSerializer(types, type_name)
+        return MapConverter(types, type_name)
     elif type_class == TypeClass.string:
-        return StringSerializer(types, type_name)
+        return StringConverter(types, type_name)
     elif type_class == TypeClass.bytes:
-        return BytesSerializer(types, type_name)
+        return BytesConverter(types, type_name)
     raise RuntimeError("Unsupported field type class \"%s\" in %s" % (type_class, type_def.type))
 
 
 class MessageInfo:
 
-    def __init__(self, proto_id: int, message_id: int, proto_name: str, message_name: str, type_serializer: TypeSerializer):
+    def __init__(self, proto_id: int, message_id: int, proto_name: str, message_name: str, type_converter: TypeConverter):
         self._proto_id = proto_id
         self._message_id = message_id
         self._proto_name = proto_name
         self._message_name = message_name
-        self._type_serializer = type_serializer
+        self._type_converter = type_converter
 
     def proto_name(self) -> str:
         return self._proto_name
@@ -335,19 +335,19 @@ class MessageInfo:
         return self._message_id
 
     def type_name(self) -> str:
-        return self._type_serializer.type_name()
+        return self._type_converter.type_name()
 
     def type_hash(self) -> int:
-        return self._type_serializer.type_hash()
+        return self._type_converter.type_hash()
 
-    def type_serializer(self) -> TypeSerializer:
-        return self._type_serializer
+    def type_converter(self) -> TypeConverter:
+        return self._type_converter
 
 
 class Codec:
 
     def __init__(self) -> None:
-        self._serializers_by_name: dict[str, TypeSerializer] = {}
+        self._converters_by_name: dict[str, TypeConverter] = {}
         self._id_by_name: dict[tuple[str, str], tuple[int, int, str]] = {}
         self._name_by_id: dict[tuple[int, int], tuple[str, str, str]] = {}
 
@@ -357,7 +357,7 @@ class Codec:
             return
 
         for type_name in parsed_types:
-            self._serializers_by_name[type_name] = create_type_serializer(parsed_types, type_name)
+            self._converters_by_name[type_name] = create_type_converter(parsed_types, type_name)
 
         parsed_protocols = parse_protocols(protocols)
         for proto_name, proto_def in parsed_protocols.items():
@@ -365,8 +365,8 @@ class Codec:
                 self._id_by_name[(proto_name, message.name)] = (proto_def.proto_id, msg_id, message.type)
                 self._name_by_id[(proto_def.proto_id, msg_id)] = (proto_name, message.name, message.type)
 
-    def type_serializer(self, type_name: str) -> TypeSerializer:
-        if converter := self._serializers_by_name.get(type_name):
+    def type_converter(self, type_name: str) -> TypeConverter:
+        if converter := self._converters_by_name.get(type_name):
             return converter
         raise MessgenError(f"Unsupported type_name={type_name}")
 
@@ -376,7 +376,7 @@ class Codec:
             raise MessgenError(f"Unsupported proto_id={proto_id} message_id={message_id}")
 
         proto_name, message_name, type_name = self._name_by_id[key]
-        return MessageInfo(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
+        return MessageInfo(proto_id, message_id, proto_name, message_name, self._converters_by_name[type_name])
 
     def message_info_by_name(self, proto_name: str, message_name: str) -> MessageInfo:
         key = (proto_name, message_name)
@@ -384,4 +384,4 @@ class Codec:
             raise MessgenError(f"Unsupported proto_name={proto_name} message_name={message_name}")
 
         proto_id, message_id, type_name = self._id_by_name[key]
-        return MessageInfo(proto_id, message_id, proto_name, message_name, self._serializers_by_name[type_name])
+        return MessageInfo(proto_id, message_id, proto_name, message_name, self._converters_by_name[type_name])

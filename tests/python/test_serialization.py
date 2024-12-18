@@ -25,7 +25,7 @@ def simple_struct():
 
 
 def test_serialization1(codec, simple_struct):
-    type_def = codec.type_serializer("messgen/test/simple_struct")
+    type_def = codec.type_converter("messgen/test/simple_struct")
     expected_msg = simple_struct
     expected_bytes = type_def.serialize(expected_msg)
     assert expected_bytes
@@ -36,7 +36,7 @@ def test_serialization1(codec, simple_struct):
 
 
 def test_serialization2(codec):
-    type_def = codec.type_serializer("messgen/test/var_size_struct")
+    type_def = codec.type_converter("messgen/test/var_size_struct")
     expected_msg = {
         "f0": 0x1234567890abcdef,
         "f1_vec": [-0x1234567890abcdef, 5, 1],
@@ -52,11 +52,11 @@ def test_serialization2(codec):
 
 def test_protocol_deserialization(codec, simple_struct):
     message_info_by_name = codec.message_info_by_name(proto_name="test_proto", message_name="simple_struct_msg")
-    expected_bytes = message_info_by_name.type_serializer().serialize(simple_struct)
+    expected_bytes = message_info_by_name.type_converter().serialize(simple_struct)
     assert expected_bytes
 
     message_info_by_id = codec.message_info_by_id(proto_id=message_info_by_name.proto_id(), message_id=message_info_by_name.message_id())
-    actual_msg = message_info_by_id.type_serializer().deserialize(expected_bytes)
+    actual_msg = message_info_by_id.type_converter().deserialize(expected_bytes)
 
     assert message_info_by_name.proto_id() == 1
     assert message_info_by_name.message_id() == 0
