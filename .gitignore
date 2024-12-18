@@ -17,6 +17,5 @@ dump.txt
 *.o
 *.elf
 tests/cpp/messgen
-port/js/tests
 .done.*
 
