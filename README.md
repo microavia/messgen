@@ -198,8 +198,8 @@ Example protocol definition (`weather_station.yaml`):
 ```yaml
 comment: "Weather station application protocol"
 messages:
-  0: { name: "heartbeat",      type: "application/heartbeat",   comment: "Heartbeat message" }
-  1: { name: "system_status",  type: "system/status",           comment: "System status message" }
-  2: { name: "system_command", type: "system/command",          comment: "System command message" }
-  3: { name: "baro_report",    type: "measurement/baro_report", comment: "Barometer report message" }
+  0: { name: "heartbeat", type: "application/heartbeat", comment: "Heartbeat message" }
+  1: { name: "system_status", type: "system/status", comment: "System status message" }
+  2: { name: "system_command", type: "system/command", comment: "System command message" }
+  3: { name: "baro_report", type: "measurement/baro_report", comment: "Barometer report message" }
 ```
