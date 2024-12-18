@@ -70,23 +70,23 @@ class TypeScriptGenerator:
     def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
         types = set()
         code = []
-    
+
         for proto_name, proto_def in protocols.items():
             code.append(f"export interface {self._to_camel_case(proto_name)} {{")
             code.append(f"  '{proto_name}': {{")
-            for struct_name in proto_def.types.values():
-                ts_struct_name = self._to_camel_case(struct_name)
-                code.append(f"    '{struct_name}': {ts_struct_name};")
+            for message in proto_def.messages.values():
+                ts_struct_name = self._to_camel_case(message.type)
+                code.append(f"    '{message.name}': {message.type};")
                 types.add(ts_struct_name)
             code.append('  }')
             code.append('}')
             code.append('')
-    
+
         import_statements = self._generate_protocol_imports(types)
         protocol_types = ' | '.join(self._to_camel_case(proto_name) for proto_name in protocols.keys())
         final_code = '\n'.join(import_statements + code) + f'export type Protocol = {protocol_types};'
-      
-    
+
+
         self._write_output_file(out_dir, self._PROTOCOLS_FILE, final_code)
 
     def _generate_protocol_imports(self, types: set[str]) -> list[str]:
@@ -105,9 +105,9 @@ class TypeScriptGenerator:
                 self._generate_struct(type_name, type_def)
             elif type_def.type_class == TypeClass.enum:
                 self._generate_enum(type_name, type_def)
-        
+
         code = '\n'.join(self._types)
-        
+
         self._write_output_file(out_dir, self._TYPES_FILE, code)
 
     def _generate_enum(self, enum_name, type_def):
@@ -121,7 +121,7 @@ class TypeScriptGenerator:
 
         self._types.append("}")
         self._types.append("")
-    
+
     def _generate_struct(self, name: str, type_def: MessgenType):
         self._types.append(f"export interface {self._to_camel_case(name)} {{")
         fields = getattr(type_def, 'fields', []) or []
@@ -175,7 +175,7 @@ class TypeScriptGenerator:
             if typed_array:
                 return typed_array
         return None
-    
+
     def _write_output_file(self, output_path, file, content):
         output_file = os.path.join(output_path, f"{file}")
 
@@ -186,5 +186,5 @@ class TypeScriptGenerator:
     def _to_camel_case(s: str):
         name = '_'.join(s.split(SEPARATOR))
         return ''.join(word.capitalize() for word in name.split('_'))
-    
+
 
