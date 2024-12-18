@@ -50,10 +50,10 @@ class TypeSerializer(ABC):
     def type_hash(self) -> int:
         return hash(self._type_def)
 
-    def serialize(self, data) -> bytes:
+    def serialize(self, data: dict) -> bytes:
         return self._serialize(data)
 
-    def deserialize(self, data) -> dict:
+    def deserialize(self, data: bytes) -> dict:
         msg, sz = self._deserialize(data)
         if sz != len(data):
             raise MessgenError(
