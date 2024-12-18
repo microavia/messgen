@@ -9,8 +9,6 @@ from pathlib import (
     Path,
 )
 
-from .validation import validate_protocol
-
 from .common import (
     SEPARATOR,
     SIZE_TYPE,
@@ -58,6 +56,7 @@ def _namespace(name: str, code:list[str]):
         if ns_name:
             code.append("")
             code.append(f"}} // namespace {ns_name}")
+            code.append("")
 
 
 @contextmanager
@@ -67,6 +66,7 @@ def _struct(name: str, code: list[str]):
         yield
     finally:
         code.append("};")
+        code.append("")
 
 
 def _inline_comment(type_def: FieldType | EnumValue):
@@ -125,15 +125,6 @@ class CppGenerator:
         self._ctx: dict = {}
         self._types: dict[str, MessgenType] = {}
 
-    def generate(self, out_dir: Path, types: dict[str, MessgenType], protocols: dict[str, Protocol]) -> None:
-        self.validate(types, protocols)
-        self.generate_types(out_dir, types)
-        self.generate_protocols(out_dir, protocols)
-
-    def validate(self, types: dict[str, MessgenType], protocols: dict[str, Protocol]):
-        for proto_def in protocols.values():
-            validate_protocol(proto_def, types)
-
     def generate_types(self, out_dir: Path, types: dict[str, MessgenType]) -> None:
         self._types = types
         for type_name, type_def in types.items():
@@ -169,7 +160,7 @@ class CppGenerator:
 
             elif isinstance(type_def, StructType):
                 code.extend(self._generate_type_struct(type_name, type_def))
-                code.extend(self._generate_members_of(type_name, type_def))
+                code.extend(self._generate_type_members_of(type_name, type_def))
 
         code = self._PREAMBLE_HEADER + self._generate_includes() + code
 
@@ -185,82 +176,92 @@ class CppGenerator:
         self._add_include("messgen/messgen.h")
 
         namespace_name, class_name = _split_last_name(proto_name)
-        print(f"Namespace: {namespace_name}, Class: {class_name}")
         with _namespace(namespace_name, code):
             with _struct(class_name, code):
-                for type_name in proto_def.types.values():
-                    self._add_include(type_name + self._EXT_HEADER)
+                for message in proto_def.messages.values():
+                    self._add_include(message.type + self._EXT_HEADER)
 
                 proto_id = proto_def.proto_id
                 if proto_id is not None:
-                    code.append(f"    constexpr static int PROTO_ID = {proto_id};")
+                    code.append(f"    constexpr static inline int PROTO_ID = {proto_id};")
+                    code.append(f"    constexpr static inline uint32_t HASH = {hash(proto_def)};")
 
-                code.extend(self._generate_type_id_decl(proto_def))
-                code.extend(self._generate_reflect_type_decl())
+                code.extend(self._generate_messages(class_name, proto_def))
+                code.extend(self._generate_reflect_message_decl())
                 code.extend(self._generate_dispatcher_decl())
 
-            code.extend(self._generate_type_ids(class_name, proto_def))
-            code.extend(self._generate_reflect_type(class_name, proto_def))
+            code.extend(self._generate_protocol_members_of(class_name, proto_def))
+            code.extend(self._generate_reflect_message(class_name, proto_def))
             code.extend(self._generate_dispatcher(class_name))
             code.append("")
 
         return self._PREAMBLE_HEADER + self._generate_includes() + code
 
-    @staticmethod
-    def _generate_type_id_decl(proto: Protocol) -> list[str]:
-        return textwrap.indent(textwrap.dedent("""
-            template <messgen::type Msg>
-            constexpr static inline int TYPE_ID = []{
-                static_assert(sizeof(Msg) == 0, \"Provided type is not part of the protocol.\");
-                return 0;
-            }();"""), "    ").splitlines()
 
-    @staticmethod
-    def _generate_type_ids(class_name: str, proto: Protocol) -> list[str]:
+    def _generate_messages(self, class_name: str, proto_def: Protocol):
+        self._add_include("tuple")
         code: list[str] = []
-        for type_id, type_name in proto.types.items():
-            code.append(f"    template <> constexpr inline int {class_name}::TYPE_ID<{_qual_name(type_name)}> = {type_id};")
+        for message in proto_def.messages.values():
+            code.extend(textwrap.indent(textwrap.dedent(f"""
+            struct {message.name} : {_qual_name(message.type)} {{
+                using data_type = {_qual_name(message.type)};
+                using protocol_type = {class_name};
+                constexpr inline static int PROTO_ID = protocol_type::PROTO_ID;
+                constexpr inline static int MESSAGE_ID = {message.message_id};
+            }};"""), "    ").splitlines())
+        return code
+
+    def _generate_protocol_members_of(self, class_name: str, proto_def: Protocol):
+        self._add_include("tuple")
+        code: list[str] = []
+        code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{class_name}>) noexcept {{")
+        code.append("    return std::tuple{")
+        for message in proto_def.messages.values():
+            code.append(f"        ::messgen::member<{class_name}, {class_name}::{message.name}>{{\"{message.name}\"}},")
+        code.append("    };")
+        code.append("}")
+        code.append("")
         return code
 
     @staticmethod
-    def _generate_reflect_type_decl() -> list[str]:
+    def _generate_reflect_message_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class Fn>
-            constexpr static auto reflect_message(int type_id, Fn&& fn);
+            constexpr static auto reflect_message(int msg_id, Fn &&fn);
             """), "    ").splitlines()
 
     @staticmethod
-    def _generate_reflect_type(class_name: str, proto: Protocol) -> list[str]:
+    def _generate_reflect_message(class_name: str, proto: Protocol) -> list[str]:
         code: list[str] = []
-        code.append("    template <class Fn>")
-        code.append(f"    constexpr auto {class_name}::reflect_message(int type_id, Fn&& fn) {{")
-        code.append("        switch (type_id) {")
-        for type_name in proto.types.values():
-            qual_name = _qual_name(type_name)
-            code.append(f"            case TYPE_ID<{qual_name}>:")
-            code.append(f"                std::forward<Fn>(fn)(::messgen::reflect_type<{qual_name}>);")
-            code.append(f"                return;")
-        code.append("        }")
+        code.append("template <class Fn>")
+        code.append(f"constexpr auto {class_name}::reflect_message(int msg_id, Fn &&fn) {{")
+        code.append("    switch (msg_id) {")
+        for message in proto.messages.values():
+            msg_type = f"{class_name}::{_unqual_name(message.name)}"
+            code.append(f"        case {msg_type}::MESSAGE_ID:")
+            code.append(f"            std::forward<Fn>(fn)(::messgen::reflect_type<{msg_type}>);")
+            code.append(f"            return;")
         code.append("    }")
+        code.append("}")
         return code
 
     @staticmethod
     def _generate_dispatcher_decl() -> list[str]:
         return textwrap.indent(textwrap.dedent("""
             template <class T>
-            static bool dispatch_message(int msg_id, const uint8_t *payload, T handler);
+            constexpr static bool dispatch_message(int msg_id, const uint8_t *payload, T handler);
             """), "    ").splitlines()
 
     @staticmethod
     def _generate_dispatcher(class_name: str) -> list[str]:
         return textwrap.dedent(f"""
             template <class T>
-            bool {class_name}::dispatch_message(int msg_id, const uint8_t *payload, T handler) {{
+            constexpr bool {class_name}::dispatch_message(int msg_id, const uint8_t *payload, T handler) {{
                 auto result = false;
                 reflect_message(msg_id, [&]<class R>(R) {{
                     using message_type = messgen::splice_t<R>;
                     if constexpr (requires(message_type msg) {{ handler(msg); }}) {{
-                        message_type msg;
+                        auto msg = message_type{{}};
                         msg.deserialize(payload);
                         handler(std::move(msg));
                         result = true;
@@ -268,17 +269,6 @@ class CppGenerator:
                 }});
                 return result;
             }}""").splitlines()
-
-    @staticmethod
-    def _generate_traits() -> list[str]:
-        return textwrap.dedent("""
-            namespace messgen {
-                template <class T>
-                struct reflect_t {};
-
-                template <class T>
-                struct splice_t {};
-            }""").splitlines()
 
     @staticmethod
     def _generate_comment_type(type_def):
@@ -379,11 +369,12 @@ class CppGenerator:
         is_empty = len(groups) == 0
         is_flat = is_empty or (len(groups) == 1 and groups[0].size is not None)
         if is_flat:
-            code.append(_indent("static constexpr size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
+            code.append(_indent("constexpr static inline size_t FLAT_SIZE = %d;" % (0 if is_empty else groups[0].size)))
             is_flat_str = "true"
-        code.append(_indent(f"static constexpr bool IS_FLAT = {is_flat_str};"))
-        code.append(_indent(f"static constexpr const char* NAME = \"{_qual_name(type_name)}\";"))
-        code.append(_indent(f"static constexpr const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
+        code.append(_indent(f"constexpr static inline bool IS_FLAT = {is_flat_str};"))
+        code.append(_indent(f"constexpr static inline uint32_t HASH = {hash(type_def)};"))
+        code.append(_indent(f"constexpr static inline const char* NAME = \"{_qual_name(type_name)}\";"))
+        code.append(_indent(f"constexpr static inline const char* SCHEMA = R\"_({self._generate_schema(type_def)})_\";"))
         code.append("")
 
         for field in type_def.fields:
@@ -483,7 +474,7 @@ class CppGenerator:
         if self._get_cpp_standard() >= 20:
             # Operator <=>
             code.append("")
-            code.append(_indent("auto operator<=>(const %s&) const = default;" % unqual_name))
+            code.append(_indent("auto operator<=>(const %s &) const = default;" % unqual_name))
 
         code.append("};")
 
@@ -527,17 +518,17 @@ class CppGenerator:
             code.append("")
         return code
 
-    def _generate_members_of(self, type_name: str, type_def: StructType):
+    def _generate_type_members_of(self, type_name: str, type_def: StructType):
         self._add_include("tuple")
 
         unqual_name = _unqual_name(type_name)
 
         code: list[str] = []
         code.append("")
-        code.append(f"[[nodiscard]] inline constexpr auto members_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
+        code.append(f"[[nodiscard]] consteval auto members_of(::messgen::reflect_t<{unqual_name}>) noexcept {{")
         code.append("    return std::tuple{")
         for field in type_def.fields:
-            code.append(f"        ::messgen::member{{\"{field.name}\", &{unqual_name}::{field.name}}},")
+            code.append(f"        ::messgen::member_variable{{{{\"{field.name}\"}}, &{unqual_name}::{field.name}}},")
         code.append("    };")
         code.append("}")
 

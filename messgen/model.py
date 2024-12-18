@@ -1,6 +1,17 @@
-from dataclasses import dataclass
+import hashlib
+import json
+
+from dataclasses import dataclass, asdict
 from enum import Enum, auto
 from typing import Union
+
+
+def _hash_model_type(dt) -> int:
+    input_string = json.dumps(asdict(dt)).replace(" ", "")
+    hash_object = hashlib.md5(input_string.encode())
+    hex_digest = hash_object.hexdigest()
+    hash_32_bits = int(hex_digest[:8], 16)
+    return hash_32_bits
 
 
 class TypeClass(str, Enum):
@@ -20,6 +31,9 @@ class BasicType:
     type_class: TypeClass
     size: int | None
 
+    def __hash__(self):
+        return _hash_model_type(self)
+
 
 @dataclass
 class ArrayType:
@@ -29,6 +43,9 @@ class ArrayType:
     array_size: int
     size: int | None
 
+    def __hash__(self):
+        return _hash_model_type(self)
+
 
 @dataclass
 class VectorType:
@@ -36,6 +53,9 @@ class VectorType:
     type_class: TypeClass
     element_type: str
     size: None
+
+    def __hash__(self):
+        return _hash_model_type(self)
 
 
 @dataclass
@@ -46,12 +66,18 @@ class MapType:
     value_type: str
     size: None
 
+    def __hash__(self):
+        return _hash_model_type(self)
+
 
 @dataclass
 class EnumValue:
     name: str
     value: int
     comment: str
+
+    def __hash__(self):
+        return _hash_model_type(self)
 
 
 @dataclass
@@ -63,12 +89,18 @@ class EnumType:
     values: list[EnumValue]
     size: int
 
+    def __hash__(self):
+        return _hash_model_type(self)
+
 
 @dataclass
 class FieldType:
     name: str
     type: str
     comment: str | None
+
+    def __hash__(self):
+        return _hash_model_type(self)
 
 
 @dataclass
@@ -78,6 +110,9 @@ class StructType:
     comment: str | None
     fields: list[FieldType]
     size: int | None
+
+    def __hash__(self):
+        return _hash_model_type(self)
 
 
 MessgenType = Union[
@@ -91,7 +126,21 @@ MessgenType = Union[
 
 
 @dataclass
+class Message:
+    message_id: int
+    name: str
+    type: str
+    comment: str | None
+
+    def __hash__(self):
+        return _hash_model_type(self)
+
+
+@dataclass
 class Protocol:
     name: str
     proto_id: int
-    types: dict[int, str]
+    messages: dict[int, Message]
+
+    def __hash__(self):
+        return _hash_model_type(self)

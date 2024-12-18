@@ -93,7 +93,7 @@ TEST_F(CppNostlTest, EmptyStruct) {
     test_serialization(e);
 }
 
-TEST_F(CppNostlTest, MessageConcept) {
+TEST_F(CppNostlTest, TypeConcept) {
     using namespace messgen;
 
     struct not_a_message {};
@@ -103,7 +103,7 @@ TEST_F(CppNostlTest, MessageConcept) {
     EXPECT_FALSE(type<int>);
 }
 
-TEST_F(CppNostlTest, FlatMessageConcept) {
+TEST_F(CppNostlTest, FlatTypeConcept) {
     using namespace messgen;
 
     EXPECT_TRUE(flat_type<test::flat_struct>);

@@ -49,15 +49,16 @@ protected:
 };
 
 TEST_F(CppTest, SimpleStruct) {
-    messgen::test::simple_struct msg{};
-    msg.f0 = 1;
-    msg.f1 = 2;
-    msg.f2 = 3;
-    msg.f3 = 4;
-    msg.f4 = 5;
-    msg.f5 = 6;
-    msg.f6 = 7;
-    msg.f8 = 9;
+    test_proto::simple_struct_msg msg{{
+        .f0 = 1,
+        .f1 = 2,
+        .f2 = 3,
+        .f3 = 4,
+        .f4 = 5,
+        .f5 = 6,
+        .f6 = 7,
+        .f8 = 9,
+    }};
 
     test_serialization(msg);
 }
@@ -263,7 +264,7 @@ TEST_F(CppTest, DispatchMessage) {
     auto handler = [&](auto &&actual) {
         using ActualType = std::decay_t<decltype(actual)>;
 
-        if constexpr (std::is_same_v<ActualType, test::simple_struct>) {
+        if constexpr (std::is_same_v<ActualType, test_proto::simple_struct_msg>) {
             EXPECT_EQ(expected.f0, actual.f0);
             EXPECT_EQ(expected.f1, actual.f1);
             invoked = true;
@@ -271,9 +272,29 @@ TEST_F(CppTest, DispatchMessage) {
             FAIL() << "Unexpected message type handled.";
         }
     };
-    test_proto::dispatch_message(test_proto::TYPE_ID<test::simple_struct>, _buf.data(), handler);
+
+    test_proto::dispatch_message(test_proto::simple_struct_msg::MESSAGE_ID, _buf.data(), handler);
 
     EXPECT_TRUE(invoked);
+}
+
+TEST_F(CppTest, TypeConcept) {
+    using namespace messgen;
+
+    struct not_a_message {};
+
+    EXPECT_TRUE(type<test::simple_struct>);
+    EXPECT_TRUE(type<test_proto::simple_struct_msg>);
+    EXPECT_FALSE(type<not_a_message>);
+    EXPECT_FALSE(type<int>);
+}
+
+TEST_F(CppTest, FlatTypeConcept) {
+    using namespace messgen;
+
+    EXPECT_TRUE(flat_type<test::flat_struct>);
+    EXPECT_FALSE(flat_type<test::complex_struct>);
+    EXPECT_FALSE(flat_type<int>);
 }
 
 TEST_F(CppTest, MessageConcept) {
@@ -281,15 +302,7 @@ TEST_F(CppTest, MessageConcept) {
 
     struct not_a_message {};
 
-    EXPECT_TRUE(type<test::simple_struct>);
-    EXPECT_FALSE(type<not_a_message>);
-    EXPECT_FALSE(type<int>);
-}
-
-TEST_F(CppTest, FlatMessageConcept) {
-    using namespace messgen;
-
-    EXPECT_TRUE(flat_type<test::flat_struct>);
-    EXPECT_FALSE(flat_type<test::complex_struct>);
-    EXPECT_FALSE(flat_type<int>);
+    EXPECT_FALSE(message<test::simple_struct>);
+    EXPECT_FALSE(message<int>);
+    EXPECT_TRUE(message<test_proto::simple_struct_msg>);
 }

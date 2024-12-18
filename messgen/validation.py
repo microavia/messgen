@@ -122,9 +122,24 @@ _CPP_INT_TYPES = {
 
 
 def validate_protocol(protocol: Protocol, types: dict[str, MessgenType]):
-    for type_name in protocol.types.values():
-        if type_name not in types:
-            raise RuntimeError(f"Type {type_name} required by {protocol.name} protocol not found")
+    seen_names = set()
+    for msg_id, msg in protocol.messages.items():
+        if msg.name in seen_names:
+            raise RuntimeError(f"Message with name={msg.name} appears multiple times in protocol={protocol.name}")
+        if msg.type not in types:
+            raise RuntimeError(f"Type {msg.type} required by message={msg.name} protocol={protocol.name} not found")
+        if msg.message_id != msg_id:
+            raise RuntimeError(f"Message {msg.name} has different message_id={msg.message_id} than key={msg_id} in protocol={protocol.name}")
+        seen_names.add(msg.name)
+
+
+def validate_types(types: dict[str, MessgenType]):
+    seen_hashes: dict[int, Any] = {}
+    for type_name, type_def in types.items():
+        type_hash = hash(type_def)
+        if hash_conflict := seen_hashes.get(type_hash):
+            raise RuntimeError(f"Type {type_name} has the same hash as {hash_conflict.type}")
+        seen_hashes[type_hash] = type_def
 
 
 # Checks if `s` is a valid name for a field or a message type

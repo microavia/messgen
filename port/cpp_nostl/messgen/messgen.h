@@ -29,12 +29,20 @@ struct member {
     using member_type = std::remove_cvref_t<M>;
 
     const char *name;
+};
+
+template <class C, class M>
+struct member_variable : member<C, M> {
+    using member<C, M>::name;
     M C::*ptr;
 };
 
+template <class C, class M>
+member_variable(const char *, M C::*) -> member_variable<C, M>;
+
 template <class S, class C, class M>
     requires std::same_as<std::remove_cvref_t<S>, std::remove_cvref_t<C>>
-[[nodiscard]] constexpr decltype(auto) value_of(S &&obj, const member<C, M> &m) noexcept {
+[[nodiscard]] constexpr decltype(auto) value_of(S &&obj, const member_variable<C, M> &m) noexcept {
     return std::forward<S>(obj).*m.ptr;
 }
 

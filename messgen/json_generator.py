@@ -39,12 +39,12 @@ class JsonGenerator:
 
     def generate_protocols(self, out_dir: Path, protocols: dict[str, Protocol]) -> None:
         combined: list = []
-        
+
         for proto_def in protocols.values():
             proto_dict = asdict(proto_def)
             proto_dict["version"] = version_hash(proto_dict)
             combined.append(proto_dict)
-        
+
         self._write_file(out_dir, "protocols", combined)
 
     def _write_file(self, out_dir: Path, name: str, data: list) -> None:
