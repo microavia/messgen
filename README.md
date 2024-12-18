@@ -47,7 +47,7 @@ On Windows:
 make check
 ```
 
-## Generating messages
+## Generating Types and Protocols
 
 All data types should be placed in one directory. Each protocol can be placed in any arbitrary directory.
 
