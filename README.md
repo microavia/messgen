@@ -17,27 +17,37 @@ Features:
 - Supported output formats: C++, JSON, TypeScript
 - Supported output formats TODO: Go, Markdown (documentation)
 
-## Dependencies
+## Runtime Dependencies
 
 - Python 3.X
 
 On Linux:
 
-```
+```bash
 sudo apt install python3
 ```
 
-On Windows 10:
+On Windows:
 
 1. Download https://bootstrap.pypa.io/get-pip.py
 2. Execute `python3 get_pip.py`
 3. Execute `pip3 install pyyaml`
 
-### Build dependencies
+## Build & Test Dependencies
 
 - libgtest-dev (for testing)
+- pytest (for testing)
+- cmake
+- ninja
+- mypy
 
-## Generate messages
+## Testing & Verification
+
+```bash
+make check
+```
+
+## Generating messages
 
 All data types should be placed in one directory. Each protocol can be placed in any arbitrary directory.
 
@@ -177,18 +187,19 @@ Type ids can be assigned to structs in `weather_station.yaml` file (see below).
 
 #### Protocol
 
-**Protocol** defines the protocol ID and type IDs for structs that will be used as messages.
-Type ID used during serialization/deserialization to identify the message type.
-Multiple protocols may be used in one system, e.g. `my_namespace/bootloader` and `my_namespace/application`.
-Parser can check the protocol by protocol ID, that can be serialized in message header.
+**Protocol** defines the protocol ID and type IDs for structs that will be used
+as messages. Message ID used during serialization/deserialization to identify the
+message type. Multiple protocols may be used in one system, e.g.
+`my_namespace/bootloader` and `my_namespace/application`. Parser can check the
+protocol by protocol ID, that can be serialized in message header.
 
 Example protocol definition (`weather_station.yaml`):
 
 ```yaml
 comment: "Weather station application protocol"
-types_map:
-  0: "heartbeat"
-  1: "system_status"
-  2: "system_command"
-  3: "baro_report"
+messages:
+  0: { name: "heartbeat",      type: "application/heartbeat",   comment: "Heartbeat message" }
+  1: { name: "system_status",  type: "system/status",           comment: "System status message" }
+  2: { name: "system_command", type: "system/command",          comment: "System command message" }
+  3: { name: "baro_report",    type: "measurement/baro_report", comment: "Barometer report message" }
 ```
